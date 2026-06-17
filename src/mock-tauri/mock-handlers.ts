@@ -577,6 +577,11 @@ export const mockHandlers: Record<string, (args: any) => any> = {
   },
   load_vault_list: () => ({ ...mockVaultList, vaults: [...mockVaultList.vaults] }),
   save_vault_list: (args: { list: typeof mockVaultList }) => { mockVaultList = { ...args.list }; return null },
+  rename_vault_folder: (args: { folderPath: string; newName: string }) => ({
+    old_path: args.folderPath,
+    new_path: `${args.folderPath.replace(/[^/]+$/, '')}${args.newName}`,
+  }),
+  delete_vault_folder: (args: { folderPath: string }) => args.folderPath,
   rename_note: handleRenameNote,
   rename_note_filename: handleRenameNoteFilename,
   move_note_to_folder: handleMoveNoteToFolder,
