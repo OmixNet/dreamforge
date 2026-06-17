@@ -1,0 +1,525 @@
+// DREAMFORGE_SLIM: 24 个 module 物理删除 (PR 4)
+//   ai_agents / ai_model_tools / ai_models / app_updater / claude_cli / claude_invocation
+//   cli_agent_runtime (+ dir) / codex_cli / gemini_cli / gemini_config / gemini_discovery
+//   hermes_cli / hermes_discovery / kiro_cli / kiro_discovery / mcp (+ dir)
+//   opencode_cli / opencode_config / opencode_discovery / opencode_events
+//   pi_cli / pi_config / pi_discovery / pi_events
+// DREAMFORGE_SLIM: std::process::Child / WsBridgeChild struct 物理删除 (PR 7, mcp ws-bridge 全禁)
+mod app_icon;
+mod commands;
+pub mod frontmatter;
+pub mod git;
+#[cfg(any(test, all(desktop, target_os = "linux")))]
+mod linux_appimage;
+#[cfg(desktop)]
+pub mod menu;
+pub mod search;
+pub mod settings;
+pub mod telemetry;
+pub mod vault;
+pub mod vault_list;
+pub mod vault_watcher;
+#[cfg(desktop)]
+mod window_state;
+
+use std::ffi::OsStr;
+use std::process::Command;
+
+#[cfg(desktop)]
+use std::path::{Path, PathBuf};
+// DREAMFORGE_SLIM: std::process::Child 物理删除 (PR 7, WsBridgeChild struct 已删)
+#[cfg(desktop)]
+use std::sync::Mutex;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+pub(crate) fn hidden_command(program: impl AsRef<OsStr>) -> Command {
+    let mut command = Command::new(program);
+    suppress_windows_console(&mut command);
+    command
+}
+
+#[cfg(windows)]
+fn suppress_windows_console(command: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    command.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(windows))]
+fn suppress_windows_console(_command: &mut Command) {}
+
+// DREAMFORGE_SLIM: WsBridgeChild struct 物理删除 (PR 7, mcp ws-bridge 全禁, 之前 manage 已注释)
+
+#[cfg(desktop)]
+struct AllowedAssetScopeRoots(Mutex<Vec<PathBuf>>);
+
+#[cfg(desktop)]
+fn log_startup_result(label: &str, result: Result<usize, String>) {
+    match result {
+        Ok(n) if n > 0 => log::info!("{}: {} files", label, n),
+        Err(e) => log::warn!("{}: {}", label, e),
+        _ => {}
+    }
+}
+
+// DREAMFORGE_SLIM: 5 个 mcp 桥 fn 物理删除 (PR 4)
+//   selected_mcp_bridge_vault_paths / push_unique_mcp_bridge_vault_path
+//   validate_mcp_bridge_vault_path / stop_ws_bridge_child / sync_ws_bridge_for_vault
+// DREAMFORGE_SLIM: WsBridgeChild struct 物理删除 (PR 7)
+
+fn spawn_background_task<F>(thread_name: &'static str, task: F)
+where
+    F: FnOnce() + Send + 'static,
+{
+    if let Err(e) = std::thread::Builder::new()
+        .name(thread_name.into())
+        .spawn(task)
+    {
+        log::warn!("Failed to start {thread_name}: {e}");
+    }
+}
+
+/// Run startup housekeeping on the legacy default vault (migrate legacy frontmatter, seed configs).
+#[cfg(desktop)]
+fn run_startup_tasks_for_vault(vault_path: &Path) {
+    let vp_str = vault_path.to_str().unwrap_or_default();
+    log_startup_result(
+        "Migrated is_a to type on startup",
+        vault::migrate_is_a_to_type(vp_str),
+    );
+    // Migrate legacy config/agents.md -> root AGENTS.md (one-time, idempotent)
+    vault::migrate_agents_md(vp_str);
+    // Seed AGENTS.md and starter type definitions at vault root if missing
+    vault::seed_config_files(vp_str);
+}
+
+#[cfg(desktop)]
+fn spawn_startup_tasks_for_vault_with<F>(vault_path: PathBuf, task: F) -> bool
+where
+    F: FnOnce(PathBuf) + Send + 'static,
+{
+    if !vault_path.is_dir() {
+        return false;
+    }
+
+    spawn_background_task("tolaria-startup-tasks", move || task(vault_path));
+    true
+}
+
+#[cfg(desktop)]
+fn spawn_startup_tasks() {
+    let Some(vault_path) = dirs::home_dir().map(|h| h.join("Laputa")) else {
+        return;
+    };
+    spawn_startup_tasks_for_vault_with(vault_path, |path| run_startup_tasks_for_vault(&path));
+}
+
+// DREAMFORGE_SLIM: sync_ws_bridge_for_selected_vault / spawn_initial_ws_bridge_sync 物理删除 (PR 4)
+
+fn setup_common_plugins(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    if cfg!(debug_assertions) {
+        app.handle().plugin(
+            tauri_plugin_log::Builder::default()
+                .level(log::LevelFilter::Info)
+                .build(),
+        )?;
+    }
+
+    app.handle().plugin(tauri_plugin_dialog::init())?;
+    Ok(())
+}
+
+#[cfg(desktop)]
+fn focus_main_window(app_handle: &tauri::AppHandle) {
+    use tauri::Manager;
+
+    if let Some(window) = app_handle.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+#[cfg(desktop)]
+fn with_desktop_entry_plugins(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry> {
+    builder
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            focus_main_window(app);
+        }))
+        // DREAMFORGE_SLIM: deep-link plugin disabled (PR 4 物理删除 tauri-plugin-deep-link 依赖)
+}
+
+// DREAMFORGE_SLIM: setup_deep_link_runtime_registration 物理删除 (PR 4)
+
+#[cfg(desktop)]
+fn setup_desktop_plugins(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    setup_macos_webview_shortcut_prevention(app)?;
+    // DREAMFORGE_SLIM: 2 个 plugin 物理删除 (PR 4)
+    //   - setup_deep_link_runtime_registration (deep link 全禁)
+    //   - tauri_plugin_updater (v0.1 不发布，不接更新)
+    app.handle().plugin(tauri_plugin_process::init())?;
+    app.handle().plugin(tauri_plugin_opener::init())?;
+    if should_use_native_desktop_menu(std::env::consts::OS) {
+        menu::setup_menu(app)?;
+    }
+    setup_custom_window_chrome(app)?;
+    window_state::restore_main_window_state(app);
+    show_debug_main_window(app);
+    Ok(())
+}
+
+#[cfg(debug_assertions)]
+fn show_debug_main_window(app: &mut tauri::App) {
+    use tauri::Manager;
+
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.center();
+        let _ = window.set_focus();
+    }
+}
+
+#[cfg(not(debug_assertions))]
+fn show_debug_main_window(_app: &mut tauri::App) {}
+
+fn should_use_native_desktop_menu(target_os: &str) -> bool {
+    target_os == "macos"
+}
+
+#[cfg(all(desktop, any(target_os = "linux", target_os = "windows")))]
+fn setup_custom_window_chrome(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    use tauri::Manager;
+
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_decorations(false);
+    }
+    Ok(())
+}
+
+#[cfg(not(all(desktop, any(target_os = "linux", target_os = "windows"))))]
+fn setup_custom_window_chrome(_app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
+}
+
+#[cfg(any(test, all(desktop, target_os = "macos")))]
+const MACOS_WEBVIEW_RESERVED_COMMAND_KEYS: &[&str] = &["O", "F"];
+#[cfg(any(test, all(desktop, target_os = "macos")))]
+const MACOS_WEBVIEW_RESERVED_COMMAND_SHIFT_KEYS: &[&str] = &["L"];
+
+#[cfg(all(desktop, target_os = "macos"))]
+fn setup_macos_webview_shortcut_prevention(
+    app: &mut tauri::App,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use tauri_plugin_prevent_default::ModifierKey::{MetaKey, ShiftKey};
+    use tauri_plugin_prevent_default::{Flags, KeyboardShortcut};
+
+    let mut builder = tauri_plugin_prevent_default::Builder::new().with_flags(Flags::empty());
+
+    // WKWebView can swallow some browser-reserved chords before our shared
+    // renderer shortcut handler sees them. Keep this list narrow and verify
+    // every addition with native QA.
+    for key in MACOS_WEBVIEW_RESERVED_COMMAND_KEYS {
+        builder = builder.shortcut(KeyboardShortcut::with_modifiers(key, &[MetaKey]));
+    }
+    for key in MACOS_WEBVIEW_RESERVED_COMMAND_SHIFT_KEYS {
+        builder = builder.shortcut(KeyboardShortcut::with_modifiers(key, &[MetaKey, ShiftKey]));
+    }
+
+    app.handle().plugin(builder.build())?;
+    Ok(())
+}
+
+#[cfg(not(all(desktop, target_os = "macos")))]
+fn setup_macos_webview_shortcut_prevention(
+    _app: &mut tauri::App,
+) -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
+}
+
+fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    setup_common_plugins(app)?;
+
+    #[cfg(desktop)]
+    setup_desktop_plugins(app)?;
+
+    // DREAMFORGE_SLIM: telemetry::init_sentry_from_settings 调用物理删除 (PR 4, telemetry.rs Sentry 全 no-op)
+
+    #[cfg(desktop)]
+    {
+        spawn_startup_tasks();
+        // DREAMFORGE_SLIM: spawn_initial_ws_bridge_sync 调用物理删除 (PR 4, mcp ws-bridge 全禁)
+    }
+
+    Ok(())
+}
+
+#[cfg(desktop)]
+fn vault_asset_scope_roots(vault_path: &Path) -> Result<Vec<PathBuf>, String> {
+    let canonical_vault_path = std::fs::canonicalize(vault_path).map_err(|e| {
+        format!(
+            "Failed to resolve asset scope for {}: {e}",
+            vault_path.display()
+        )
+    })?;
+    let mut roots = vec![canonical_vault_path.clone()];
+    let requested_vault_path = vault_path.to_path_buf();
+    if requested_vault_path != canonical_vault_path {
+        roots.push(requested_vault_path);
+    }
+    Ok(roots)
+}
+
+#[cfg(desktop)]
+fn missing_asset_scope_roots(
+    allowed_roots: &[PathBuf],
+    requested_roots: &[PathBuf],
+) -> Vec<PathBuf> {
+    requested_roots
+        .iter()
+        .filter(|root| !allowed_roots.contains(root))
+        .cloned()
+        .collect()
+}
+
+#[cfg(desktop)]
+pub(crate) fn sync_vault_asset_scope(
+    app_handle: &tauri::AppHandle,
+    vault_path: &Path,
+) -> Result<(), String> {
+    use tauri::Manager;
+
+    let requested_roots = vault_asset_scope_roots(vault_path)?;
+    let scope = app_handle.asset_protocol_scope();
+    let state: tauri::State<'_, AllowedAssetScopeRoots> = app_handle.state();
+    let mut allowed_roots = state
+        .0
+        .lock()
+        .map_err(|_| "Failed to lock asset scope state".to_string())?;
+    let roots_to_allow = missing_asset_scope_roots(&allowed_roots, &requested_roots);
+
+    for root in &roots_to_allow {
+        scope
+            .allow_directory(root, true)
+            .map_err(|e| format!("Failed to allow asset access for {}: {e}", root.display()))?;
+    }
+
+    allowed_roots.extend(roots_to_allow);
+    Ok(())
+}
+
+macro_rules! app_invoke_handler {
+    () => {
+        tauri::generate_handler![
+            commands::list_vault,
+            commands::list_vault_folders,
+            commands::get_note_content,
+            commands::validate_note_content,
+            commands::create_note_content,
+            commands::save_note_content,
+            commands::update_frontmatter,
+            commands::delete_frontmatter_property,
+            commands::rename_note,
+            commands::rename_note_filename,
+            commands::move_note_to_folder,
+            commands::move_note_to_workspace,
+            commands::auto_rename_untitled,
+            commands::detect_renames,
+            commands::update_wikilinks_for_renames,
+            commands::get_file_history,
+            commands::get_modified_files,
+            commands::get_file_diff,
+            commands::get_file_diff_at_commit,
+            commands::get_vault_pulse,
+            commands::git_commit,
+            commands::git_author_identity,
+            commands::get_build_number,
+            commands::get_last_commit_info,
+            commands::git_pull,
+            commands::git_push,
+            commands::git_remote_status,
+            commands::git_file_url,
+            commands::git_add_remote,
+            commands::get_conflict_files,
+            commands::get_conflict_mode,
+            commands::git_resolve_conflict,
+            commands::git_commit_conflict_resolution,
+            commands::git_discard_file,
+            commands::is_git_repo,
+            commands::init_git_repo,
+            commands::reload_vault,
+            commands::reload_vault_entry,
+            commands::sync_vault_asset_scope_for_window,
+            commands::open_vault_file_external,
+            commands::sync_note_title,
+            commands::save_image,
+            commands::copy_image_to_vault,
+            commands::delete_note,
+            commands::batch_delete_notes,
+            commands::batch_delete_notes_async,
+            commands::migrate_is_a_to_type,
+            commands::create_vault_folder,
+            commands::rename_vault_folder,
+            commands::delete_vault_folder,
+            commands::batch_archive_notes,
+            commands::get_settings,
+            commands::update_menu_state,
+            commands::update_app_icon,
+            commands::trigger_menu_command,
+            commands::update_current_window_min_size,
+            commands::perform_current_window_titlebar_double_click,
+            commands::save_settings,
+            commands::load_vault_list,
+            commands::save_vault_list,
+            // DREAMFORGE_SLIM: git clone 远程 vault 禁用 (v0.1 只本地)
+            // commands::git_clone::clone_git_repo,
+            commands::search_vault,
+            commands::create_empty_vault,
+            // DREAMFORGE_SLIM: clone getting-started vault 禁用
+            // commands::create_getting_started_vault,
+            commands::check_vault_exists,
+            commands::get_default_vault_path,
+            commands::copy_text_to_clipboard,
+            commands::read_text_from_clipboard,
+            commands::get_process_memory_snapshot,
+            commands::repair_vault,
+            commands::should_use_external_media_preview,
+            commands::print_current_webview,
+            // DREAMFORGE_SLIM: PDF export 禁用
+            // commands::can_export_current_webview_pdf,
+            // commands::export_current_webview_pdf,
+            commands::list_views,
+            commands::save_view_cmd,
+            commands::delete_view_cmd,
+            vault_watcher::start_vault_watcher,
+            vault_watcher::stop_vault_watcher,
+            commands::dreamvault_status,
+            commands::dreamvault_run,
+            commands::dreamvault_report
+        ]
+    };
+}
+
+fn with_invoke_handler(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry> {
+    builder.invoke_handler(app_invoke_handler!())
+}
+
+#[cfg(desktop)]
+fn handle_run_event(app_handle: &tauri::AppHandle, event: &tauri::RunEvent) {
+    // DREAMFORGE_SLIM: tauri::Manager import 物理删除 (PR 7, WsBridgeChild 引用已删)
+    // DREAMFORGE_SLIM: WsBridgeChild 引用 + stop_ws_bridge_child 调用物理删除 (PR 4)
+    window_state::handle_run_event(app_handle, event);
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    #[cfg(all(desktop, target_os = "linux"))]
+    linux_appimage::apply_startup_env_overrides();
+
+    let builder = tauri::Builder::default();
+
+    #[cfg(desktop)]
+    let builder = with_desktop_entry_plugins(builder);
+
+    #[cfg(desktop)]
+    let builder = builder
+        // DREAMFORGE_SLIM: WsBridgeChild manage 物理删除 (PR 4)
+        .manage(AllowedAssetScopeRoots(Mutex::new(Vec::new())))
+        .manage(window_state::MainWindowFrameState::default())
+        .manage(vault_watcher::VaultWatcherState::new());
+
+    with_invoke_handler(builder)
+        .setup(setup_app)
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            #[cfg(desktop)]
+            handle_run_event(app_handle, &event);
+        });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_use_native_desktop_menu;
+    use super::MACOS_WEBVIEW_RESERVED_COMMAND_KEYS;
+    use super::MACOS_WEBVIEW_RESERVED_COMMAND_SHIFT_KEYS;
+
+    #[cfg(desktop)]
+    use super::spawn_startup_tasks_for_vault_with;
+    #[cfg(desktop)]
+    use std::path::PathBuf;
+
+    #[cfg(all(desktop, unix))]
+    use super::vault_asset_scope_roots;
+
+    #[test]
+    fn macos_webview_shortcut_prevention_includes_ai_panel_shortcut() {
+        assert_eq!(MACOS_WEBVIEW_RESERVED_COMMAND_KEYS, ["O", "F"]);
+        assert_eq!(MACOS_WEBVIEW_RESERVED_COMMAND_SHIFT_KEYS, ["L"]);
+    }
+
+    // DREAMFORGE_SLIM: 4 个 mcp 桥 test 物理删除 (PR 4)
+    //   selected_mcp_bridge_vault_paths_puts_persisted_active_vault_first
+    //   selected_mcp_bridge_vault_paths_ignores_blank_active_vault
+    //   validate_mcp_bridge_vault_path_requires_existing_directory
+    //   missing_asset_scope_roots_keeps_previously_allowed_vaults
+
+    #[cfg(desktop)]
+    #[test]
+    fn startup_tasks_skip_missing_legacy_vault() {
+        let missing_vault = tempfile::tempdir().unwrap().path().join("missing");
+        let called = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let called_from_task = called.clone();
+
+        let spawned = spawn_startup_tasks_for_vault_with(missing_vault, move |_| {
+            called_from_task.store(true, std::sync::atomic::Ordering::SeqCst);
+        });
+
+        assert!(!spawned);
+        assert!(!called.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
+    #[cfg(desktop)]
+    #[test]
+    fn startup_tasks_run_in_background() {
+        let dir = tempfile::tempdir().unwrap();
+        let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+        let (release_tx, release_rx) = std::sync::mpsc::channel();
+
+        let spawned = spawn_startup_tasks_for_vault_with(dir.path().to_path_buf(), move |_| {
+            entered_tx.send(()).unwrap();
+            release_rx
+                .recv_timeout(std::time::Duration::from_secs(1))
+                .unwrap();
+        });
+
+        assert!(spawned);
+        entered_rx
+            .recv_timeout(std::time::Duration::from_secs(1))
+            .unwrap();
+        release_tx.send(()).unwrap();
+    }
+
+    #[cfg(all(desktop, unix))]
+    #[test]
+    fn vault_asset_scope_roots_include_requested_symlink_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let canonical_vault = dir.path().join("Getting Started");
+        let symlinked_vault = dir.path().join("Symlinked Getting Started");
+        std::fs::create_dir(&canonical_vault).unwrap();
+        std::os::unix::fs::symlink(&canonical_vault, &symlinked_vault).unwrap();
+
+        let roots = vault_asset_scope_roots(&symlinked_vault).unwrap();
+
+        assert_eq!(roots[0], canonical_vault.canonicalize().unwrap());
+        assert!(roots.contains(&symlinked_vault));
+    }
+
+    #[test]
+    fn native_desktop_menu_is_macos_only() {
+        assert!(should_use_native_desktop_menu("macos"));
+        assert!(!should_use_native_desktop_menu("windows"));
+        assert!(!should_use_native_desktop_menu("linux"));
+    }
+}
