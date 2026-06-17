@@ -157,9 +157,14 @@ const DEFAULT_MOCK_VAULT = {
 let mockLastVaultPath: string | null = DEFAULT_MOCK_VAULT_PATH
 const mockRemoteStateByVault = new Map<string, boolean>([[DEFAULT_MOCK_VAULT_PATH, true]])
 
-let mockVaultList: { vaults: Array<{ label: string; path: string }>; active_vault: string | null } = {
+let mockVaultList: {
+  vaults: Array<{ label: string; path: string }>
+  active_vault: string | null
+  hidden_defaults: string[]
+} = {
   vaults: [DEFAULT_MOCK_VAULT],
   active_vault: DEFAULT_MOCK_VAULT_PATH,
+  hidden_defaults: [],
 }
 
 let mockVaultAiGuidanceStatus = {
