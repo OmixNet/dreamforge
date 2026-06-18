@@ -814,5 +814,6 @@
   "locale.beLatn": "Biélorusse (Latin)",
   "locale.idID": "Indonésien",
   "locale.ukUA": "Ukrainien",
-  "locale.svSE": "Suédois"
+  "locale.svSE": "Suédois",
+  "settings.privacy.slimNote": "Le mode Slim désactive toute la télémétrie — aucune donnée d'utilisation n'est envoyée depuis cette version."
 }

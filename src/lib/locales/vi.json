@@ -814,5 +814,6 @@
   "locale.beLatn": "Tiếng Belarus (Latinh)",
   "locale.idID": "Tiếng Indonesia",
   "locale.ukUA": "Tiếng Ukraina",
-  "locale.svSE": "Tiếng Thụy Điển"
+  "locale.svSE": "Tiếng Thụy Điển",
+  "settings.privacy.slimNote": "Chế độ Slim tắt tất cả telemetry — không có dữ liệu sử dụng nào được gửi từ bản dựng này."
 }

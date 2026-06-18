@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import {
   APP_LOCALES,
   EN_TRANSLATIONS,
@@ -78,6 +80,27 @@ describe('i18n', () => {
       expect(translate('zh-CN', key)).not.toContain('访达')
       expect(translate('zh-TW', key)).toBe('在檔案管理器中顯示')
       expect(translate('zh-TW', key)).not.toContain('訪達')
+    }
+  })
+
+  it('keeps every locale’s key set in lockstep with English (v0.3.1 i18n guard)', () => {
+    // Each locale file must have the exact same set of translation keys as
+    // en.json — the source of truth. A new key in en.json without matching
+    // translations falls back to the English template, which is fine for
+    // graceful degradation but a CI signal that translations are lagging.
+    // This test catches silent drift across the 20 locale files.
+    const enKeys = new Set(Object.keys(EN_TRANSLATIONS))
+    const localesDir = join(__dirname, 'locales')
+    const knownFiles = new Set(readdirSync(localesDir))
+    for (const locale of localeCatalogLocales()) {
+      expect(knownFiles.has(`${locale}.json`), `locale file missing for ${locale}`).toBe(true)
+      const raw = readFileSync(join(localesDir, `${locale}.json`), 'utf-8')
+      const data = JSON.parse(raw) as Record<string, string>
+      const localeKeys = new Set(Object.keys(data))
+      const missing = [...enKeys].filter((k) => !localeKeys.has(k))
+      const extra = [...localeKeys].filter((k) => !enKeys.has(k))
+      expect(missing, `locale ${locale} missing keys: ${missing.join(', ')}`).toEqual([])
+      expect(extra, `locale ${locale} has extra keys: ${extra.join(', ')}`).toEqual([])
     }
   })
 })

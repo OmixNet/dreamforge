@@ -814,5 +814,6 @@
   "locale.beLatn": "Bielaruskaja (Łacinka)",
   "locale.idID": "Indonesian",
   "locale.ukUA": "Ukrainskaja",
-  "locale.svSE": "Šviedskaja"
+  "locale.svSE": "Šviedskaja",
+  "settings.privacy.slimNote": "Režym Slim adkliučaje ŭsie telemeteryi — z hetaj zborі ne adpraŭljajucca danyja ab vykarystanni."
 }

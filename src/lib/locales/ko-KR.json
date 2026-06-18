@@ -814,5 +814,6 @@
   "locale.beLatn": "벨라루스어 (라틴 문자)",
   "locale.idID": "인도네시아 공화국",
   "locale.ukUA": "우크라이나어",
-  "locale.svSE": "스웨덴어"
+  "locale.svSE": "스웨덴어",
+  "settings.privacy.slimNote": "Slim 모드에서는 모든 원격 분석이 비활성화됩니다 — 이 빌드에서는 사용 데이터가 전송되지 않습니다."
 }

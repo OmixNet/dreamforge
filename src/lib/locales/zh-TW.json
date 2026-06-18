@@ -316,6 +316,7 @@
   "settings.privacy.crashReportingDescription": "傳送匿名錯誤報告",
   "settings.privacy.analytics": "使用分析",
   "settings.privacy.analyticsDescription": "分享匿名使用模式",
+  "settings.privacy.slimNote": "Slim 模式停用所有遙測 — 此版本不會傳送任何使用資料。",
   "settings.footerShortcut": "⌘, 開啟設定",
   "settings.cancel": "取消",
   "settings.save": "儲存",

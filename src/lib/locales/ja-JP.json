@@ -814,5 +814,6 @@
   "locale.beLatn": "ベラルーシ語（ラテン文字）",
   "locale.idID": "インドネシア語",
   "locale.ukUA": "ウクライナ語",
-  "locale.svSE": "スウェーデン語"
+  "locale.svSE": "スウェーデン語",
+  "settings.privacy.slimNote": "Slim モードではすべてのテレメトリが無効になります — このビルドから使用データが送信されることはありません。"
 }
