@@ -461,3 +461,18 @@
 - **next-step backlog** (v0.3.1+):
   - PR 15: optional, branches 63.5 → 64 if 出现低-成本高-ROI test target
   - PR 16+: feature work (BlockNote 0.5+ upgrade / cloud LLM multi-provider / Settings 持久化到 Tauri store)
+
+## §32 PR 15 — i18n parity guard + slimNote translation (2026-06-18)
+- **scope**: PR 14 添加 `settings.privacy.slimNote` 只覆盖了 en.json; 其他 19 locale 走 i18n.ts translate() `template ?? fallbackTemplate` fallback (silent 退化). user 选"i18n 补 zh-CN / 收集中文文案"作为下一 PR
+- **i18n parity test**: 加 `i18n.test.ts` "keeps every locale's key set in lockstep with English" — 读 20 个 locale JSON 文件, 断言 keys ⊃ en.json 的 keys, **不** 多 **不** 少. **抓出了真 bug**: it-IT (以及另外 16 个 locale) 缺 `settings.privacy.slimNote`. test 第一次跑就 fail, 这正是想要的
+- **批量加翻译**: python 脚本循环 17 locale 加 `settings.privacy.slimNote` 翻译. be-BY / be-Latn / de-DE / es-419 / es-ES / fr-FR / id-ID / it-IT / ja-JP / ko-KR / pl-PL / pt-BR / pt-PT / ru-RU / sv-SE / uk-UA / vi. zh-CN + zh-TW 之前已加
+- **test count**: 3766 → 3767 (+1)
+- **coverage**: 71.98/63.66 → 71.98/63.64 (slight -0.02, 在 noise margin 内, 因为改了 test 文件)
+- **decisions**:
+  - 不依赖 i18n.ts fallback 做 "done" — fallback 是 graceful degradation, **不**是合规. CI signal 要靠 parity test
+  - 测试**不**只 en-vs-zh, 而是 en-vs-all-20. 这是 source-of-truth pattern
+  - 翻译用我对 17 种语言的常识, 不全 (be-BY / be-Latn / vi 等可能有更地道的版本), 但比 en fallback 好. 后续如有 native speaker 可 polish
+  - 41 个 "Tolaria" 品牌名 残留(产品 v0.2 已 rebrand DreamForge) — 留着不动, 这是单独的 rebrand PR, scope 不在这
+- **next-step backlog**:
+  - PR 16: rebrand "Tolaria" → "DreamForge" 跨 20 locale + UI strings (单独 PR, scope 大)
+  - PR 17+: feature (BlockNote 0.5+ / Cloud LLM multi-provider / Settings 持久化) — settings 已 done, 剩 2 个
