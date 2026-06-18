@@ -436,3 +436,28 @@
   - PR 15: optional 64 → 65
   - PR 16+: feature work (BlockNote 0.5+ upgrade, cloud LLM multi-provider, real git remote for dreamforge confirmed)
   - GUI verify round (user-driven): macOS TCC blocks Mavis; user opens .app from `src-tauri/target/release/bundle/macos/DreamForge.app` and confirms Settings → Vaults + multi-vault switcher
+
+## §31 PR 14 — Settings text cleanup + AI residue gating (2026-06-18)
+- **v0.3.0 GUI verify**: user 跑过 .app (Settings → Vaults / VaultDropdown 切换 / 5-entry sidebar 全绿), 标 pass
+- **PR 14 scope**: PR 13 coverage ramp 收官后, user 优先做"Settings 文案/AI 残留清理" — 隐藏 slim mode 仍 leak 的 Tolaria UI
+- **隐藏的 UI 元素** (slim mode 下):
+  1. `SettingsBodyNav` 的 AI Agents nav item
+  2. `SettingsPanel.SettingsAgentWorkflowSections` 的整个 AI SettingsSection
+  3. `SettingsPanel.SyncAndUpdatesSection` 的 Release Channel row (Tolaria updater feature)
+  4. `PrivacySettingsSection` 的 crash-reporting + analytics toggles, 替换为单条 "Slim mode disables all telemetry" note
+- **defensive guard**: `AiAgentSettingsSection` 顶部 `if (DREAMFORGE_SLIM_MODE) return null` — 防止未来 inline-mount caller 绕过 SettingsAgentWorkflowSections 的 gate
+- **i18n**: `settings.privacy.slimNote` 加到 en.json (line 318 之后), 其他 19 locale 走 i18n.ts translate() fallback 链 (line 276 `template ?? fallbackTemplate`) — 不需要 20 locale 都加
+- **test 调整**:
+  - `SettingsPanel.test.tsx` 加 `vi.mock('../lib/dreamforgeMode', ...)` 让 DREAMFORGE_SLIM_MODE = false, 让既有的 AI / release channel / privacy 11 个测试继续测 non-slim 渲染
+  - 新加 `SettingsBodyNav.test.tsx` (3 tests) + `PrivacySettingsSection.test.tsx` (3 tests) 测 slim mode 隐藏行为
+- **test count**: 3760 → 3766 (+6)
+- **build 验证**: tauri build OK (26.98s); .app 在 `src-tauri/target/release/bundle/macos/DreamForge.app`; 用户 mark GUI verify pass 后可以装新版本
+- **push 状态**: `1d35958 feat: PR 14 — Settings text cleanup + AI residue gating` push 成功 (初次 port 443 closed by 198.18.0.25 NAT hang, sleep 15 retry 成功)
+- **decisions**:
+  - 隐藏而非删除 — Phase 4 flip DREAMFORGE_SLIM_MODE = false 时能自动恢复全部 UI
+  - en.json 加 1 key, 其他 locale 走 fallback — 避免 20 file diff
+  - 既有的 SettingsPanel.test.tsx 11 个测试改 mock DREAMFORGE_SLIM_MODE = false, 不删不改 — 测试是 non-slim 渲染的 source of truth
+  - `if (DREAMFORGE_SLIM_MODE) return null` 在 AiAgentSettingsSection 顶部 — belt-and-suspenders, 防止未来 caller
+- **next-step backlog** (v0.3.1+):
+  - PR 15: optional, branches 63.5 → 64 if 出现低-成本高-ROI test target
+  - PR 16+: feature work (BlockNote 0.5+ upgrade / cloud LLM multi-provider / Settings 持久化到 Tauri store)
