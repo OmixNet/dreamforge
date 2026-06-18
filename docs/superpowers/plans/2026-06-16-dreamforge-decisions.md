@@ -654,3 +654,33 @@
 ### next-step backlog
 - **PR 19**: visual mark swap (DreamForge logo + 替换 .app icon + in-app icon) — **需 user 提供 logo design**
 - **PR 20+**: BlockNote 0.5+ / Cloud LLM multi-provider
+
+## §36 PR 19 — visual mark swap (DreamForge mark full replace) (2026-06-19)
+- **scope**: §33 backlog PR 19. user 提供 SVG `~/Downloads/dream_cycle_markdown_x_macos_icon.svg` (1024×1024) 替换 Luca 原 Tolaria 水珠 mark
+- **设计描述**: macOS-style rounded square + dark glass background + peach→lavender gradient 'X' + crescent moon + 2 stars + orbital line with sphere + bar chart. "dream cycle / markdown X macOS" theme
+- **生成 pipeline** (macOS-only project):
+  - SVG → PNG via `sips` + CoreSVG (无 cairosvg / rsvg-convert / magick dep)
+  - iconset → icns via `iconutil` (需 `.iconset` 后缀,否则 invalid)
+  - PNG → ico via PIL + multi-resolution `append_images`
+- **scope coverage**:
+  - `src-tauri/icons/` 20 PNG file: 32/64/128/128@2x/256/512/512-dark + icon.png master + Square* (Windows Store 8 个) + StoreLogo. 每个 PNG 按现有 dimension 重生成 (no add/remove file,只换 content)
+  - `src-tauri/icons/icon.icns`: 10-size iconset (16/32/64/128/256/512/1024 + @2x variants) → iconutil
+  - `src-tauri/icons/icon.ico`: PIL 多分辨率 (16/32/48/64/128/256)
+  - `src-tauri/icons/android/` 15 PNG: ic_launcher + ic_launcher_round + ic_launcher_foreground × 5 mipmap density. 虽然 Android 不在 v0.1 scope,顺手都换了 — 未来 mobile support 时 assets 已一致
+  - `src/assets/dreamforge-icon.svg`: content 换新 SVG (WelcomeScreen hero icon, PR 16 import 路径不变)
+  - `public/favicon.svg`: 替换 🌳 emoji placeholder (index.html `<link rel='icon' type='image/svg+xml' href='/favicon.svg'>` 引用)
+  - `AGENTS.md`: icons/ 注释更新到 20 PNG + icns + ico,标注 user SVG 来源
+- **保留**:
+  - `icons-tolaria-backup/` (Luca 原水珠,AGENTS.md convention "historical attribution preserved")
+  - `THIRD_PARTY_NOTICES.md` (Luca © line)
+  - AGENTS.md / README.md (derivative work 声明)
+- **build verify**:
+  - tsc 0 / eslint 0 / vitest 3788/3788 / cargo 718/718
+  - tauri build OK (DreamForge.app 重新生成)
+  - 从 .app `Contents/Resources/icon.icns` extract PNG preview verify 新 mark 正确渲染
+  - coverage 72.18/63.85/73.53/74.69 (不变,no source code touched)
+  - dream-cli-verify 13/0/0
+- **commit**: `e210a6b` (38 files, 313+/11-, 全 icon binary + AGENTS.md + dreamforge-icon.svg + favicon.svg)
+- **next-step backlog**:
+  - **PR 20+**: BlockNote 0.5+ upgrade (risky) / Cloud LLM multi-provider (Anthropic + Gemini + OpenRouter,需 DreamVault Swift 改) / Settings UX polish
+  - v0.4.0 ship candidate: PR 16/17/18/19 累计 + coverage 72/63.85 (gate 70/63.5 pass) — 可能是 tag v0.4.0 的好时机
