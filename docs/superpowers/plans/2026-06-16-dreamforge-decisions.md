@@ -510,3 +510,72 @@
   - **PR 19**: visual mark swap (DreamForge logo design + 替换 .app icon + in-app icon)
   - **PR 20+**: BlockNote 0.46.2 → 0.5+ (risky) / Cloud LLM multi-provider (Anthropic + Gemini + OpenRouter — 需 DreamVault Swift 改)
 
+
+## §34 PR 17 — Settings export/import with envelope format (2026-06-18)
+- **scope**: §32 backlog PR 17. Settings 持久化已 done (PR 10 §30), 加 export/import 让 user 能跨机器迁移 / 备份
+- **envelope design**:
+  ```json
+  {
+    "version": 1,
+    "kind": "dreamforge-settings",
+    "exported_at": "2026-06-18T21:47:37Z",
+    "app_version": "0.3.0",
+    "settings": { ...17 fields... }
+  }
+  ```
+  - `kind` discriminator → 拒绝 non-dreamforge JSON
+  - `version` 字段 → forward-compatible, 0 拒绝, future version 拒绝
+  - `exported_at` → ISO 8601 UTC (self-rolled, **不**引 chrono/time dep)
+  - `app_version` → 来自 `env!("CARGO_PKG_VERSION")`
+- **纯函数 + 薄 wrapper pattern** (testable without tauri runtime):
+  - `build_settings_export_json(settings, app_version, exported_at) -> Result<String, String>` — pure
+  - `parse_settings_import_json(content: &str) -> Result<Settings, String>` — pure, 4 验证路径
+  - `export_settings_to(path)` tauri command — wraps build + writes file
+  - `import_settings_from(path)` tauri command — wraps parse + save_settings + returns current
+- **测试 7 个 Rust**:
+  - `export_envelope_round_trips_through_import` — build + parse
+  - `export_envelope_includes_metadata` — version/kind/app_version/exported_at 都有
+  - `import_rejects_wrong_kind` — kind discriminator
+  - `import_rejects_unsupported_version` — 99
+  - `import_rejects_zero_version` — 0
+  - `import_rejects_malformed_json` — "not json at all"
+  - `import_rejects_envelope_without_settings_field` — 缺 settings
+  - `days_to_ymd_known_dates` — Howard Hinnant 算法
+- **frontend 5 个 TS test**:
+  - renders title + 2 buttons
+  - export: dialog → invoke → success message
+  - import: dialog → invoke → reload callback + success
+  - import: dialog → invoke → error inline
+  - cancel: dialog returns null → skip invoke
+- **i18n**:
+  - 12 新 keys: `settings.data.{title, description, exportButton, exportDescription, importButton, importDescription, exporting, importing, exportSuccess, importSuccess, exportError, importError}`
+  - en.json + 19 locale (20 总). i18n.test.ts parity test 抓 drift
+- **UI placement**:
+  - 新 `settings.data` section in SettingsBodyNav (Database icon)
+  - 永远 visible (slim mode 不 gate, user data backup 不是 AI residue)
+  - 行为: 点击 export → tauri save dialog → 默认 filename `dreamforge-settings-{YYYY-MM-DD}.json`. 取消 = 静默 idle
+  - 点击 import → tauri open dialog (JSON filter) → 验证 envelope → apply → 调用 `onSettingsReloaded` callback (App.tsx 传 `loadSettings` hook) → success message with path
+- **status state machine**:
+  - `{kind: 'idle'}` → initial
+  - `{kind: 'busy', which: 'export' | 'import'}` → button 禁用
+  - `{kind: 'success', which, message}` → inline `<p>` with path
+  - `{kind: 'error', which, message}` → inline `<p class="text-destructive">`
+  - Cancel 返回 idle (不显示)
+- **decisions**:
+  - **envelope 必加 kind discriminator** (防止 user 误传其他 JSON 文件)
+  - **envelope 必加 version** (前向兼容, 0 reject 是因为 Settings::default() 的 None 值会被误传)
+  - **不用 chrono/time crate** — 自写 ISO 8601 + Howard Hinnant 算法 (~20 行), Cargo dep 清单不污染
+  - **dialog plugin 动态 import** (跟 `notePdfExport.ts` 同样的 pattern), 不影响首屏 bundle size
+  - **onSettingsReloaded callback pattern** (而非全局 store) — SettingsPanel 通过 3 层 wrapper (SettingsPanel → SettingsPanelInner → SettingsBodyFromDraft → SettingsBody) 向下传, SettingsDataSections 用 `Pick<SettingsBodyProps, 't' | 'onSettingsReloaded'>` 局部 destructure. 跟 PR 11.5 vault addVault callback 模式一致
+  - **replace not merge** import 行为 — 简单, user 想 partial merge 自己 edit JSON
+  - **always visible in slim mode** — user data backup, 不属于 PR 6/PR 14 删的 AI residue
+- **build status**:
+  - tsc 0 / vitest 3772/3772 (+5 TS) / eslint 0 / vite 7.13s / cargo 718/718 (+8 Rust, 7 PR 17 + 1 day)
+  - tauri build OK
+  - coverage 72.00/63.67/73.32/74.49 (gate 70/63.5/70/60, +0.02/+0.03)
+  - dream-cli-verify 13/0/0
+- **commit**: `2499c2c` (30 files, 884+/24-, 2 新 file: DataSettingsSection.tsx + .test.tsx)
+- **next-step backlog**:
+  - **PR 18**: `tolaria_` identifier migration (localStorage key + file token + URL param) 配 data migration script — 修 §33 deferred list
+  - **PR 19**: visual mark swap (DreamForge logo design + 替换 .app icon + in-app icon) — 需 user 提供 logo design
+  - **PR 20+**: BlockNote 0.5+ (risky) / Cloud LLM multi-provider (Anthropic + Gemini + OpenRouter — 需 DreamVault Swift 改)
