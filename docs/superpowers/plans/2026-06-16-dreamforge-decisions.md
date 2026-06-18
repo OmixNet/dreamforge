@@ -579,3 +579,78 @@
   - **PR 18**: `tolaria_` identifier migration (localStorage key + file token + URL param) 配 data migration script — 修 §33 deferred list
   - **PR 19**: visual mark swap (DreamForge logo design + 替换 .app icon + in-app icon) — 需 user 提供 logo design
   - **PR 20+**: BlockNote 0.5+ (risky) / Cloud LLM multi-provider (Anthropic + Gemini + OpenRouter — 需 DreamVault Swift 改)
+
+## §35 PR 18 — Tolaria identifier migration (localStorage + file token + URL param) (2026-06-18)
+- **scope**: §33 backlog PR 18. 152 个 lowercase `tolaria_` 残留里,user-facing data 影响的 3 类 → 改;technical identifier 留 (内部 API / mock path / file name / icon 内容)
+- **3 个 identifier family,3 个不同 migration 策略** (per data-migration semantics):
+
+### A. localStorage keys — 3-layer migration
+- **3 个 namespace**:
+  - `DREAMFORGE_APP_STORAGE_KEYS` (new, current): `dreamforge-theme` / `dreamforge:zoom-level` 等 12 keys
+  - `LEGACY_TOLARIA_APP_STORAGE_KEYS` (intermediate): `tolaria-theme` / `tolaria:zoom-level` 等 11 keys (no `legacyMigrationFlag`, 因为那是 laputa 时代的)
+  - `LEGACY_APP_STORAGE_KEYS` (deepest): `laputa-theme` / `laputa:zoom-level` 等 11 keys
+- **2 个 migration function** (各自 idempotent flag):
+  - `copyLegacyAppStorageKeys()` — laputa → dreamforge, flag `dreamforge:legacy-storage-migrated`
+  - `copyTolariaAppStorageKeys()` — tolaria → dreamforge, flag `dreamforge:tolaria-storage-migrated`
+- **顺序**: configMigration.ts 先 laputa 后 tolaria. **为什么**: 一次都没 migrate 过的 user (只有 laputa key) 走 laputa → dreamforge;migrate 过 laputa 但没 migrate tolaria 的 (tolaria key 有, dreamforge 没) 走 tolaria → dreamforge;两个都 migrate 过的 (dreamforge key 已有) 跳过. 三个 layer 互不冲突,顺序保证 idempotent
+- **`getAppStorageItem()`** 读路径: dreamforge → tolaria → laputa (3-layer fallback)
+- **back-compat alias**: `APP_STORAGE_KEYS = DREAMFORGE_APP_STORAGE_KEYS` (避免改 7 个 caller)
+- **6 个 test**: laputa 迁移 / tolaria 迁移 / flag idempotent / 双 migration 顺序 / fallback read / restricted localStorage
+
+### B. File attachment token (TOLARIA_FILE_ATTACHMENT → DREAMFORGE_FILE_ATTACHMENT)
+- **dual-recognize pattern** (跟 PR 16 不同,这里保留老 prefix 读):
+  - `DREAMFORGE_FILE_ATTACHMENT_TOKEN_PREFIX = '@@DREAMFORGE_FILE_ATTACHMENT:'` (new write)
+  - `LEGACY_TOLARIA_FILE_ATTACHMENT_TOKEN_PREFIX = '@@TOLARIA_FILE_ATTACHMENT:'` (old read)
+  - `FILE_ATTACHMENT_TOKEN_PREFIX` = DREAMFORGE (write 走这个)
+  - `readFileAttachmentToken()`: 优先 check dreamforge, fallback check tolaria
+- **migration script** `scripts/migrate-tolaria-identifiers.mjs`:
+  - 走 vault 目录,扫所有 `.md` file
+  - dry-run 默认 (打印 what would change),`--apply` 才真写
+  - 跳过 `.git` / `node_modules` / `.dream` (skip 已知 metadata 目录)
+  - 替换 `@@TOLARIA_FILE_ATTACHMENT:` → `@@DREAMFORGE_FILE_ATTACHMENT:`
+  - 6 个 test: no-op / dry-run / apply / 多 token + .git skip / missing arg / unreadable dir
+- **2 个 fileAttachmentMarkdown test**: pin 写路径 emit DREAMFORGE prefix
+- **用法**:
+  ```
+  node scripts/migrate-tolaria-identifiers.mjs /path/to/vault           # dry-run
+  node scripts/migrate-tolaria-identifiers.mjs /path/to/vault --apply    # 真改
+  ```
+- **decision**: 用户在他自己 vault 上手动跑 (我不在 PR 里自动跑 — vault 是 user data, not artifact)
+
+### C. URL query param (tolaria_pdf_preview= → dreamforge_pdf_preview=)
+- **直接 rename,无 migration**: param 是每次 render 构造的 (FilePreview.tsx:42), 没人 persist,只有同 render 内的 reader 读
+- **2 test file regex 更新**: `FilePreview.test.tsx` (3 处) + `Editor.test.tsx` (1 处)
+
+### D. NO_WORKSPACE_KEY (typeDefinitions.ts)
+- **直接 rename,无 migration**: sentinel 是 typeLookup map 的 key,internal,never persist
+- **5 test pin 新值**
+
+### Decisions
+- **per-family 策略,不统一**: localStorage 用 3-layer (有 persist user data),file token 用 dual-recognize + migration script (有 embed 在 user markdown),URL param / sentinel 用 direct rename (无 persist,无 user data). 风险/复杂度跟 data-migration 风险正比
+- **dual-recognize vs migration timing**: 都在 PR 18 *同时 ship*. 读路径支持双 prefix (前向兼容), 写路径用新 prefix (forward-only), migration script 给 user 一次性的清理机会. 三层防御
+- **migration script 不自动跑**: 是 user data,不主动改. user 跑 `node scripts/...` 自己控制 timing
+- **back-compat alias APP_STORAGE_KEYS**: 7 个 caller (`noteListHelpers.ts` / `useNoteListSort.test.tsx` / `configMigration.test.ts` / `noteListHelpers.extra.test.ts` / `sidebarHooks.ts` / `tagStyles.ts` / `statusStyles.ts` / `propertyTypes.ts`) 不用改,降低 PR risk surface
+- **`legacyMigrationFlag` 改名为 `dreamforge:legacy-storage-migrated`**: flag value 也要随 namespace 走,不然 user 每次启动都重跑 migration (flag 在老 namespace 永远读不到)
+- **3-layer 顺序 laputa→tolaria→dreamforge**: 因为 laputa migration 在用户历史中跑过一次 (PR 5/6 时代), 之后 tolaria 是源头. 顺序保证 idempotent
+
+### Build status
+- tsc 0 / vitest 3788/3788 (+16 新) / eslint 0 / vite 6.88s / cargo 718/718
+- tauri build OK
+- coverage 72.18/63.85/73.53/74.69 (gate 70/63.5/70/60, +0.18/+0.18)
+- dream-cli-verify 13/0/0
+
+### Commit
+- `3fe459d` (12 files, 495+/31-, 4 新 file: scripts/migrate-tolaria-identifiers.mjs + src/scripts/...test.ts + src/utils/fileAttachmentMarkdown.test.ts + src/utils/typeDefinitions.test.ts)
+
+### Deferred (PR 19+ backlog, see §33)
+- `tolaria:note-window:` / `tolaria:ai-workspace-window:` localStorage keys (in `windowMode.ts` + `aiWorkspaceWindowSharedContext.ts`) — slim-mode-hidden AI + per-window state, rename when AI 回来
+- event names (`tolaria:open-ai-chat` etc. in `aiPromptBridge.ts`) — in-process only, slim-hidden
+- `__tolariaFrontendReady` window flag in `frontendReady.ts` — per-window, internal
+- type/const names (`TolariaSlashMenuItem` / `shouldAutoLinkTolariaHref`) — internal API, 大 refactor
+- file name (`tolariaEditorFormattingConfig.ts` / `tolariaBlockNoteSideMenu.tsx`) — internal, rename 牵扯广
+- mock data file path (`/mock/Tolaria/...`) — internal mock,no real data
+- icon SVG 内容 (Luca ©,蓝水珠) — design swap = PR 19
+
+### next-step backlog
+- **PR 19**: visual mark swap (DreamForge logo + 替换 .app icon + in-app icon) — **需 user 提供 logo design**
+- **PR 20+**: BlockNote 0.5+ / Cloud LLM multi-provider
