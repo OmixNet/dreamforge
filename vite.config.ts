@@ -990,11 +990,19 @@ export default defineConfig({
         // v0.2 PR 11 coverage gate (per AGENTS.md §3). Lines / functions / statements at 70%
         // is achievable on slim v0.1 code; branches is harder (v8 branch coverage often misses
         // default-value ternaries / nullish coalescing / optional-chaining fallbacks).
-        // v0.2 baseline: 61.65% branches; ramp-up target is 70% by v0.3.
+        //
+        // v0.3 PR 12.x re-baseline: branches gate locked at the current real coverage
+        // (62.95% after PR 12.3) so we never regress below today's number. The previous
+        // 60% v0.2 baseline was below the actual measurement, which let dead-code branches
+        // silently drag the average down without tripping CI.
+        //
+        // Ramp plan (PR 13/14/15): 62.5 → 65 → 67.5 → 70. Each PR targets a ~2.5pp bump on
+        // real used code, not on Tolaria-residual files. If a PR can't hit its target, the
+        // next PR starts from wherever the previous one landed rather than chasing a number.
         lines: 70,
         functions: 70,
         statements: 70,
-        branches: 60, // v0.2 baseline; v0.3 target 70
+        branches: 62.5, // v0.3 PR 12.3 baseline = 62.95%; PR 13/14/15 target 65/67.5/70
       },
     },
   },
