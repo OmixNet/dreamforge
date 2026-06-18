@@ -815,5 +815,17 @@
   "locale.idID": "Indonesiska",
   "locale.ukUA": "Ukrainska",
   "locale.svSE": "Svenska",
-  "settings.privacy.slimNote": "Slim-läge inaktiverar all telemetri — inga användningsdata skickas från denna build."
+  "settings.privacy.slimNote": "Slim-läge inaktiverar all telemetri — inga användningsdata skickas från denna build.",
+  "settings.data.title": "Data",
+  "settings.data.description": "Säkerhetskopiera dina inställningar till en JSON-fil eller återställ dem på en annan maskin. Importerade inställningar ersätter alla aktuella värden — exportera först om du vill behålla en kopia.",
+  "settings.data.exportButton": "Exportera inställningar…",
+  "settings.data.exportDescription": "Spara aktuella inställningar i en JSON-fil på disk.",
+  "settings.data.importButton": "Importera inställningar…",
+  "settings.data.importDescription": "Ersätt alla inställningar med värden från en tidigare exporterad JSON-fil.",
+  "settings.data.exporting": "Exporterar…",
+  "settings.data.importing": "Importerar…",
+  "settings.data.exportSuccess": "Inställningar exporterade till",
+  "settings.data.importSuccess": "Inställningar importerade från",
+  "settings.data.exportError": "Kunde inte exportera inställningar:",
+  "settings.data.importError": "Kunde inte importera inställningar:"
 }

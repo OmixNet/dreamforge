@@ -815,5 +815,17 @@
   "locale.idID": "インドネシア語",
   "locale.ukUA": "ウクライナ語",
   "locale.svSE": "スウェーデン語",
-  "settings.privacy.slimNote": "Slim モードではすべてのテレメトリが無効になります — このビルドから使用データが送信されることはありません。"
+  "settings.privacy.slimNote": "Slim モードではすべてのテレメトリが無効になります — このビルドから使用データが送信されることはありません。",
+  "settings.data.title": "データ",
+  "settings.data.description": "設定を JSON ファイルにバックアップしたり、別のマシンで復元したりできます。インポートした設定は現在の値をすべて置き換えます — コピーを残したい場合は先にエクスポートしてください。",
+  "settings.data.exportButton": "設定をエクスポート…",
+  "settings.data.exportDescription": "現在の設定を JSON ファイルとしてディスクに保存します。",
+  "settings.data.importButton": "設定をインポート…",
+  "settings.data.importDescription": "以前エクスポートした JSON ファイルの値ですべての設定を置き換えます。",
+  "settings.data.exporting": "エクスポート中…",
+  "settings.data.importing": "インポート中…",
+  "settings.data.exportSuccess": "設定をエクスポートしました:",
+  "settings.data.importSuccess": "設定をインポートしました:",
+  "settings.data.exportError": "設定をエクスポートできませんでした:",
+  "settings.data.importError": "設定をインポートできませんでした:"
 }

@@ -289,6 +289,143 @@ pub fn save_settings(settings: Settings) -> Result<(), String> {
     crate::settings::save_settings(settings)
 }
 
+// PR 17: Settings export/import. Envelope format:
+//   { "version": 1, "kind": "dreamforge-settings",
+//     "exported_at": "2026-06-18T21:47:37Z", "app_version": "0.3.0",
+//     "settings": { ...17 fields... } }
+// The envelope is forward-compatible (version field for future migrations)
+// and rejects unrelated JSON files (kind discriminator).
+
+const SETTINGS_ENVELOPE_KIND: &str = "dreamforge-settings";
+const SETTINGS_ENVELOPE_VERSION: u32 = 1;
+
+#[derive(serde::Serialize)]
+struct SettingsExportEnvelope<'a> {
+    version: u32,
+    kind: &'a str,
+    exported_at: String,
+    app_version: &'a str,
+    settings: &'a Settings,
+}
+
+#[derive(serde::Deserialize)]
+struct SettingsImportEnvelope {
+    #[serde(default)]
+    version: Option<u32>,
+    #[serde(default)]
+    kind: Option<String>,
+    #[serde(default)]
+    settings: Option<Settings>,
+}
+
+fn envelope_error(message: impl Into<String>) -> String {
+    format!("Invalid settings file: {}", message.into())
+}
+
+fn build_settings_export_json(
+    settings: &Settings,
+    app_version: &str,
+    exported_at: String,
+) -> Result<String, String> {
+    let envelope = SettingsExportEnvelope {
+        version: SETTINGS_ENVELOPE_VERSION,
+        kind: SETTINGS_ENVELOPE_KIND,
+        exported_at,
+        app_version,
+        settings,
+    };
+    serde_json::to_string_pretty(&envelope)
+        .map_err(|e| format!("Failed to serialize settings envelope: {}", e))
+}
+
+fn parse_settings_import_json(content: &str) -> Result<Settings, String> {
+    let envelope: SettingsImportEnvelope = serde_json::from_str(content)
+        .map_err(|e| envelope_error(format!("could not parse JSON ({})", e)))?;
+    let kind = envelope.kind.as_deref().unwrap_or("");
+    if kind != SETTINGS_ENVELOPE_KIND {
+        return Err(envelope_error(format!(
+            "expected kind {:?} but found {:?}",
+            SETTINGS_ENVELOPE_KIND, kind
+        )));
+    }
+    let version = envelope.version.unwrap_or(0);
+    if version == 0 || version > SETTINGS_ENVELOPE_VERSION {
+        return Err(envelope_error(format!(
+            "unsupported envelope version {} (this build supports up to {})",
+            version, SETTINGS_ENVELOPE_VERSION
+        )));
+    }
+    envelope
+        .settings
+        .ok_or_else(|| envelope_error("missing 'settings' field"))
+}
+
+#[tauri::command]
+pub fn export_settings_to(path: String) -> Result<u64, String> {
+    let settings = crate::settings::get_settings()?;
+    let app_version = env!("CARGO_PKG_VERSION");
+    let json = build_settings_export_json(&settings, app_version, current_iso8601_utc())?;
+    let target = std::path::PathBuf::from(&path);
+    if let Some(parent) = target.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create export directory: {}", e))?;
+        }
+    }
+    std::fs::write(&target, &json)
+        .map_err(|e| format!("Failed to write settings export: {}", e))?;
+    Ok(json.len() as u64)
+}
+
+#[tauri::command]
+pub fn import_settings_from(path: String) -> Result<Settings, String> {
+    let source = std::path::PathBuf::from(&path);
+    let content = std::fs::read_to_string(&source)
+        .map_err(|e| format!("Failed to read settings file: {}", e))?;
+    let settings = parse_settings_import_json(&content)?;
+    crate::settings::save_settings(settings)?;
+    crate::settings::get_settings()
+}
+
+fn current_iso8601_utc() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    // Minimal ISO 8601 (UTC) formatter — YYYY-MM-DDTHH:MM:SSZ.
+    // Seconds precision is sufficient for an export timestamp.
+    let secs_per_day = 86_400u64;
+    let secs_per_hour = 3_600u64;
+    let secs_per_min = 60u64;
+    let days = now / secs_per_day;
+    let secs_today = now % secs_per_day;
+    let hour = secs_today / secs_per_hour;
+    let secs_in_hour = secs_today % secs_per_hour;
+    let minute = secs_in_hour / secs_per_min;
+    let second = secs_in_hour % secs_per_min;
+    let (year, month, day) = days_to_ymd(days);
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+        year, month, day, hour, minute, second
+    )
+}
+
+// Civil-from-days algorithm by Howard Hinnant (public domain).
+fn days_to_ymd(days_since_epoch: u64) -> (i32, u32, u32) {
+    let z = days_since_epoch as i64 + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = (z - era * 146_097) as u64;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
+    let y = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
+    let y = if m <= 2 { y + 1 } else { y } as i32;
+    (y, m, d)
+}
+
 // DREAMFORGE_SLIM: get_ai_workspace_sessions / save_ai_workspace_sessions 物理删除 (PR 4)
 
 // DREAMFORGE_SLIM: 2 app_updater commands (desktop + mobile) 物理删除 (PR 4)
@@ -488,5 +625,111 @@ mod tests {
         );
         let call_log = calls.borrow().clone();
         (result, call_log)
+    }
+
+    // PR 17: settings export/import envelope round-trip + error paths.
+    // These exercise the pure parse/build helpers without touching the
+    // real APP_CONFIG_DIR settings file.
+
+    fn sample_settings() -> Settings {
+        let mut s = Settings::default();
+        s.theme_mode = Some("dark".to_string());
+        s.ui_language = Some("zh-CN".to_string());
+        s.release_channel = Some("alpha".to_string());
+        s.hide_gitignored_files = Some(false);
+        s.anonymous_id = Some("test-anon-1234".to_string());
+        s
+    }
+
+    #[test]
+    fn export_envelope_round_trips_through_import() {
+        let original = sample_settings();
+        let json = build_settings_export_json(&original, "0.3.0", "2026-06-18T21:00:00Z".to_string())
+            .expect("export should serialize");
+        let restored = parse_settings_import_json(&json).expect("import should parse exported JSON");
+        assert_eq!(restored.theme_mode, original.theme_mode);
+        assert_eq!(restored.ui_language, original.ui_language);
+        assert_eq!(restored.release_channel, original.release_channel);
+        assert_eq!(restored.hide_gitignored_files, original.hide_gitignored_files);
+        assert_eq!(restored.anonymous_id, original.anonymous_id);
+    }
+
+    #[test]
+    fn export_envelope_includes_metadata() {
+        let json = build_settings_export_json(
+            &Settings::default(),
+            "0.3.0",
+            "2026-06-18T21:00:00Z".to_string(),
+        )
+        .expect("export should serialize");
+        let value: serde_json::Value = serde_json::from_str(&json).expect("envelope is JSON");
+        assert_eq!(value["version"], 1);
+        assert_eq!(value["kind"], "dreamforge-settings");
+        assert_eq!(value["app_version"], "0.3.0");
+        assert_eq!(value["exported_at"], "2026-06-18T21:00:00Z");
+        assert!(value["settings"].is_object());
+    }
+
+    #[test]
+    fn import_rejects_wrong_kind() {
+        let bad = serde_json::json!({
+            "version": 1,
+            "kind": "not-dreamforge",
+            "settings": {}
+        })
+        .to_string();
+        let err = parse_settings_import_json(&bad).expect_err("wrong kind must be rejected");
+        assert!(err.contains("expected kind"), "got: {err}");
+    }
+
+    #[test]
+    fn import_rejects_unsupported_version() {
+        let bad = serde_json::json!({
+            "version": 99,
+            "kind": "dreamforge-settings",
+            "settings": {}
+        })
+        .to_string();
+        let err = parse_settings_import_json(&bad).expect_err("future version must be rejected");
+        assert!(err.contains("unsupported envelope version"), "got: {err}");
+    }
+
+    #[test]
+    fn import_rejects_zero_version() {
+        let bad = serde_json::json!({
+            "version": 0,
+            "kind": "dreamforge-settings",
+            "settings": {}
+        })
+        .to_string();
+        let err = parse_settings_import_json(&bad).expect_err("version 0 must be rejected");
+        assert!(err.contains("unsupported envelope version"), "got: {err}");
+    }
+
+    #[test]
+    fn import_rejects_malformed_json() {
+        let err = parse_settings_import_json("not json at all")
+            .expect_err("malformed JSON must be rejected");
+        assert!(err.starts_with("Invalid settings file:"), "got: {err}");
+    }
+
+    #[test]
+    fn import_rejects_envelope_without_settings_field() {
+        let bad = serde_json::json!({
+            "version": 1,
+            "kind": "dreamforge-settings",
+            "exported_at": "2026-06-18T21:00:00Z"
+        })
+        .to_string();
+        let err = parse_settings_import_json(&bad).expect_err("missing settings must be rejected");
+        assert!(err.contains("missing 'settings' field"), "got: {err}");
+    }
+
+    #[test]
+    fn days_to_ymd_known_dates() {
+        // 2026-06-18 = epoch day 20622 (verified by hand: 56 years + 168 days from 1970-01-01).
+        assert_eq!(days_to_ymd(20622), (2026, 6, 18));
+        assert_eq!(days_to_ymd(0), (1970, 1, 1));
+        assert_eq!(days_to_ymd(365), (1971, 1, 1));
     }
 }

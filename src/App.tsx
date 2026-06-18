@@ -202,7 +202,7 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
   const closeFeedback = useCallback(() => setShowFeedback(false), [])
   // DREAMFORGE_SLIM: openDocs 物理删除 (PR 6, StatusBar 不再传 onOpenDocs)
   const networkStatus = useNetworkStatus()
-  const { settings, loaded: settingsLoaded, saveSettings } = useSettings()
+  const { settings, loaded: settingsLoaded, saveSettings, loadSettings } = useSettings()
   const aiFeaturesEnabled = areAiFeaturesEnabled(settings)
 
   // onSwitch closure captures `notes` declared below — safe because it's only
@@ -1806,7 +1806,7 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
           onCommit={conflictResolver.commitResolution}
           onClose={conflictFlow.handleCloseConflictResolver}
         />
-        <SettingsPanel open={dialogs.showSettings} initialSectionId={settingsInitialSectionId} settings={settings} aiAgentsStatus={DREAMFORGE_SLIM_MODE ? undefined : aiAgentsStatus} locale={appLocale} systemLocale={systemLocale} vaults={vaultSwitcher.allVaults} defaultWorkspacePath={DREAMFORGE_SLIM_MODE ? undefined : vaultSwitcher.defaultWorkspacePath} onAddVault={vaultSwitcher.addVault} selectedVaultPath={vaultSwitcher.selectedVaultPath} onSetDefaultWorkspace={vaultSwitcher.setDefaultWorkspace} onRemoveVault={vaultSwitcher.removeVault} onReorderVaults={vaultSwitcher.reorderVaults} onUpdateWorkspaceIdentity={vaultSwitcher.updateWorkspaceIdentity} isGitVault={gitRepoState !== 'missing'} onSave={saveSettings} onCopyMcpConfig={DREAMFORGE_SLIM_MODE ? undefined : undefined} explicitOrganizationEnabled={explicitOrganizationEnabled} onSaveExplicitOrganization={handleSaveExplicitOrganization} onClose={dialogs.closeSettings} />
+        <SettingsPanel open={dialogs.showSettings} initialSectionId={settingsInitialSectionId} settings={settings} aiAgentsStatus={DREAMFORGE_SLIM_MODE ? undefined : aiAgentsStatus} locale={appLocale} systemLocale={systemLocale} vaults={vaultSwitcher.allVaults} defaultWorkspacePath={DREAMFORGE_SLIM_MODE ? undefined : vaultSwitcher.defaultWorkspacePath} onAddVault={vaultSwitcher.addVault} selectedVaultPath={vaultSwitcher.selectedVaultPath} onSetDefaultWorkspace={vaultSwitcher.setDefaultWorkspace} onRemoveVault={vaultSwitcher.removeVault} onReorderVaults={vaultSwitcher.reorderVaults} onUpdateWorkspaceIdentity={vaultSwitcher.updateWorkspaceIdentity} isGitVault={gitRepoState !== 'missing'} onSave={saveSettings} onCopyMcpConfig={DREAMFORGE_SLIM_MODE ? undefined : undefined} explicitOrganizationEnabled={explicitOrganizationEnabled} onSaveExplicitOrganization={handleSaveExplicitOrganization} onSettingsReloaded={loadSettings} onClose={dialogs.closeSettings} />
         <FeedbackDialog open={showFeedback} onClose={closeFeedback} locale={appLocale} />
         {/* DREAMFORGE_SLIM: <McpSetupDialog> JSX 物理删除 (PR 6) */}
         <CloneVaultModal key={dialogs.showCloneVault ? 'clone-open' : 'clone-closed'} open={dialogs.showCloneVault} onClose={dialogs.closeCloneVault} onVaultCloned={vaultSwitcher.handleVaultCloned} />

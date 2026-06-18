@@ -815,5 +815,17 @@
   "locale.idID": "Indonésien",
   "locale.ukUA": "Ukrainien",
   "locale.svSE": "Suédois",
-  "settings.privacy.slimNote": "Le mode Slim désactive toute la télémétrie — aucune donnée d'utilisation n'est envoyée depuis cette version."
+  "settings.privacy.slimNote": "Le mode Slim désactive toute la télémétrie — aucune donnée d'utilisation n'est envoyée depuis cette version.",
+  "settings.data.title": "Données",
+  "settings.data.description": "Sauvegardez vos paramètres dans un fichier JSON ou restaurez-les sur une autre machine. Les paramètres importés remplacent toutes les valeurs actuelles — exportez d'abord si vous souhaitez en garder une copie.",
+  "settings.data.exportButton": "Exporter les paramètres…",
+  "settings.data.exportDescription": "Enregistrer les paramètres actuels dans un fichier JSON sur le disque.",
+  "settings.data.importButton": "Importer les paramètres…",
+  "settings.data.importDescription": "Remplacer tous les paramètres par les valeurs d'un fichier JSON précédemment exporté.",
+  "settings.data.exporting": "Export en cours…",
+  "settings.data.importing": "Import en cours…",
+  "settings.data.exportSuccess": "Paramètres exportés vers",
+  "settings.data.importSuccess": "Paramètres importés depuis",
+  "settings.data.exportError": "Impossible d'exporter les paramètres :",
+  "settings.data.importError": "Impossible d'importer les paramètres :"
 }

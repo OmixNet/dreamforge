@@ -815,5 +815,17 @@
   "locale.idID": "Bahasa Indonesia",
   "locale.ukUA": "Ukraina",
   "locale.svSE": "Swedia",
-  "settings.privacy.slimNote": "Mode Slim menonaktifkan semua telemetri — tidak ada data penggunaan yang dikirim dari build ini."
+  "settings.privacy.slimNote": "Mode Slim menonaktifkan semua telemetri — tidak ada data penggunaan yang dikirim dari build ini.",
+  "settings.data.title": "Data",
+  "settings.data.description": "Cadangkan pengaturan Anda ke file JSON atau pulihkan di mesin lain. Pengaturan yang diimpor akan mengganti semua nilai saat ini — pastikan untuk mengekspor terlebih dahulu jika ingin menyimpan salinan.",
+  "settings.data.exportButton": "Ekspor pengaturan…",
+  "settings.data.exportDescription": "Simpan pengaturan saat ini ke file JSON di disk.",
+  "settings.data.importButton": "Impor pengaturan…",
+  "settings.data.importDescription": "Ganti semua pengaturan dengan nilai dari file JSON yang sebelumnya diekspor.",
+  "settings.data.exporting": "Mengekspor…",
+  "settings.data.importing": "Mengimpor…",
+  "settings.data.exportSuccess": "Pengaturan diekspor ke",
+  "settings.data.importSuccess": "Pengaturan diimpor dari",
+  "settings.data.exportError": "Tidak dapat mengekspor pengaturan:",
+  "settings.data.importError": "Tidak dapat mengimpor pengaturan:"
 }

@@ -815,5 +815,17 @@
   "locale.idID": "Indonésio",
   "locale.ukUA": "Ucraniano",
   "locale.svSE": "Sueco",
-  "settings.privacy.slimNote": "O modo Slim desativa toda a telemetria — nenhum dado de uso é enviado a partir desta compilação."
+  "settings.privacy.slimNote": "O modo Slim desativa toda a telemetria — nenhum dado de uso é enviado a partir desta compilação.",
+  "settings.data.title": "Dados",
+  "settings.data.description": "Faça backup das suas configurações em um arquivo JSON ou restaure-as em outra máquina. As configurações importadas substituem todos os valores atuais — exporte primeiro se quiser manter uma cópia.",
+  "settings.data.exportButton": "Exportar configurações…",
+  "settings.data.exportDescription": "Salve as configurações atuais em um arquivo JSON no disco.",
+  "settings.data.importButton": "Importar configurações…",
+  "settings.data.importDescription": "Substitua todas as configurações pelos valores de um arquivo JSON exportado anteriormente.",
+  "settings.data.exporting": "Exportando…",
+  "settings.data.importing": "Importando…",
+  "settings.data.exportSuccess": "Configurações exportadas para",
+  "settings.data.importSuccess": "Configurações importadas de",
+  "settings.data.exportError": "Não foi possível exportar as configurações:",
+  "settings.data.importError": "Não foi possível importar as configurações:"
 }

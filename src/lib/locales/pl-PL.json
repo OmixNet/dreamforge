@@ -815,5 +815,17 @@
   "locale.idID": "Indonezyjski",
   "locale.ukUA": "Ukraiński",
   "locale.svSE": "Szwedzki",
-  "settings.privacy.slimNote": "Tryb Slim wyłącza całą telemetrię — z tej kompilacji nie są wysyłane żadne dane o użytkowaniu."
+  "settings.privacy.slimNote": "Tryb Slim wyłącza całą telemetrię — z tej kompilacji nie są wysyłane żadne dane o użytkowaniu.",
+  "settings.data.title": "Dane",
+  "settings.data.description": "Utwórz kopię zapasową ustawień w pliku JSON lub przywróć je na innym komputerze. Importowane ustawienia zastępują wszystkie bieżące wartości — najpierw wyeksportuj, jeśli chcesz zachować kopię.",
+  "settings.data.exportButton": "Eksportuj ustawienia…",
+  "settings.data.exportDescription": "Zapisz bieżące ustawienia w pliku JSON na dysku.",
+  "settings.data.importButton": "Importuj ustawienia…",
+  "settings.data.importDescription": "Zastąp wszystkie ustawienia wartościami z wcześniej wyeksportowanego pliku JSON.",
+  "settings.data.exporting": "Eksportowanie…",
+  "settings.data.importing": "Importowanie…",
+  "settings.data.exportSuccess": "Ustawienia wyeksportowane do",
+  "settings.data.importSuccess": "Ustawienia zaimportowane z",
+  "settings.data.exportError": "Nie udało się wyeksportować ustawień:",
+  "settings.data.importError": "Nie udało się zaimportować ustawień:"
 }

@@ -815,5 +815,17 @@
   "locale.idID": "Tiếng Indonesia",
   "locale.ukUA": "Tiếng Ukraina",
   "locale.svSE": "Tiếng Thụy Điển",
-  "settings.privacy.slimNote": "Chế độ Slim tắt tất cả telemetry — không có dữ liệu sử dụng nào được gửi từ bản dựng này."
+  "settings.privacy.slimNote": "Chế độ Slim tắt tất cả telemetry — không có dữ liệu sử dụng nào được gửi từ bản dựng này.",
+  "settings.data.title": "Dữ liệu",
+  "settings.data.description": "Sao lưu cài đặt của bạn vào tệp JSON hoặc khôi phục chúng trên máy khác. Cài đặt đã nhập sẽ thay thế tất cả các giá trị hiện tại — hãy xuất trước nếu bạn muốn giữ một bản sao.",
+  "settings.data.exportButton": "Xuất cài đặt…",
+  "settings.data.exportDescription": "Lưu cài đặt hiện tại vào tệp JSON trên đĩa.",
+  "settings.data.importButton": "Nhập cài đặt…",
+  "settings.data.importDescription": "Thay thế tất cả cài đặt bằng các giá trị từ tệp JSON đã xuất trước đó.",
+  "settings.data.exporting": "Đang xuất…",
+  "settings.data.importing": "Đang nhập…",
+  "settings.data.exportSuccess": "Đã xuất cài đặt tới",
+  "settings.data.importSuccess": "Đã nhập cài đặt từ",
+  "settings.data.exportError": "Không thể xuất cài đặt:",
+  "settings.data.importError": "Không thể nhập cài đặt:"
 }

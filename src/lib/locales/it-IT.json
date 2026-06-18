@@ -815,5 +815,17 @@
   "locale.idID": "Indonesiano",
   "locale.ukUA": "Ucraino",
   "locale.svSE": "Svedese",
-  "settings.privacy.slimNote": "La modalità Slim disabilita tutta la telemetria — nessun dato di utilizzo viene inviato da questa build."
+  "settings.privacy.slimNote": "La modalità Slim disabilita tutta la telemetria — nessun dato di utilizzo viene inviato da questa build.",
+  "settings.data.title": "Dati",
+  "settings.data.description": "Esegui il backup delle tue impostazioni in un file JSON o ripristinale su un'altra macchina. Le impostazioni importate sostituiscono tutti i valori attuali — assicurati di esportare prima se vuoi conservarne una copia.",
+  "settings.data.exportButton": "Esporta impostazioni…",
+  "settings.data.exportDescription": "Salva le impostazioni attuali in un file JSON su disco.",
+  "settings.data.importButton": "Importa impostazioni…",
+  "settings.data.importDescription": "Sostituisci tutte le impostazioni con i valori di un file JSON precedentemente esportato.",
+  "settings.data.exporting": "Esportazione…",
+  "settings.data.importing": "Importazione…",
+  "settings.data.exportSuccess": "Impostazioni esportate in",
+  "settings.data.importSuccess": "Impostazioni importate da",
+  "settings.data.exportError": "Impossibile esportare le impostazioni:",
+  "settings.data.importError": "Impossibile importare le impostazioni:"
 }

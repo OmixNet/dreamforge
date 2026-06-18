@@ -77,6 +77,7 @@ import { Button } from './ui/button'
 import { DreamCliPathField } from './DreamCliPathField'
 import { LlmSettingsField } from './LlmSettingsField'
 import { VaultSettingsSection } from './VaultSettingsSection'
+import { DataSettingsSection } from './DataSettingsSection'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import type { NoteWidthMode } from '../types'
 import type { VaultOption } from './status-bar/types'
@@ -106,6 +107,7 @@ interface SettingsPanelProps {
   isGitVault?: boolean
   explicitOrganizationEnabled?: boolean
   onSaveExplicitOrganization?: (enabled: boolean) => void
+  onSettingsReloaded?: () => Promise<void> | void
   onClose: () => void
 }
 
@@ -194,6 +196,7 @@ interface SettingsBodyProps {
   setCrashReporting: (value: boolean) => void
   analytics: boolean
   setAnalytics: (value: boolean) => void
+  onSettingsReloaded?: () => Promise<void> | void
 }
 
 const PULL_INTERVAL_OPTIONS = [1, 2, 5, 10, 15, 30] as const
@@ -317,6 +320,7 @@ export function SettingsPanel({
   isGitVault = true,
   explicitOrganizationEnabled = true,
   onSaveExplicitOrganization,
+  onSettingsReloaded,
   onClose,
 }: SettingsPanelProps) {
   if (!open) return null
@@ -336,6 +340,7 @@ export function SettingsPanel({
       isGitVault={isGitVault}
       explicitOrganizationEnabled={explicitOrganizationEnabled}
       onSaveExplicitOrganization={onSaveExplicitOrganization}
+      onSettingsReloaded={onSettingsReloaded}
       onClose={onClose}
     />
   )
@@ -364,6 +369,7 @@ function SettingsPanelInner({
   isGitVault,
   explicitOrganizationEnabled,
   onSaveExplicitOrganization,
+  onSettingsReloaded,
   onClose,
 }: SettingsPanelInnerProps) {
   const [draft, setDraft] = useState(() => createSettingsDraft(settings, explicitOrganizationEnabled))
@@ -478,6 +484,7 @@ function SettingsPanelInner({
           setThemeMode={handleThemeModeChange}
           setHideGitignoredFiles={handleGitignoredVisibilityChange}
           setAllNotesFileVisibility={handleAllNotesFileVisibilityChange}
+          onSettingsReloaded={onSettingsReloaded}
         />
         <SettingsFooter onClose={onClose} onSave={handleSave} t={t} />
       </div>
@@ -534,6 +541,7 @@ interface SettingsBodyFromDraftProps {
   setThemeMode: (value: ThemeMode) => void
   setHideGitignoredFiles: (value: boolean) => void
   setAllNotesFileVisibility: (value: AllNotesFileVisibility) => void
+  onSettingsReloaded?: () => Promise<void> | void
 }
 
 function SettingsBodyFromDraft({
@@ -552,6 +560,7 @@ function SettingsBodyFromDraft({
   setThemeMode,
   setHideGitignoredFiles,
   setAllNotesFileVisibility,
+  onSettingsReloaded,
 }: SettingsBodyFromDraftProps) {
   return (
     <SettingsBody
@@ -610,7 +619,19 @@ function SettingsBodyFromDraft({
       setCrashReporting={(value) => updateDraft('crashReporting', value)}
       analytics={draft.analytics}
       setAnalytics={(value) => updateDraft('analytics', value)}
+      onSettingsReloaded={onSettingsReloaded}
     />
+  )
+}
+
+function SettingsDataSections({ t, onSettingsReloaded }: Pick<SettingsBodyProps, 't' | 'onSettingsReloaded'>) {
+  return (
+    <SettingsSection id={SETTINGS_SECTION_IDS.data}>
+      <DataSettingsSection
+        t={t}
+        onSettingsReloaded={onSettingsReloaded ?? (() => {})}
+      />
+    </SettingsSection>
   )
 }
 
@@ -622,6 +643,7 @@ function SettingsBody(props: SettingsBodyProps) {
         <SettingsSyncAndAppearanceSections {...props} />
         <SettingsContentSections {...props} />
         <SettingsAgentWorkflowSections {...props} />
+        <SettingsDataSections {...props} />
       </div>
     </div>
   )

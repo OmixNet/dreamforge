@@ -160,5 +160,5 @@ export function useSettings() {
     }
   }, [saveSettings, settings])
 
-  return { settings, loaded, saveSettings }
+  return { settings, loaded, saveSettings, loadSettings }
 }

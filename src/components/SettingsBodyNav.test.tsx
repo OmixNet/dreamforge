@@ -39,5 +39,8 @@ describe('SettingsBodyNav (slim mode)', () => {
     expect(screen.getByText(/Appearance/i)).toBeInTheDocument()
     expect(screen.getByText(/Workflow/i)).toBeInTheDocument()
     expect(screen.getByText(/Telemetry/i)).toBeInTheDocument()
+    // PR 17: the Data section is always visible in slim mode (user data
+    // backup, not AI residue).
+    expect(screen.getByText(/^Data$/)).toBeInTheDocument()
   })
 })

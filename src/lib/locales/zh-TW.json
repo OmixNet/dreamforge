@@ -815,5 +815,17 @@
   "locale.beLatn": "白俄羅斯語（拉丁語）",
   "locale.idID": "印尼",
   "locale.ukUA": "烏克蘭語",
-  "locale.svSE": "瑞典語"
+  "locale.svSE": "瑞典語",
+  "settings.data.title": "資料",
+  "settings.data.description": "將你的設定備份到 JSON 檔案,或者在另一台機器上復原。匯入的設定會取代所有目前值 — 如果想保留副本,請先匯出。",
+  "settings.data.exportButton": "匯出設定…",
+  "settings.data.exportDescription": "將目前設定儲存為磁碟上的 JSON 檔案。",
+  "settings.data.importButton": "匯入設定…",
+  "settings.data.importDescription": "使用之前匯出的 JSON 檔案中的值取代所有設定。",
+  "settings.data.exporting": "正在匯出…",
+  "settings.data.importing": "正在匯入…",
+  "settings.data.exportSuccess": "設定已匯出到",
+  "settings.data.importSuccess": "設定已從",
+  "settings.data.exportError": "無法匯出設定:",
+  "settings.data.importError": "無法匯入設定:"
 }

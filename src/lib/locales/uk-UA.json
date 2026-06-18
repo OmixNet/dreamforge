@@ -815,5 +815,17 @@
   "locale.idID": "Індонезійська",
   "locale.ukUA": "Українська",
   "locale.svSE": "Шведська",
-  "settings.privacy.slimNote": "Режим Slim вимикає всю телеметрію — з цієї збірки не надсилаються дані про використання."
+  "settings.privacy.slimNote": "Режим Slim вимикає всю телеметрію — з цієї збірки не надсилаються дані про використання.",
+  "settings.data.title": "Дані",
+  "settings.data.description": "Зробіть резервну копію налаштувань у файл JSON або відновіть їх на іншій машині. Імпортовані налаштування замінюють усі поточні значення — спочатку експортуйте, якщо хочете зберегти копію.",
+  "settings.data.exportButton": "Експорт налаштувань…",
+  "settings.data.exportDescription": "Зберегти поточні налаштування у файл JSON на диску.",
+  "settings.data.importButton": "Імпорт налаштувань…",
+  "settings.data.importDescription": "Замінити всі налаштування значеннями з раніше експортованого файлу JSON.",
+  "settings.data.exporting": "Експорт…",
+  "settings.data.importing": "Імпорт…",
+  "settings.data.exportSuccess": "Налаштування експортовано в",
+  "settings.data.importSuccess": "Налаштування імпортовано з",
+  "settings.data.exportError": "Не вдалося експортувати налаштування:",
+  "settings.data.importError": "Не вдалося імпортувати налаштування:"
 }

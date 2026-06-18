@@ -815,5 +815,17 @@
   "locale.idID": "Інданезійская",
   "locale.ukUA": "Украінская",
   "locale.svSE": "Шведская",
-  "settings.privacy.slimNote": "Рэжым Slim адключае ўсе тэлеметрыі — з гэтай зборкі не адпраўляюцца даныя аб выкарыстанні."
+  "settings.privacy.slimNote": "Рэжым Slim адключае ўсе тэлеметрыі — з гэтай зборкі не адпраўляюцца даныя аб выкарыстанні.",
+  "settings.data.title": "Даныя",
+  "settings.data.description": "Зрабіце рэзервовую копію налад у файл JSON або аднавіце іх на іншай машыне. Імпартаваныя налады замяняюць усе бягучыя значэнні — спачатку зрабіце экспарт, калі хочаце захаваць копію.",
+  "settings.data.exportButton": "Экспартаваць налады…",
+  "settings.data.exportDescription": "Захаваць бягучыя налады ў файл JSON на дыску.",
+  "settings.data.importButton": "Імпартаваць налады…",
+  "settings.data.importDescription": "Замяніць усе налады значэннямі з раней экспартаванага файла JSON.",
+  "settings.data.exporting": "Экспарт…",
+  "settings.data.importing": "Імпарт…",
+  "settings.data.exportSuccess": "Налады экспартаваны ў",
+  "settings.data.importSuccess": "Налады імпартаваны з",
+  "settings.data.exportError": "Не ўдалося экспартаваць налады:",
+  "settings.data.importError": "Не ўдалося імпартаваць налады:"
 }

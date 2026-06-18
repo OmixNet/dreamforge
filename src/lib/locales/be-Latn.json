@@ -815,5 +815,17 @@
   "locale.idID": "Indonesian",
   "locale.ukUA": "Ukrainskaja",
   "locale.svSE": "Šviedskaja",
-  "settings.privacy.slimNote": "Režym Slim adkliučaje ŭsie telemeteryi — z hetaj zborі ne adpraŭljajucca danyja ab vykarystanni."
+  "settings.privacy.slimNote": "Režym Slim adkliučaje ŭsie telemeteryi — z hetaj zborі ne adpraŭljajucca danyja ab vykarystanni.",
+  "settings.data.title": "Danyja",
+  "settings.data.description": "Zrabiće rezervovuju kopiju naladaŭ u fajl JSON abo adnaŭcie ich na inšaj mašynie. Impartavanyja nalady zamianiajuć usie biahučyja značenni — spačatku zrabicie ekspart, kali chočacie zachavać kopiju.",
+  "settings.data.exportButton": "Ekspartavać nalady…",
+  "settings.data.exportDescription": "Zachavać biahučyja nalady ŭ fajl JSON na dysku.",
+  "settings.data.importButton": "Impartavać nalady…",
+  "settings.data.importDescription": "Zamianić usie nalady značenniami z raniej ekspartavanaha fajla JSON.",
+  "settings.data.exporting": "Ekspart…",
+  "settings.data.importing": "Impart…",
+  "settings.data.exportSuccess": "Nalady ekspartavany ŭ",
+  "settings.data.importSuccess": "Nalady impartavany z",
+  "settings.data.exportError": "Nie ŭdalosia ekspartavać nalady:",
+  "settings.data.importError": "Nie ŭdalosia impartavać nalady:"
 }
