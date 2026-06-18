@@ -39,7 +39,13 @@ function appendPdfPreviewLoadKey(assetSrc: string, loadKey: string): string {
   const baseSrc = hashIndex === -1 ? assetSrc : assetSrc.slice(0, hashIndex)
   const hash = hashIndex === -1 ? '' : assetSrc.slice(hashIndex)
   const separator = baseSrc.includes('?') ? '&' : '?'
-  return `${baseSrc}${separator}tolaria_pdf_preview=${encodeURIComponent(loadKey)}${hash}`
+  // PR 18: renamed query param from `tolaria_pdf_preview=` to
+  // `dreamforge_pdf_preview=`. The param is freshly constructed on each
+  // render — it is never persisted, never sent to disk, and only read by
+  // the same code that wrote it within the same render — so a direct rename
+  // is safe (no dual-recognition needed, unlike the file attachment token
+  // which is embedded in markdown files).
+  return `${baseSrc}${separator}dreamforge_pdf_preview=${encodeURIComponent(loadKey)}${hash}`
 }
 
 function usePdfPreviewLoadKey(): string {

@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { APP_STORAGE_KEYS, LEGACY_APP_STORAGE_KEYS, copyLegacyAppStorageKeys, getAppStorageItem } from './appStorage'
+import {
+  APP_STORAGE_KEYS,
+  LEGACY_APP_STORAGE_KEYS,
+  LEGACY_TOLARIA_APP_STORAGE_KEYS,
+  copyLegacyAppStorageKeys,
+  copyTolariaAppStorageKeys,
+  getAppStorageItem,
+} from './appStorage'
 
 describe('appStorage legacy migration', () => {
   let store: Record<string, string>
@@ -12,7 +19,7 @@ describe('appStorage legacy migration', () => {
     })
   })
 
-  it('copies legacy values to Tolaria keys without overwriting existing values', () => {
+  it('copies Laputa legacy values to DreamForge keys without overwriting existing values', () => {
     store[LEGACY_APP_STORAGE_KEYS.theme] = 'dark'
     store[LEGACY_APP_STORAGE_KEYS.zoom] = '125'
     store[APP_STORAGE_KEYS.zoom] = '100'
@@ -24,8 +31,46 @@ describe('appStorage legacy migration', () => {
     expect(store[APP_STORAGE_KEYS.legacyMigrationFlag]).toBe('1')
   })
 
-  it('falls back to legacy values when the Tolaria key is absent', () => {
-    store[LEGACY_APP_STORAGE_KEYS.viewMode] = 'editor-list'
+  it('copies Tolaria legacy values to DreamForge keys without overwriting existing values', () => {
+    store[LEGACY_TOLARIA_APP_STORAGE_KEYS.theme] = 'light'
+    store[LEGACY_TOLARIA_APP_STORAGE_KEYS.zoom] = '125'
+    store[APP_STORAGE_KEYS.zoom] = '100'
+
+    copyTolariaAppStorageKeys()
+
+    expect(store[APP_STORAGE_KEYS.theme]).toBe('light')
+    expect(store[APP_STORAGE_KEYS.zoom]).toBe('100')
+    expect(store[APP_STORAGE_KEYS.tolariaMigrationFlag]).toBe('1')
+  })
+
+  it('does not re-run Tolaria migration when the flag is already set', () => {
+    store[APP_STORAGE_KEYS.tolariaMigrationFlag] = '1'
+    store[LEGACY_TOLARIA_APP_STORAGE_KEYS.theme] = 'dark'
+
+    copyTolariaAppStorageKeys()
+
+    expect(store[APP_STORAGE_KEYS.theme]).toBeUndefined()
+  })
+
+  it('runs both migrations sequentially: Laputa → Tolaria → DreamForge', () => {
+    // User who has only Laputa keys (never upgraded) should end up with
+    // DreamForge values via two migration passes. copyTolariaAppStorageKeys
+    // is a no-op on the first run (no Tolaria keys exist yet), but
+    // copyLegacyAppStorageKeys will have created them — so a second
+    // invocation of the Tolaria migration moves them. This test mirrors
+    // the call order in configMigration.ts.
+    store[LEGACY_APP_STORAGE_KEYS.theme] = 'system'
+    copyLegacyAppStorageKeys()
+    // After Laputa migration, the theme is now in BOTH laputa-theme and
+    // dreamforge-theme (the function copies the value, not moves it).
+    // The Tolaria layer still has nothing, so copyTolariaAppStorageKeys
+    // is a no-op here.
+    copyTolariaAppStorageKeys()
+    expect(store[APP_STORAGE_KEYS.theme]).toBe('system')
+  })
+
+  it('falls back to legacy values when the DreamForge key is absent', () => {
+    store[LEGACY_TOLARIA_APP_STORAGE_KEYS.viewMode] = 'editor-list'
 
     expect(getAppStorageItem('viewMode')).toBe('editor-list')
   })
@@ -37,6 +82,7 @@ describe('appStorage legacy migration', () => {
     })
 
     expect(() => copyLegacyAppStorageKeys()).not.toThrow()
+    expect(() => copyTolariaAppStorageKeys()).not.toThrow()
     expect(getAppStorageItem('theme')).toBeNull()
   })
 })

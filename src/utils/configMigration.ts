@@ -1,4 +1,4 @@
-import { APP_STORAGE_KEYS, copyLegacyAppStorageKeys, getAppStorageItem } from '../constants/appStorage'
+import { APP_STORAGE_KEYS, copyLegacyAppStorageKeys, copyTolariaAppStorageKeys, getAppStorageItem } from '../constants/appStorage'
 import type { VaultConfig } from '../types'
 
 const MIGRATION_FLAG = APP_STORAGE_KEYS.configMigrationFlag
@@ -97,6 +97,7 @@ export function migrateLocalStorageToVaultConfig(loaded: VaultConfig | null): Va
   const base = loaded ?? createDefaultVaultConfig()
 
   copyLegacyAppStorageKeys()
+  copyTolariaAppStorageKeys()
 
   if (migrationAlreadyCompleted()) return base
 

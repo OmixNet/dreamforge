@@ -1,6 +1,10 @@
 import type { VaultEntry } from '../types'
 
-const NO_WORKSPACE_KEY = '__tolaria_no_workspace__'
+// PR 18: renamed from __tolaria_no_workspace__ as part of the DreamForge
+// rebrand. This sentinel is internal to typeWorkspaceKey() — never persisted
+// to user files or URLs — so a direct rename is safe (no dual-recognition
+// needed, unlike the file attachment token which lives inside markdown).
+const NO_WORKSPACE_KEY = '__dreamforge_no_workspace__'
 
 interface TypeNameQuery {
   type: string

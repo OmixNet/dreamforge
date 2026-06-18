@@ -58,7 +58,14 @@ interface TransformedLine {
   line: MarkdownLine
 }
 
-const FILE_ATTACHMENT_TOKEN_PREFIX = '@@TOLARIA_FILE_ATTACHMENT:'
+// PR 18: file attachment token is now DreamForge-branded. We dual-recognize
+// the historical Tolaria prefix so notes written by previous builds continue
+// to resolve attachments after the rebrand. New writes always use the
+// DreamForge prefix; the migration script (`scripts/migrate-tolaria-file-tokens.mjs`)
+// rewrites existing notes in place.
+const DREAMFORGE_FILE_ATTACHMENT_TOKEN_PREFIX = '@@DREAMFORGE_FILE_ATTACHMENT:'
+const LEGACY_TOLARIA_FILE_ATTACHMENT_TOKEN_PREFIX = '@@TOLARIA_FILE_ATTACHMENT:'
+const FILE_ATTACHMENT_TOKEN_PREFIX = DREAMFORGE_FILE_ATTACHMENT_TOKEN_PREFIX
 const FILE_ATTACHMENT_TOKEN_SUFFIX = '@@'
 const STANDALONE_ATTACHMENT_LINK_PATTERN = /^( {0,3})\[((?:\\.|[^\]\\\n])*)\]\((<[^>\n]+>|(?:\\.|[^)\s\n])+)(?:[ \t]+"((?:\\.|[^"\\\n])*)")?\)[ \t]*$/u
 
@@ -163,11 +170,18 @@ function normalizePayload(value: unknown): FileAttachmentPayload | null {
 
 function readFileAttachmentToken(text: MarkdownText): FileAttachmentPayload | null {
   const trimmed = text.trim()
-  if (!trimmed.startsWith(FILE_ATTACHMENT_TOKEN_PREFIX)) return null
+  // PR 18: dual-recognize the legacy Tolaria prefix and the new DreamForge
+  // prefix. Both decode to the same payload shape.
+  const recognizedPrefix = trimmed.startsWith(DREAMFORGE_FILE_ATTACHMENT_TOKEN_PREFIX)
+    ? DREAMFORGE_FILE_ATTACHMENT_TOKEN_PREFIX
+    : trimmed.startsWith(LEGACY_TOLARIA_FILE_ATTACHMENT_TOKEN_PREFIX)
+      ? LEGACY_TOLARIA_FILE_ATTACHMENT_TOKEN_PREFIX
+      : null
+  if (recognizedPrefix === null) return null
   if (!trimmed.endsWith(FILE_ATTACHMENT_TOKEN_SUFFIX)) return null
 
   const encoded = trimmed.slice(
-    FILE_ATTACHMENT_TOKEN_PREFIX.length,
+    recognizedPrefix.length,
     -FILE_ATTACHMENT_TOKEN_SUFFIX.length,
   )
   try {
