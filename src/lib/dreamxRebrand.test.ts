@@ -98,6 +98,19 @@ describe('PR 20 — DreamX user-visible brand', () => {
     expect(config.identifier).toBe('com.biomatrix.dreamforge')
   })
 
+  it('src-tauri/Info.plist has no Tolaria or DreamForge in user-facing strings', () => {
+    // macOS reads NSLocalNetworkUsageDescription (and other privacy
+    // strings) into the system permission dialog. This is real
+    // user-visible surface, and PR 20 missed it because the test only
+    // scanned tauri.conf.json. PR 21 adds the Info.plist scan.
+    const plistPath = join(REPO_ROOT, 'src-tauri', 'Info.plist')
+    const plist = readFileSync(plistPath, 'utf8')
+    expect(plist).not.toContain('Tolaria')
+    expect(plist).not.toContain('DreamForge')
+    // Privacy string content sanity: should be about DreamX.
+    expect(plist).toContain('DreamX')
+  })
+
   it('index.html title is DreamX', () => {
     const indexPath = join(REPO_ROOT, 'index.html')
     const html = readFileSync(indexPath, 'utf8')
@@ -165,7 +178,7 @@ describe('PR 20 — DreamX user-visible brand', () => {
         }
         const full = join(dir, entry.name)
         if (entry.isDirectory()) walk(full, acc)
-        else if (/\.(ts|tsx|json|html|md|mjs|css|svg)$/u.test(entry.name)) {
+        else if (/\.(ts|tsx|json|html|md|mjs|css|svg|plist)$/u.test(entry.name)) {
           acc.push(full)
         }
       }

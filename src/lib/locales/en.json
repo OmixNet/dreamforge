@@ -45,7 +45,7 @@
   "feedback.title": "Contribute to DreamX",
   "feedback.description": "Pick the path that fits what you want to do! Any type of help is appreciated",
   "feedback.sponsor.title": "Sponsor / Support",
-  "feedback.sponsor.description": "Luca here 👋 my full-time job is running Refactoring, a newsletter for 170K+ engineers about how to run good teams and ship software with AI. I write about workflows, interview tech leaders (e.g. DHH, Martin Fowler, and more) and run a private community of 2000+ engineers with monthly live coaching, AI club, and more.\n\nDreamForge is FOSS and always will be. If you like it, the best way to support it is to subscribe to the newsletter.",
+  "feedback.sponsor.description": "Luca here 👋 my full-time job is running Refactoring, a newsletter for 170K+ engineers about how to run good teams and ship software with AI. I write about workflows, interview tech leaders (e.g. DHH, Martin Fowler, and more) and run a private community of 2000+ engineers with monthly live coaching, AI club, and more.\n\nDreamX is FOSS and always will be. If you like it, the best way to support it is to subscribe to the newsletter.",
   "feedback.sponsor.cta": "Check out Refactoring",
   "feedback.sponsor.linkLabel": "Refactoring",
   "feedback.featureRequests.title": "Feature requests",
