@@ -271,7 +271,8 @@ dreamforge/
 │   ├── capabilities/
 │   │   ├── default.json    # NO deep-link/updater (PR 5 C)
 │   │   └── mobile.json
-│   ├── icons/              # 9 file (sips-generated)
+│   ├── icons/              # PR 19 — full DreamForge mark swap; 20 PNG + icon.icns + icon.ico (sips + iconutil + PIL generated from user-provided SVG `~/Downloads/dream_cycle_markdown_x_macos_icon.svg`)
+│   ├── icons-tolaria-backup/  # PR 16 — historical backup of Luca's original water-drop icon (© Luca Rossi)
 │   └── src/
 │       ├── lib.rs          # 526 lines, 24 module decls 删 (PR 4)
 │       ├── settings.rs     # APP_CONFIG_DIR + AI fields 删

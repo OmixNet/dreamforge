@@ -1,10 +1,156 @@
-<svg width="266" height="363" viewBox="0 0 266 363" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g clip-path="url(#clip0_111_151)">
-<path fill-rule="evenodd" clip-rule="evenodd" d="M119.524 5.31219C126.607 -1.77073 138.117 -1.77073 145.2 5.31219C178.844 40.7268 265.61 147.856 265.61 230.195C265.61 303.68 206.29 363 132.805 363C59.3195 363 0 303.68 0 230.195C0 147.856 86.7659 40.7268 119.524 5.31219ZM59.5947 242.88C58.1619 234.744 50.3952 229.074 42.2195 230.195C34.0438 231.316 28.5932 238.799 30.0259 246.935C37.6847 290.425 72.2734 325.622 116.094 334.485C117.821 334.836 119.552 334.864 121.178 334.641C127.269 333.806 132.289 329.26 133.371 322.934C134.756 314.893 129.25 307.054 121.086 305.401C89.7767 299.057 65.0615 273.923 59.5947 242.88Z" fill="#155DFF"/>
-</g>
-<defs>
-<clipPath id="clip0_111_151">
-<rect width="266" height="363" fill="white"/>
-</clipPath>
-</defs>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- macOS dark glass background -->
+    <linearGradient id="bg" x1="180" y1="120" x2="850" y2="900" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2A3036"/>
+      <stop offset="0.55" stop-color="#171B21"/>
+      <stop offset="1" stop-color="#0D1015"/>
+    </linearGradient>
+
+    <linearGradient id="bgInner" x1="240" y1="150" x2="800" y2="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#343A42" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#11151B" stop-opacity="0.18"/>
+    </linearGradient>
+
+    <!-- X material -->
+    <linearGradient id="xGrad" x1="305" y1="230" x2="730" y2="780" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F3D7CB"/>
+      <stop offset="0.42" stop-color="#C8B2B0"/>
+      <stop offset="0.68" stop-color="#B9B4D0"/>
+      <stop offset="1" stop-color="#8E91B5"/>
+    </linearGradient>
+
+    <linearGradient id="orbitGrad" x1="180" y1="460" x2="865" y2="645" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF3DD"/>
+      <stop offset="0.42" stop-color="#D9CAD6"/>
+      <stop offset="1" stop-color="#928DB2"/>
+    </linearGradient>
+
+    <linearGradient id="moonGrad" x1="200" y1="145" x2="294" y2="255" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF1A9"/>
+      <stop offset="0.55" stop-color="#FFD66F"/>
+      <stop offset="1" stop-color="#F3A95C"/>
+    </linearGradient>
+
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.45" stop-color="#D8D2D1"/>
+      <stop offset="1" stop-color="#8E8889"/>
+    </linearGradient>
+
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="28" stdDeviation="36" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+
+    <filter id="xShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="16" stdDeviation="12" flood-color="#000000" flood-opacity="0.38"/>
+      <feDropShadow dx="0" dy="-2" stdDeviation="2" flood-color="#FFFFFF" flood-opacity="0.20"/>
+    </filter>
+
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="1 0 0 0 1
+                0 1 0 0 .82
+                0 0 1 0 .45
+                0 0 0 .65 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="smallGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#F9E4B0" flood-opacity="0.45"/>
+    </filter>
+
+    <clipPath id="roundClip">
+      <rect x="132" y="112" width="760" height="800" rx="118" ry="118"/>
+    </clipPath>
+  </defs>
+
+  <!-- outer app icon -->
+  <rect x="132" y="112" width="760" height="800" rx="118" ry="118"
+        fill="url(#bg)" filter="url(#softShadow)"/>
+  <rect x="150" y="130" width="724" height="764" rx="102" ry="102"
+        fill="url(#bgInner)" opacity="0.78"/>
+  <rect x="132" y="112" width="760" height="800" rx="118" ry="118"
+        fill="none" stroke="#FFFFFF" stroke-opacity="0.11" stroke-width="3"/>
+
+  <!-- transparent markdown document behind X -->
+  <g opacity="0.32">
+    <path d="M390 204H696L800 308V742C800 773 775 798 744 798H390C359 798 334 773 334 742V260C334 229 359 204 390 204Z"
+          fill="#E9EDF7" opacity="0.16" stroke="#F7F8FC" stroke-opacity="0.32" stroke-width="2"/>
+    <path d="M696 204V287C696 304 710 318 727 318H800"
+          fill="none" stroke="#F7F8FC" stroke-opacity="0.28" stroke-width="2"/>
+    <rect x="448" y="286" width="146" height="11" rx="5.5" fill="#FFFFFF" opacity="0.16"/>
+    <rect x="448" y="332" width="104" height="10" rx="5" fill="#FFFFFF" opacity="0.12"/>
+  </g>
+
+  <!-- Dream cycle orbit: memory consolidation / decay curve -->
+  <g clip-path="url(#roundClip)">
+    <path d="M124 540 C198 404, 340 392, 500 476 C676 568, 770 629, 930 520"
+          fill="none" stroke="url(#orbitGrad)" stroke-width="8" stroke-linecap="round" opacity="0.95"/>
+    <path d="M930 520 C1000 474, 1030 434, 1010 392"
+          fill="none" stroke="#B8B0C8" stroke-width="8" stroke-linecap="round"
+          stroke-dasharray="2 18" opacity="0.9"/>
+  </g>
+
+  <!-- central X: two sculpted ribbons -->
+  <g filter="url(#xShadow)">
+    <path d="M250 276
+             C294 276 336 276 378 276
+             C402 276 418 286 434 309
+             L548 472
+             C564 495 564 527 548 550
+             L418 736
+             C404 756 388 766 364 766
+             C324 766 286 766 246 766
+             L464 512
+             Z"
+          fill="url(#xGrad)"/>
+    <path d="M772 346
+             C732 346 696 346 658 346
+             C636 346 620 356 606 376
+             L483 550
+             C466 574 466 606 483 630
+             L580 766
+             C595 787 612 796 638 796
+             C676 796 716 796 756 796
+             L566 528
+             Z"
+          fill="url(#xGrad)" opacity="0.96"/>
+    <!-- subtle bevel highlights -->
+    <path d="M278 278 C326 278 365 278 402 279 C421 280 433 290 447 309"
+          fill="none" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="3" stroke-linecap="round"/>
+    <path d="M658 348 C690 348 724 348 758 348"
+          fill="none" stroke="#FFFFFF" stroke-opacity="0.34" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <!-- orbit nodes -->
+  <circle cx="244" cy="440" r="19" fill="url(#metal)" filter="url(#smallGlow)"/>
+  <circle cx="656" cy="694" r="22" fill="url(#metal)" filter="url(#smallGlow)"/>
+
+  <!-- moon + stars: Dream cycle symbol -->
+  <g filter="url(#glow)">
+    <path d="M255 142
+             C225 157 206 188 211 223
+             C217 266 259 294 300 280
+             C263 277 236 248 236 213
+             C236 181 253 154 279 140
+             C270 139 262 139 255 142Z"
+          fill="url(#moonGrad)"/>
+    <path d="M328 158 L336 176 L354 184 L336 192 L328 210 L320 192 L302 184 L320 176 Z"
+          fill="#FFEAA4"/>
+    <path d="M293 190 L299 203 L312 209 L299 215 L293 228 L287 215 L274 209 L287 203 Z"
+          fill="#FFF1B8"/>
+  </g>
+
+  <!-- report bars -->
+  <g opacity="0.95">
+    <rect x="724" y="746" width="22" height="52" rx="6" fill="#F4F6FB" opacity="0.92"/>
+    <rect x="762" y="704" width="24" height="94" rx="7" fill="#F4F6FB" opacity="0.96"/>
+    <rect x="804" y="654" width="25" height="144" rx="7" fill="#FFFFFF"/>
+  </g>
 </svg>
