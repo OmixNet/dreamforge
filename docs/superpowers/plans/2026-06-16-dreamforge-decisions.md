@@ -476,3 +476,37 @@
 - **next-step backlog**:
   - PR 16: rebrand "Tolaria" → "DreamForge" 跨 20 locale + UI strings (单独 PR, scope 大)
   - PR 17+: feature (BlockNote 0.5+ / Cloud LLM multi-provider / Settings 持久化) — settings 已 done, 剩 2 个
+
+## §33 PR 16 — Tolaria → DreamForge rebrand (string + URL + icon naming) (2026-06-18)
+- **scope**: §32 backlog PR 16. 41 个 "Tolaria" 品牌名残留 (en.json + 19 locale + 30+ src/ 字符串) — user-facing 部分全清, technical identifier 部分 deferred
+- **执行**: 5 步
+  1. **20 locale JSON**: python 脚本 `s/Tolaria/DreamForge/g` + json round-trip validate → 801 个字符串替换 across 20 file
+  2. **src/ user-facing string**: 19 file targeted, 54 个字符串 (toast / error msg / title / description / button label / AI prompt preamble). 用 SKIP_PATTERNS 跳过 type name / mock path / function name / code comment
+  3. **URL 常量** (`src/constants/feedback.ts`): TOLARIA_DOCS_URL / TOLARIA_PRODUCT_BOARD_URL / TOLARIA_GITHUB_DISCUSSIONS_URL / TOLARIA_GITHUB_CONTRIBUTING_URL / TOLARIA_GITHUB_ISSUES_URL / TOLARIA_GITHUB_PULL_REQUESTS_URL → DREAMFORGE_*_URL, host 改 `refactoringhq/tolaria` → `OmixNet/dreamforge`. **REFACTORING_HOME_URL = 'https://refactoring.fm/' 保留** (Luca 个人网站 — historical attribution, 跟 sponsor 按钮联动)
+  4. **HTML 标题** (`src/utils/releaseHistoryPage.ts`): `<title>Tolaria — Release History</title>` + `<h1>Tolaria Release History</h1>` → DreamForge
+  5. **icon 命名**: `src/assets/tolaria-icon.svg` → `dreamforge-icon.svg` (git mv), `import tolariaIcon` → `import dreamforgeIcon`, `alt="Tolaria icon"` → `alt="DreamForge icon"`. **icon 内容 (蓝水珠) 不动** — visual mark swap 是另一 PR (品牌重设计)
+- **测试 fix**: 14 个 test 失败 (hard-code 旧字符串), 全部改. 影响: feedbackDiagnostics / AiAgentsOnboardingPrompt / CommitDialog / SettingsPanel (确认对话框) / ai-agent (4) / ai-context (2) / useOnboarding / useVaultSwitcher / useGettingStartedClone / openAiWorkspaceWindow. **1 个 comment 不动**: `SettingsPanel.test.tsx:17 // PR 14: this test file exercises the non-slim Tolaria surface` — historical, accurate (PR 14 真 exercise non-slim surface, 是 verify 范围的一部分)
+- **legal text 保留**: THIRD_PARTY_NOTICES.md (AGPL 衍生声明) / README.md / AGENTS.md (project guide) — derivative work 声明 + 历史 attribution. 跟 user-facing 字符串是 separate concern
+- **build status**:
+  - tsc 0 / vitest 3767/3767 / eslint 0 / vite build 7.05s / cargo test 710/710 / tauri build 27.00s / dream-cli-verify 13/0/0
+  - coverage 71.98/63.64/73.31/74.47 (gate pass, no change)
+- **deferred (technical identifier, 真 migration 风险, 单独 PR)**:
+  - `localStorage` keys: `tolaria_welcome_dismissed` (appStorage.ts:13), `__tolaria_no_workspace__` (typeDefinitions.ts:3) — 改名 = 丢现有用户设置 state
+  - **file attachment token**: `@@TOLARIA_FILE_ATTACHMENT:` (fileAttachmentMarkdown.ts:61) — **嵌入 markdown 文件内容**, 改名 = 破现有用户附件
+  - PDF preview query: `tolaria_pdf_preview=` (FilePreview.tsx:42) — URL 构造 on each render, 改 URL pattern = 破现有 preview
+  - **component / type name**: `tolariaEditorFormatting` / `TolariaSlashMenuItem` / `TOLARIA_BLOCK_TYPE_SELECT_ITEMS` / `shouldAutoLinkTolariaHref` — internal API, 涉及 PR 4 物理删过的 dead module 周边, 改 = 触发重 PR surface
+  - **test mock URL**: `https://tolaria.localhost` / `https://tolaria.md/releases/` — 仅测试占位符
+  - **DOM id / thread name**: `tolaria-fatal-render-error` (main.tsx:128) / `tolaria-startup-tasks` (lib.rs:106) — runtime 内部
+  - **icon SVG 内容**: 蓝水珠仍是 Luca Tolaria mark (icons-tolaria-backup/ 备份) — visual mark swap = 品牌重设计, **不**是 string rebrand. 单独 PR 提
+- **decisions**:
+  - **string rebrand vs identifier rebrand 分 PR** (跟 user "1-2 small focused PR > big-bang" 风格一致): PR 16 只动 user-visible 字符串, identifier 走 PR 18+ 配 data migration script
+  - **保留 Luca attribution**: `REFACTORING_HOME_URL` (个人网站) + THIRD_PARTY_NOTICES.md + README.md — AGPL 协议要求 + 历史 acknowledge
+  - **icon 命名 vs 内容**: 命名先改 (PR 16), 视觉 mark 留 → 视觉重设计是 design 任务, 跟 string rebrand 是 separate work stream
+  - **comment 保留**: 152 个 "tolaria" 残留都是 DREAMFORGE_SLIM trace (educational) + historical attribution + type/identifier. 跟 MEMORY.md "DREAMFORGE_SLIM trace 注释保留" precedent 一致
+- **commit**: `d87747c` (53 files, 865+/865- balanced). **不 push** (等 user GUI verify)
+- **next-step backlog**:
+  - **PR 17**: Settings 导出/导入 (user plan) — settings 已 in Tauri store (PR 10 §30 补), 加 export JSON / import JSON
+  - **PR 18**: Tolaria → DreamForge data migration (lowercase `tolaria_` storage key + file token + URL param) + companion `dreamforge` migration script
+  - **PR 19**: visual mark swap (DreamForge logo design + 替换 .app icon + in-app icon)
+  - **PR 20+**: BlockNote 0.46.2 → 0.5+ (risky) / Cloud LLM multi-provider (Anthropic + Gemini + OpenRouter — 需 DreamVault Swift 改)
+
