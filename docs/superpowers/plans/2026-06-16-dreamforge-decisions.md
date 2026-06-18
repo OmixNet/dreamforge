@@ -684,3 +684,62 @@
 - **next-step backlog**:
   - **PR 20+**: BlockNote 0.5+ upgrade (risky) / Cloud LLM multi-provider (Anthropic + Gemini + OpenRouter,需 DreamVault Swift 改) / Settings UX polish
   - v0.4.0 ship candidate: PR 16/17/18/19 累计 + coverage 72/63.85 (gate 70/63.5 pass) — 可能是 tag v0.4.0 的好时机
+
+## §37 PR 20 — Rebrand DreamForge → DreamX (user-visible brand only) (2026-06-19)
+- **scope**: user-visible brand 改成 DreamX,底层兼容名保留 dreamforge. 跟 PR 16/19 不同,这次是**分层的** — 不是 hard rename
+- **不改的** (compatibility layer):
+  - GitHub repo: `OmixNet/dreamforge` (历史 tag / commit history / fork / SSH URL)
+  - 本地文件夹: `/Users/biomatrix/Desktop/APP/dreamforge`
+  - bundle id: `com.biomatrix.dreamforge` (macOS 看 is same app,不会因 rebrand 算 new app)
+  - config dir: `com.biomatrix.dreamforge` (settings.json 位置不变,user 数据全保留)
+  - env var: `DREAMFORGE_DREAM_CLI` / `DREAMFORGE_LLM_API_KEY` / `DREAMFORGE_SLIM_MODE`
+  - localStorage: `dreamforge-theme` / `dreamforge:zoom-level` 等
+  - file token: `@@DREAMFORGE_FILE_ATTACHMENT:`
+  - URL param: `dreamforge_pdf_preview=`
+  - sentinel: `__dreamforge_no_workspace__`
+  - package.json: `name: "dreamforge"`
+  - Cargo.toml: `name = "dreamforge"`, lib name = `tolaria_lib` (内部,没动过)
+  - DreamVault Swift engine 名字
+- **改的** (user-visible brand):
+  - `tauri.conf.json`: productName + window title → DreamX
+  - `index.html`: `<title>` → DreamX
+  - 20 locale JSON: 所有 user-facing "DreamForge" → "DreamX" (en.json 41 个 + 19 其他 locale 677 个)
+  - `WelcomeScreen.tsx`: title "Welcome to DreamForge" + alt + 2 description
+  - `openAiWorkspaceWindow.ts`: AI 窗口 title "DreamForge AI" → "DreamX AI"
+  - `releaseHistoryPage.ts`: HTML <title> + <h1>
+  - `ai-context.ts` / `ai-chat.ts` / `ai-agent.ts`: AI system prompt 12 个 "integrated into DreamForge"
+  - `App.tsx` / `main.tsx` / `FilePreview.tsx` / `CommitDialog.tsx` / `CloneVaultModal.tsx` / `RenameDetectedBanner.tsx` / `AiAgentsOnboardingPrompt.tsx` / `ClaudeCodeOnboardingPrompt.tsx` / `lib/feedbackDiagnostics.ts` / `lib/appUpdater.ts` / `lib/vaultAiGuidance.ts` / `lib/aiAgentStreamCallbacks.ts` / `hooks/aiAgentCommands.ts` / `utils/releaseDownloadPage.ts`: 各种 toast / error / button label / description
+  - `README.md`: H1 "# 🌙 DreamX" (drop 梦铸 中文名)
+- **不改的 (allowlist in test)**:
+  - `THIRD_PARTY_NOTICES.md` (AGPL attribution, 冻结)
+  - `docs/reports/v0*-ship-*.md` (历史 ship 记录, 冻结)
+  - `docs/superpowers/plans/*-dreamforge-decisions.md` (migration log)
+  - `docs/superpowers/plans/2026-06-17-adr-*.md` (5 个 ADR)
+  - `docs/superpowers/plans/2026-06-17-dreamforge-v0.2-roadmap.md`
+  - `docs/superpowers/plans/2026-06-16-dreamforge-development-manual.md`
+  - `AGENTS.md` (AI agent guide,不是 user)
+  - `src/lib/dreamxRebrand.test.ts` (test 自指,assertion message 故意含旧名)
+- **实现细节**:
+  - **case-sensitive 替换**: 只动 `DreamForge` (title case),不动 `DREAMFORGE_*` (env var) 也不动 `dreamforge*` (folder/repo/identifier)
+  - **CJK 字符 trick**: ja-JP / ko-KR 翻译里 `DreamForge` 后跟 CJK 字符,word boundary `\b` 不 match. 第一次扫 19 个 ja-JP + 15 个 ko-KR,test 抓到还有. 第二次 pass 不带 `\b` 抓到 25 + 28 剩余,全替换
+  - **JSX text**: 第二次 pass 处理 `<span>... outside DreamForge. ...</span>` 这种 JSX 文本 (不是 string literal 也不是 comment)
+  - **comment 保留**: 11 个代码注释 (DREAMFORGE_SLIM trace convention) 保留 — per cross-project precedent
+- **新 test `src/lib/dreamxRebrand.test.ts`** (8 个):
+  - locale files 扫值不扫 key
+  - tauri.conf.json: productName + window title 必 DreamX, identifier 必 com.biomatrix.dreamforge (compat 验证)
+  - index.html: <title>DreamX</title>
+  - README.md: 第一 H1 含 DreamX, 不含 DreamForge, 不含 梦铸
+  - WelcomeScreen: alt + title DreamX
+  - openAiWorkspaceWindow: 'DreamX AI'
+  - releaseHistoryPage: HTML title + h1
+  - **全仓 scan**: src/ public/ docs/ src-tauri/ 都扫,有 allowlist 跳过 (frozen historical), 严格 case-sensitive "DreamForge" 检测
+- **build status**:
+  - tsc 0 / eslint 0 / vitest 3796/3796 (+8) / cargo 718/718
+  - tauri build OK — output: `DreamX.app` (was `DreamForge.app`)
+  - coverage 72.18/63.85/73.53/74.69 (不变,纯 string swap)
+  - dream-cli-verify 13/0/0
+- **commit**: `6115936` (60 files, 1031+/838-, 1 新 file: dreamxRebrand.test.ts)
+- **next-step backlog**:
+  - v0.4.0 tag candidate: PR 16/17/18/19/20 累计 rebrand,coverage pass
+  - 未来如果 DreamX 名字 confirm,做 PR 18-style 第二次 namespace migration (compatibility layer 也改) — 但**不**会自动做
+  - BlockNote 0.5+ / Cloud LLM multi-provider / Settings UX polish
