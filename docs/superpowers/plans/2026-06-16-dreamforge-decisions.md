@@ -743,3 +743,48 @@
   - v0.4.0 tag candidate: PR 16/17/18/19/20 累计 rebrand,coverage pass
   - 未来如果 DreamX 名字 confirm,做 PR 18-style 第二次 namespace migration (compatibility layer 也改) — 但**不**会自动做
   - BlockNote 0.5+ / Cloud LLM multi-provider / Settings UX polish
+
+## §38 PR 21 — DreamX rebrand cleanup (post-GUI-verify residue) (2026-06-19)
+- **scope**: user 跑完 GUI verify,PR 20 rebrand 不够干净. 4 处残留需修,test 需扩
+- **GUI verify 状态**:
+  - DreamX.app 主 GUI 通过 ✓
+  - Info.plist CFBundleDisplayName = DreamX, CFBundleName = DreamX ✓
+  - 真实窗口标题 / 菜单栏 / WebArea description = DreamX ✓
+  - 主界面正常:5-entry sidebar / DreamPanel / Vault 路径 / StatusBar ✓
+  - Settings 默认 zh-CN 页 UI 文案是 DreamX ✓
+  - 旧配置兼容: vault / LLM Base URL / LLM Model / DREAMFORGE_LLM_API_KEY 文案兼容 ✓
+  - icon.icns 1.1MB 在 bundle ✓
+  - repo working tree 干净 ✓
+- **残留 + 修法**:
+  1. **`Info.plist` `NSLocalNetworkUsageDescription`** (blocking):
+     - 前: "Tolaria connects to local model servers you configure for AI chat."
+     - 后: "DreamX connects to local model servers you configure for AI chat."
+     - 这是 macOS local-network 权限弹窗文案,真实 user 看到
+     - verify: `Contents/Info.plist` 现在是 "DreamX ..."
+  2. **`UpdateBanner.tsx` 2 处** "Tolaria {displayVersion}":
+     - L76 available state → "DreamX {displayVersion}"
+     - L148 ready-to-restart state → "DreamX {displayVersion}"
+  3. **`TelemetryConsentDialog.tsx` L31** "Help improve Tolaria":
+     - → "Help improve DreamX"
+     - (slim mode hide 但代码还在,需清)
+  4. **17 locale 还残留 DreamForge** (尤其 feedback.sponsor.description):
+     - **regex 漏根因**: PR 20 用 `\bDreamForge\b`,但 en.json L48 前是 JSON escape `\\n\\n` (literal backslash + n + backslash + n),`n` 是 word char,跟后面 `D` 之间没有 `\b` boundary,所以 regex 跳过
+     - **修法**: plain `str.replace('DreamForge', 'DreamX')` (不 regex),catch 30 个 across 17 locale
+     - **sv-SE 单独 14 个**: Swedish possessive "DreamForges" (s = 's)
+- **test 扩**:
+  - 新 test "src-tauri/Info.plist has no Tolaria or DreamForge in user-visible strings" 显式 assert privacy string + check DreamX 在
+  - wide scan extension filter 加 `.plist` (之前只 .ts/.tsx/.json/.html/.md/.mjs/.css/.svg)
+- **build verify**:
+  - tsc 0 / eslint 0 / vitest 3797/3797 (+1 Info.plist test) / cargo 718/718
+  - tauri build OK → DreamX.app
+  - `Contents/Info.plist` `NSLocalNetworkUsageDescription` = "DreamX ..." (verify in built bundle)
+  - coverage 72.19/63.87/73.53/74.7 (+0.02 lines/+0.02 branches vs PR 20)
+  - dream-cli-verify 13/0/0
+- **commit**: `041e20a` (21 files, 48+/35-)
+- **lesson**:
+  - **regex 跟 JSON escape 不和**: `\b` 在 JSON 文本里看的是 literal chars,不看 escape 后的语义. 用 `\b` 处理 user-visible 字符串前,先想 raw char pattern 还是 parsed semantics
+  - **GUI verify 抓漏的种类**: PR 16-20 全是 code-level grep / build verify,**不**有 user-level 弹窗 / Info.plist / 真实 macOS 权限文案 这种 system integration 的 surface. user GUI verify 是唯一覆盖
+  - **test allowlist 是累加**: PR 16 (Tolaria rebrand) → 20 (DreamX rebrand) → 21 (Info.plist 加). 每次新 surface 都加进 rebrand test,下次 rebrand 自动 catch
+- **next-step backlog**:
+  - **v0.4.0 tag candidate** (if user confirms): PR 16/17/18/19/20/21 累计 + coverage 72.19/63.87 + 3797/3797 vitest + 718/718 cargo + dream-cli-verify 13/0/0 + tauri build 26-28s + GUI verify pass. 这是 ship 节奏
+  - PR 22+: BlockNote 0.5+ / Cloud LLM multi-provider / Settings UX polish
