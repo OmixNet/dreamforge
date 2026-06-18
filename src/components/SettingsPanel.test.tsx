@@ -14,6 +14,15 @@ vi.mock('../lib/telemetry', () => ({
   trackEvent: trackEventMock,
 }))
 
+// PR 14: this test file exercises the non-slim Tolaria surface (AI Agents,
+// release channel, telemetry toggles). Slim mode hides those entries, so
+// the tests need to opt out of DREAMFORGE_SLIM_MODE explicitly. Slim-mode
+// behavior is covered by SettingsBodyNav / PrivacySettingsSection tests.
+vi.mock('../lib/dreamforgeMode', async () => {
+  const actual = await vi.importActual<typeof import('../lib/dreamforgeMode')>('../lib/dreamforgeMode')
+  return { ...actual, DREAMFORGE_SLIM_MODE: false }
+})
+
 const emptySettings: Settings = {
   auto_pull_interval_minutes: null,
   git_enabled: null,

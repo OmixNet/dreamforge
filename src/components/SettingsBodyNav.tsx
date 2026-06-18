@@ -1,5 +1,6 @@
 import { Article, ArrowsClockwise as RefreshCw, Cube, GitBranch, ListChecks, Palette, Robot as Bot, ShieldCheck, type IconProps } from '@phosphor-icons/react'
 import type { ComponentType } from 'react'
+import { DREAMFORGE_SLIM_MODE } from '../lib/dreamforgeMode'
 import type { TranslationKey } from '../lib/i18n'
 import { Button } from './ui/button'
 import { SETTINGS_SECTION_IDS } from './settingsSectionIds'
@@ -15,13 +16,18 @@ interface SettingsNavItem {
 }
 
 export function SettingsBodyNav({ t }: SettingsBodyNavProps) {
+  // Slim mode hides AI-related entries — see lib/dreamforgeMode.ts. Other
+  // Tolaria-only entries (release channel, MCP) are already gated at the
+  // App.tsx layer via prop forwarding; this is the slim-specific nav filter.
   const items: SettingsNavItem[] = [
     { id: SETTINGS_SECTION_IDS.sync, label: t('settings.sync.title'), Icon: RefreshCw },
     { id: SETTINGS_SECTION_IDS.workspaces, label: t('settings.workspaces.title'), Icon: Cube },
     { id: SETTINGS_SECTION_IDS.autogit, label: t('settings.autogit.title'), Icon: GitBranch },
     { id: SETTINGS_SECTION_IDS.appearance, label: t('settings.appearance.title'), Icon: Palette },
     { id: SETTINGS_SECTION_IDS.content, label: t('settings.vaultContent.title'), Icon: Article },
-    { id: SETTINGS_SECTION_IDS.ai, label: t('settings.aiAgents.title'), Icon: Bot },
+    ...(DREAMFORGE_SLIM_MODE
+      ? []
+      : [{ id: SETTINGS_SECTION_IDS.ai, label: t('settings.aiAgents.title'), Icon: Bot } as const]),
     { id: SETTINGS_SECTION_IDS.workflow, label: t('settings.workflow.title'), Icon: ListChecks },
     { id: SETTINGS_SECTION_IDS.privacy, label: t('settings.privacy.title'), Icon: ShieldCheck },
   ]

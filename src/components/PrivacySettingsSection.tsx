@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { DREAMFORGE_SLIM_MODE } from '../lib/dreamforgeMode'
 import type { createTranslator } from '../lib/i18n'
 import { SectionHeading, SettingsGroup, SettingsGroupItem } from './SettingsControls'
 import { Checkbox } from './ui/checkbox'
@@ -52,24 +53,39 @@ export function PrivacySettingsSection({
   analytics,
   setAnalytics,
 }: PrivacySettingsSectionProps) {
+  // DREAMFORGE_SLIM: telemetry toggles (Sentry crash reporting + PostHog
+  // analytics) are Tolaria features. The underlying hooks are kept so test
+  // coverage is preserved, but the user-facing toggles are hidden in slim
+  // mode. A short note replaces the toggles so the Privacy section still
+  // makes sense as a destination in the side nav.
   return (
     <>
       <SectionHeading title={t('settings.privacy.title')} />
       <SettingsGroup>
-        <TelemetryToggle
-          label={t('settings.privacy.crashReporting')}
-          description={t('settings.privacy.crashReportingDescription')}
-          checked={crashReporting}
-          onChange={setCrashReporting}
-          testId="settings-crash-reporting"
-        />
-        <TelemetryToggle
-          label={t('settings.privacy.analytics')}
-          description={t('settings.privacy.analyticsDescription')}
-          checked={analytics}
-          onChange={setAnalytics}
-          testId="settings-analytics"
-        />
+        {DREAMFORGE_SLIM_MODE ? (
+          <SettingsGroupItem testId="settings-privacy-slim-note">
+            <p className="text-sm text-muted-foreground">
+              {t('settings.privacy.slimNote')}
+            </p>
+          </SettingsGroupItem>
+        ) : (
+          <>
+            <TelemetryToggle
+              label={t('settings.privacy.crashReporting')}
+              description={t('settings.privacy.crashReportingDescription')}
+              checked={crashReporting}
+              onChange={setCrashReporting}
+              testId="settings-crash-reporting"
+            />
+            <TelemetryToggle
+              label={t('settings.privacy.analytics')}
+              description={t('settings.privacy.analyticsDescription')}
+              checked={analytics}
+              onChange={setAnalytics}
+              testId="settings-analytics"
+            />
+          </>
+        )}
       </SettingsGroup>
     </>
   )

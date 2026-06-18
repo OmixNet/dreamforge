@@ -44,6 +44,7 @@ import { normalizeReleaseChannel, serializeReleaseChannel, type ReleaseChannel }
 import { shouldHideGitignoredFiles } from '../lib/gitignoredVisibility'
 import { areGitFeaturesEnabled } from '../lib/gitSettings'
 import { areAiFeaturesEnabled } from '../lib/aiFeatures'
+import { DREAMFORGE_SLIM_MODE } from '../lib/dreamforgeMode'
 import { trackAllNotesVisibilityChanged } from '../lib/productAnalytics'
 import { AiProviderSettings } from './AiProviderSettings'
 import { AiAgentIcon } from './AiAgentIcon'
@@ -778,21 +779,23 @@ function SettingsAgentWorkflowSections({
 }: SettingsBodyProps) {
   return (
     <>
-      <SettingsSection id={SETTINGS_SECTION_IDS.ai}>
-        <AiAgentSettingsSection
-          t={t}
-          aiFeaturesEnabled={aiFeaturesEnabled}
-          setAiFeaturesEnabled={setAiFeaturesEnabled}
-          aiAgentsStatus={aiAgentsStatus}
-          defaultAiAgent={defaultAiAgent}
-          setDefaultAiAgent={setDefaultAiAgent}
-          defaultAiTarget={defaultAiTarget}
-          setDefaultAiTarget={setDefaultAiTarget}
-          aiModelProviders={aiModelProviders}
-          setAiModelProviders={setAiModelProviders}
-          onCopyMcpConfig={onCopyMcpConfig}
-        />
-      </SettingsSection>
+      {!DREAMFORGE_SLIM_MODE && (
+        <SettingsSection id={SETTINGS_SECTION_IDS.ai}>
+          <AiAgentSettingsSection
+            t={t}
+            aiFeaturesEnabled={aiFeaturesEnabled}
+            setAiFeaturesEnabled={setAiFeaturesEnabled}
+            aiAgentsStatus={aiAgentsStatus}
+            defaultAiAgent={defaultAiAgent}
+            setDefaultAiAgent={setDefaultAiAgent}
+            defaultAiTarget={defaultAiTarget}
+            setDefaultAiTarget={setDefaultAiTarget}
+            aiModelProviders={aiModelProviders}
+            setAiModelProviders={setAiModelProviders}
+            onCopyMcpConfig={onCopyMcpConfig}
+          />
+        </SettingsSection>
+      )}
 
       <SettingsSection id={SETTINGS_SECTION_IDS.workflow}>
         <OrganizationWorkflowSection
@@ -849,18 +852,20 @@ function SyncAndUpdatesSection({
           />
         </SettingsRow>
 
-        <SettingsRow label={t('settings.releaseChannel')} description={t('settings.releaseChannelDescription')}>
-          <SelectControl
-            ariaLabel={t('settings.releaseChannel')}
-            value={releaseChannel}
-            onValueChange={(value) => setReleaseChannel(value as ReleaseChannel)}
-            options={[
-              { value: 'stable', label: t('settings.releaseStable') },
-              { value: 'alpha', label: t('settings.releaseAlpha') },
-            ]}
-            testId="settings-release-channel"
-          />
-        </SettingsRow>
+        {!DREAMFORGE_SLIM_MODE && (
+          <SettingsRow label={t('settings.releaseChannel')} description={t('settings.releaseChannelDescription')}>
+            <SelectControl
+              ariaLabel={t('settings.releaseChannel')}
+              value={releaseChannel}
+              onValueChange={(value) => setReleaseChannel(value as ReleaseChannel)}
+              options={[
+                { value: 'stable', label: t('settings.releaseStable') },
+                { value: 'alpha', label: t('settings.releaseAlpha') },
+              ]}
+              testId="settings-release-channel"
+            />
+          </SettingsRow>
+        )}
       </SettingsGroup>
     </>
   )
@@ -1028,6 +1033,11 @@ function AiAgentSettingsSection({
   | 'setAiModelProviders'
   | 'onCopyMcpConfig'
 >) {
+  // DREAMFORGE_SLIM: defensive guard. SettingsAgentWorkflowSections already
+  // gates the wrapping SettingsSection, but if a future caller mounts this
+  // section directly (e.g. an inline overlay), it should still no-op.
+  if (DREAMFORGE_SLIM_MODE) return null
+
   const selectedTarget = resolveAiTarget({
     default_ai_agent: defaultAiAgent,
     default_ai_target: defaultAiTarget,

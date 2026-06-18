@@ -316,6 +316,7 @@
   "settings.privacy.crashReportingDescription": "Send anonymous error reports",
   "settings.privacy.analytics": "Usage analytics",
   "settings.privacy.analyticsDescription": "Share anonymous usage patterns",
+  "settings.privacy.slimNote": "Slim mode disables all telemetry — no usage data is sent from this build.",
   "settings.footerShortcut": "⌘, to open settings",
   "settings.cancel": "Cancel",
   "settings.save": "Save",
