@@ -991,18 +991,25 @@ export default defineConfig({
         // is achievable on slim v0.1 code; branches is harder (v8 branch coverage often misses
         // default-value ternaries / nullish coalescing / optional-chaining fallbacks).
         //
-        // v0.3 PR 12.x re-baseline: branches gate locked at the current real coverage
-        // (62.95% after PR 12.3) so we never regress below today's number. The previous
-        // 60% v0.2 baseline was below the actual measurement, which let dead-code branches
-        // silently drag the average down without tripping CI.
+        // v0.3 PR 12.x re-baseline: branches gate locked at the current real coverage so we
+        // never regress below today's number. The previous 60% v0.2 baseline was below the
+        // actual measurement, which let dead-code branches silently drag the average down
+        // without tripping CI.
         //
-        // Ramp plan (PR 13/14/15): 62.5 → 65 → 67.5 → 70. Each PR targets a ~2.5pp bump on
-        // real used code, not on Tolaria-residual files. If a PR can't hit its target, the
-        // next PR starts from wherever the previous one landed rather than chasing a number.
+        // Ramp plan (PR 13/14/15): 62.5 → 65 → 67.5 → 70.
+        //
+        // PR 13 (5 test files, 37 new tests) lifted branches 62.95 → 63.62. The remaining
+        // used code that would push toward 65 is either component-rendering (InlineWikilinkInput
+        // JSX with 47 uncovered branches) or pulls in many unrelated deps (useAppPreferences
+        // with useAiAgentPreferences / useTelemetry / useThemeMode / useDocumentThemeMode). The
+        // marginal coverage gain per new test file dropped to ~0.1pp — the cost of chasing 65
+        // is now higher than the value. Locking the gate at 63.5 (0.12pp below the current
+        // 63.62 measurement) and moving on to PR 14/15 only if a real used-code surface
+        // becomes worthwhile. The next PR (PR 14) will bump to 64 if it lands naturally.
         lines: 70,
         functions: 70,
         statements: 70,
-        branches: 62.5, // v0.3 PR 12.3 baseline = 62.95%; PR 13/14/15 target 65/67.5/70
+        branches: 63.5, // v0.3 PR 13 measurement = 63.62%; PR 14/15 target 64/65
       },
     },
   },
