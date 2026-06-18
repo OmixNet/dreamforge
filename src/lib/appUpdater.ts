@@ -14,7 +14,7 @@ export type AppUpdateDownloadEvent =
   | { event: 'Finished' }
 
 export const RESTART_REQUIRED_FOLDER_PICKER_MESSAGE =
-  'DreamForge needs a restart before macOS can open another folder picker. Restart to apply the downloaded update and try again.'
+  'DreamX needs a restart before macOS can open another folder picker. Restart to apply the downloaded update and try again.'
 
 let restartRequiredAfterUpdate = false
 

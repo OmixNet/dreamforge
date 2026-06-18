@@ -8,15 +8,15 @@ import { typeWorkspaceKey } from './typeDefinitions'
 // future refactor cannot silently regress the brand.
 
 describe('typeWorkspaceKey (PR 18 rebrand)', () => {
-  it('uses the DreamForge sentinel when path is empty', () => {
+  it('uses the DreamX sentinel when path is empty', () => {
     expect(typeWorkspaceKey({ path: '' })).toBe('__dreamforge_no_workspace__')
   })
 
-  it('uses the DreamForge sentinel when path is null', () => {
+  it('uses the DreamX sentinel when path is null', () => {
     expect(typeWorkspaceKey({ path: null })).toBe('__dreamforge_no_workspace__')
   })
 
-  it('uses the DreamForge sentinel when path is whitespace only', () => {
+  it('uses the DreamX sentinel when path is whitespace only', () => {
     expect(typeWorkspaceKey({ path: '   ' })).toBe('__dreamforge_no_workspace__')
   })
 

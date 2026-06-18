@@ -1192,7 +1192,7 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
       const checkedChannel = normalizeReleaseChannel(settings.release_channel)
       setToastMessage(`No newer ${checkedChannel} update is available right now`)
     } else if (result.kind === 'available') {
-      setToastMessage(`DreamForge ${result.displayVersion} is available`)
+      setToastMessage(`DreamX ${result.displayVersion} is available`)
     } else {
       setToastMessage(result.message)
     }
@@ -1211,7 +1211,7 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
     }
   }, [refreshVaultAiGuidance, resolvedPath, vault])
 
-  const restoreVaultAiGuidance = useCallback(async (successToast: string | null = 'DreamForge AI guidance restored') => {
+  const restoreVaultAiGuidance = useCallback(async (successToast: string | null = 'DreamX AI guidance restored') => {
     if (!resolvedPath) return
     try {
       const tauriInvoke = isTauri() ? invoke : mockInvoke
@@ -1220,7 +1220,7 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
       await refreshVaultAiGuidance()
       if (successToast) setToastMessage(successToast)
     } catch (err) {
-      setToastMessage(`Failed to restore DreamForge AI guidance: ${err}`)
+      setToastMessage(`Failed to restore DreamX AI guidance: ${err}`)
     }
   }, [refreshVaultAiGuidance, resolvedPath, vault])
 

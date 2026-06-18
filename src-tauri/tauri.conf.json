@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "DreamForge",
+  "productName": "DreamX",
   "version": "0.1.0",
   "identifier": "com.biomatrix.dreamforge",
   "build": {
@@ -14,7 +14,7 @@
     "macOSPrivateApi": true,
     "windows": [
       {
-        "title": "DreamForge",
+        "title": "DreamX",
         "width": 1400,
         "height": 900,
         "minWidth": 480,

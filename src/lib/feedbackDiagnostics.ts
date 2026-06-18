@@ -126,7 +126,7 @@ export function buildSanitizedDiagnosticBundle({
   releaseChannel,
 }: DiagnosticBundleContext): string {
   const lines = [
-    'DreamForge sanitized diagnostics',
+    'DreamX sanitized diagnostics',
     `Generated: ${new Date().toISOString()}`,
     `Build: ${buildNumber ?? 'unknown'}`,
     `Release channel: ${releaseChannel ?? 'stable'}`,

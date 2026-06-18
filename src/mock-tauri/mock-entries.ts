@@ -1129,7 +1129,7 @@ MOCK_ENTRIES.push(
   {
     path: '/Users/biomatrix/Desktop/APP/dreamforge-test-vault/notes/hello.md',
     filename: 'hello.md',
-    title: 'Hello DreamForge',
+    title: 'Hello DreamX',
     isA: null,
     aliases: [],
     belongsTo: [],
@@ -1151,7 +1151,7 @@ MOCK_ENTRIES.push(
   {
     path: '/Users/biomatrix/Desktop/APP/dreamforge-test-vault/MEMORY.md',
     filename: 'MEMORY.md',
-    title: 'DreamForge Memory',
+    title: 'DreamX Memory',
     isA: null,
     aliases: [],
     belongsTo: [],

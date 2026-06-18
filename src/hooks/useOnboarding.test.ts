@@ -371,7 +371,7 @@ describe('useOnboarding', () => {
     })
 
     expect(result.current.error).toBe(
-      'DreamForge needs a restart before macOS can open another folder picker. Restart to apply the downloaded update and try again.',
+      'DreamX needs a restart before macOS can open another folder picker. Restart to apply the downloaded update and try again.',
     )
     expect(result.current.state.status).toBe('welcome')
   })

@@ -23,7 +23,7 @@ const getDialogCopy = (commitMode: CommitMode): CommitDialogCopy => {
   if (commitMode === 'local') {
     return {
       title: 'Commit',
-      description: 'This vault has no git remote configured. DreamForge will create a local commit only.',
+      description: 'This vault has no git remote configured. DreamX will create a local commit only.',
       actionLabel: 'Commit',
       shortcutHint: `${submitShortcut} to commit locally`,
     }

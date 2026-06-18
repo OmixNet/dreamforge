@@ -275,13 +275,13 @@ function getWelcomeScreenPresentation(
   if (mode === 'welcome') {
     return {
       heroBackground: 'transparent',
-      heroIcon: <img src={dreamforgeIcon} alt="DreamForge icon" style={BRAND_ICON_STYLE} />,
+      heroIcon: <img src={dreamforgeIcon} alt="DreamX icon" style={BRAND_ICON_STYLE} />,
       openFolderLabel: 'Open existing vault',
       subtitle: 'Markdown knowledge management for the age of AI',
       templateDescription: isOffline
         ? `Requires internet — clone later. Suggested path: ${defaultVaultPath}`
         : 'Download the getting started vault',
-      title: 'Welcome to DreamForge',
+      title: 'Welcome to DreamX',
     }
   }
 
@@ -437,9 +437,9 @@ export function WelcomeScreen({
             icon={<Plus size={18} style={{ color: 'var(--accent-blue)' }} />}
             iconBg="var(--accent-blue-light)"
             label="Create empty vault"
-            description="Start fresh in an empty folder with DreamForge defaults"
+            description="Start fresh in an empty folder with DreamX defaults"
             loadingLabel="Creating vault…"
-            loadingDescription="Preparing DreamForge defaults in the selected folder"
+            loadingDescription="Preparing DreamX defaults in the selected folder"
             onClick={onCreateEmptyVault}
             disabled={busy}
             loading={creatingAction === 'empty'}

@@ -20,7 +20,7 @@ function buildVaultAttachmentLink(label: string, url: string): string {
 }
 
 describe('fileAttachmentMarkdown token prefix', () => {
-  it('emits the DreamForge prefix when rewriting a standalone attachment link', () => {
+  it('emits the DreamX prefix when rewriting a standalone attachment link', () => {
     // The pre-processor only rewrites links that occupy their own line
     // (the regex anchors with `^` and `[ \t]*$`). Inline links like
     // "See [report](...)" do not match — the pre-processor leaves them

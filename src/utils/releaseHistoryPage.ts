@@ -887,14 +887,14 @@ export function buildReleaseHistoryPage(releasesPayload: unknown): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DreamForge — Release History</title>
+  <title>DreamX — Release History</title>
   <style>${RELEASE_HISTORY_PAGE_STYLES}
   </style>
 </head>
 <body>
   <main>
     <header>
-      <h1>DreamForge Release History</h1>
+      <h1>DreamX Release History</h1>
       <p class="subtitle">Stable builds appear when a stable-vYYYY.M.D tag is promoted. Alpha builds update on every push to main.</p>
     </header>
     <div class="channel-tabs">

@@ -20,7 +20,7 @@ describe('useAiAgentsOnboarding', () => {
     localStorage.clear()
   })
 
-  it('stays hidden in DreamForge Slim mode even when enabled', () => {
+  it('stays hidden in DreamX Slim mode even when enabled', () => {
     const { result } = renderHook(() => useAiAgentsOnboarding(true))
 
     expect(DREAMFORGE_SLIM_MODE).toBe(true)

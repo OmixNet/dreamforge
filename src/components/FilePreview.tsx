@@ -58,7 +58,7 @@ function fallbackContentForPreviewKind(previewKind: FilePreviewKind | null): Omi
     return {
       icon: 'warning',
       title: 'Image preview failed',
-      description: 'DreamForge could not render this image file in the preview.',
+      description: 'DreamX could not render this image file in the preview.',
     }
   }
 
@@ -66,14 +66,14 @@ function fallbackContentForPreviewKind(previewKind: FilePreviewKind | null): Omi
     return {
       icon: 'warning',
       title: 'PDF preview failed',
-      description: 'DreamForge could not render this PDF file in the preview.',
+      description: 'DreamX could not render this PDF file in the preview.',
     }
   }
 
   return {
     icon: 'file',
     title: 'Preview unavailable',
-    description: 'DreamForge does not have an in-app preview for this file type.',
+    description: 'DreamX does not have an in-app preview for this file type.',
   }
 }
 

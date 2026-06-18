@@ -170,7 +170,7 @@ function normalizePayload(value: unknown): FileAttachmentPayload | null {
 
 function readFileAttachmentToken(text: MarkdownText): FileAttachmentPayload | null {
   const trimmed = text.trim()
-  // PR 18: dual-recognize the legacy Tolaria prefix and the new DreamForge
+  // PR 18: dual-recognize the legacy Tolaria prefix and the new DreamX
   // prefix. Both decode to the same payload shape.
   const recognizedPrefix = trimmed.startsWith(DREAMFORGE_FILE_ATTACHMENT_TOKEN_PREFIX)
     ? DREAMFORGE_FILE_ATTACHMENT_TOKEN_PREFIX

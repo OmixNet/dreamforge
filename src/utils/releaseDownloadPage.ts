@@ -50,23 +50,23 @@ type DownloadPageContent = {
 
 const PLATFORM_METADATA: Record<StablePlatformKey, { buttonLabel: string; label: string }> = {
   'darwin-aarch64': {
-    buttonLabel: 'Download DreamForge for macOS Apple Silicon',
+    buttonLabel: 'Download DreamX for macOS Apple Silicon',
     label: 'macOS Apple Silicon',
   },
   'darwin-x86_64': {
-    buttonLabel: 'Download DreamForge for Intel Mac',
+    buttonLabel: 'Download DreamX for Intel Mac',
     label: 'macOS Intel',
   },
   'linux-x86_64': {
-    buttonLabel: 'Download DreamForge AppImage for Linux',
+    buttonLabel: 'Download DreamX AppImage for Linux',
     label: 'Linux AppImage',
   },
   'linux-x86_64-rpm': {
-    buttonLabel: 'Download DreamForge RPM for Linux',
+    buttonLabel: 'Download DreamX RPM for Linux',
     label: 'Linux RPM',
   },
   'windows-x86_64': {
-    buttonLabel: 'Download DreamForge for Windows',
+    buttonLabel: 'Download DreamX for Windows',
     label: 'Windows',
   },
 }
@@ -410,17 +410,17 @@ function buildStableDownloadPageContent(
   if (Object.keys(downloads).length > 0) {
     return {
       helperText: 'Your download should start automatically. If it does not, use one of the platform links below.',
-      message: 'Preparing the latest stable DreamForge download for your platform.',
+      message: 'Preparing the latest stable DreamX download for your platform.',
       shouldRedirect: true,
-      title: 'DreamForge Stable Download',
+      title: 'DreamX Stable Download',
     }
   }
 
   return {
     helperText: 'Use the button below to check the latest release history.',
-    message: 'No stable DreamForge downloads are available yet.',
+    message: 'No stable DreamX downloads are available yet.',
     shouldRedirect: false,
-    title: 'DreamForge Stable Download Unavailable',
+    title: 'DreamX Stable Download Unavailable',
   }
 }
 
@@ -461,7 +461,7 @@ function buildDownloadsMarkup(downloads: StableDownloadTargets): string {
 function buildDownloadFrameMarkup(downloads: StableDownloadTargets): string {
   if (Object.keys(downloads).length === 0) return ''
 
-  return `<iframe title="DreamForge installer download" name="${DOWNLOAD_FRAME_NAME}" sandbox="allow-downloads" hidden></iframe>`
+  return `<iframe title="DreamX installer download" name="${DOWNLOAD_FRAME_NAME}" sandbox="allow-downloads" hidden></iframe>`
 }
 
 function buildRedirectMarkup(downloads: StableDownloadTargets): string {
@@ -525,10 +525,10 @@ function buildRedirectMarkup(downloads: StableDownloadTargets): string {
         }
 
         if (requiresWindowsChoice) {
-          return 'Use the signed Windows installer link below. Company-managed devices may require IT approval of the DreamForge publisher.';
+          return 'Use the signed Windows installer link below. Company-managed devices may require IT approval of the DreamX publisher.';
         }
 
-        return 'Starting the latest stable DreamForge download for ' + target.label + '.';
+        return 'Starting the latest stable DreamX download for ' + target.label + '.';
       }
 
       function updateDownloadMessage(target, requiresMacChoice, requiresWindowsChoice) {

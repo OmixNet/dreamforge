@@ -66,7 +66,7 @@ function restoreGuidanceCommands({
   return [
     {
       id: 'restore-vault-ai-guidance',
-      label: 'Restore DreamForge AI Guidance',
+      label: 'Restore DreamX AI Guidance',
       group: 'Settings',
       keywords: aiAgentKeywords('ai', 'agent', 'guidance', 'restore', 'repair', 'agents', 'gemini'),
       enabled: true,

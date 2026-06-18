@@ -1,17 +1,17 @@
-# 🌙 DreamForge (梦铸)
+# 🌙 DreamX
 
-DreamForge 是一个本地优先的知识 App，把原始资料和 Markdown 笔记自动锻造成长期个人记忆库。
+DreamX 是一个本地优先的知识 App，把原始资料和 Markdown 笔记自动锻造成长期个人记忆库。
 
 > "**raw/ → notes/ → wiki/ → MEMORY.md → Dream report**" —— 在夜里，把零散记忆锻造成知识图谱。
 
 ## 这是什么
 
-DreamForge 由两部分组成：
+DreamX 由两部分组成：
 
 - **Tauri 桌面壳**（本仓库）：原生 macOS 桌面应用，本地 Markdown vault、文件树、编辑器、搜索、wikilink / backlinks、本地 Git 快照、Dream 面板
 - **DreamVault 引擎**（[DreamVault 仓库](https://github.com/biomatrix/DreamVault) 单独存放）：Swift/CLI 引擎，跑 `gather → consolidate → decay → persist → commit` 记忆整理流程
 
-第一版（DreamForge Slim v0.1）只支持 **macOS 本地使用**，不连任何外部服务（无 AI 云、无 PostHog / Sentry、无 updater、无远程 Git push UI、无 deep link、无多 vault mounted、无跨平台发布）。
+第一版（DreamX Slim v0.1）只支持 **macOS 本地使用**，不连任何外部服务（无 AI 云、无 PostHog / Sentry、无 updater、无远程 Git push UI、无 deep link、无多 vault mounted、无跨平台发布）。
 
 ## 核心规则
 
@@ -97,13 +97,13 @@ VAULT_PATH=/path/to/your/vault ./scripts/dream-cli-verify.sh
 ollama serve &
 # 2. 确认 dream CLI 路径
 Settings → Dream → Dream CLI path = /Users/biomatrix/Desktop/APP/DreamVault/.build/debug/dream
-# 3. 在 DreamForge App 里打开 dreamforge-test-vault
+# 3. 在 DreamX App 里打开 dreamforge-test-vault
 # 4. 点 Run Dream
 ```
 
 ## 协议
 
-DreamForge 是 [Tolaria](https://github.com/refactoringhq/tolaria) 的衍生作品，继承 **AGPL-3.0-or-later** 协议。详见 [LICENSE](LICENSE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+DreamX 是 [Tolaria](https://github.com/refactoringhq/tolaria) 的衍生作品，继承 **AGPL-3.0-or-later** 协议。详见 [LICENSE](LICENSE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 路线图
 

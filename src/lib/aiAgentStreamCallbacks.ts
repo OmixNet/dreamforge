@@ -87,7 +87,7 @@ function finalResponseText(response: AssistantResponseText, agent: AiAgentId): A
     return [
       'OpenCode returned no assistant text.',
       'Check the selected provider/model context limit or retry the request.',
-      'For large active notes, DreamForge sends a compact note snapshot and OpenCode can read the full file with get_note(path).',
+      'For large active notes, DreamX sends a compact note snapshot and OpenCode can read the full file with get_note(path).',
     ].join(' ')
   }
 
