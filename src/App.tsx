@@ -92,7 +92,7 @@ import { trackEvent } from './lib/telemetry'
 import { areAiFeaturesEnabled } from './lib/aiFeatures'
 import { areGitFeaturesEnabled } from './lib/gitSettings'
 import { useAppCommandAiActions } from './hooks/useAppCommandAiActions'
-// DREAMFORGE_SLIM: TOLARIA_DOCS_URL + openExternalUrl 物理删除 (PR 6, openDocs 已删)
+// DREAMFORGE_SLIM: DREAMFORGE_DOCS_URL + openExternalUrl 物理删除 (PR 6, openDocs 已删)
 import {
   translate,
 } from './lib/i18n'
@@ -1192,7 +1192,7 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
       const checkedChannel = normalizeReleaseChannel(settings.release_channel)
       setToastMessage(`No newer ${checkedChannel} update is available right now`)
     } else if (result.kind === 'available') {
-      setToastMessage(`Tolaria ${result.displayVersion} is available`)
+      setToastMessage(`DreamForge ${result.displayVersion} is available`)
     } else {
       setToastMessage(result.message)
     }
@@ -1211,7 +1211,7 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
     }
   }, [refreshVaultAiGuidance, resolvedPath, vault])
 
-  const restoreVaultAiGuidance = useCallback(async (successToast: string | null = 'Tolaria AI guidance restored') => {
+  const restoreVaultAiGuidance = useCallback(async (successToast: string | null = 'DreamForge AI guidance restored') => {
     if (!resolvedPath) return
     try {
       const tauriInvoke = isTauri() ? invoke : mockInvoke
@@ -1220,7 +1220,7 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
       await refreshVaultAiGuidance()
       if (successToast) setToastMessage(successToast)
     } catch (err) {
-      setToastMessage(`Failed to restore Tolaria AI guidance: ${err}`)
+      setToastMessage(`Failed to restore DreamForge AI guidance: ${err}`)
     }
   }, [refreshVaultAiGuidance, resolvedPath, vault])
 

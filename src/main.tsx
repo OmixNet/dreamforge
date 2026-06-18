@@ -93,7 +93,7 @@ window.__laputaTest = {
     }
 
     if (!window.__laputaTest?.dispatchBrowserMenuCommand) {
-      throw new Error('Tolaria test bridge is missing dispatchBrowserMenuCommand')
+      throw new Error('DreamForge test bridge is missing dispatchBrowserMenuCommand')
     }
 
     window.__laputaTest.dispatchBrowserMenuCommand(id)
@@ -144,7 +144,7 @@ function showFatalRenderError(
 
   const message = error instanceof Error ? error.stack ?? error.message : String(error)
   overlay.textContent = [
-    'Tolaria render error',
+    'DreamForge render error',
     '',
     message,
     '',

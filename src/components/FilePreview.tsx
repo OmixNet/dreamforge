@@ -52,7 +52,7 @@ function fallbackContentForPreviewKind(previewKind: FilePreviewKind | null): Omi
     return {
       icon: 'warning',
       title: 'Image preview failed',
-      description: 'Tolaria could not render this image file in the preview.',
+      description: 'DreamForge could not render this image file in the preview.',
     }
   }
 
@@ -60,14 +60,14 @@ function fallbackContentForPreviewKind(previewKind: FilePreviewKind | null): Omi
     return {
       icon: 'warning',
       title: 'PDF preview failed',
-      description: 'Tolaria could not render this PDF file in the preview.',
+      description: 'DreamForge could not render this PDF file in the preview.',
     }
   }
 
   return {
     icon: 'file',
     title: 'Preview unavailable',
-    description: 'Tolaria does not have an in-app preview for this file type.',
+    description: 'DreamForge does not have an in-app preview for this file type.',
   }
 }
 

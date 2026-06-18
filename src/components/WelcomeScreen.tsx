@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { OnboardingShell } from './OnboardingShell'
 import { Button } from '@/components/ui/button'
-import tolariaIcon from '@/assets/tolaria-icon.svg'
+import dreamforgeIcon from '@/assets/dreamforge-icon.svg'
 
 interface WelcomeScreenProps {
   mode: 'welcome' | 'vault-missing'
@@ -275,13 +275,13 @@ function getWelcomeScreenPresentation(
   if (mode === 'welcome') {
     return {
       heroBackground: 'transparent',
-      heroIcon: <img src={tolariaIcon} alt="Tolaria icon" style={BRAND_ICON_STYLE} />,
+      heroIcon: <img src={dreamforgeIcon} alt="DreamForge icon" style={BRAND_ICON_STYLE} />,
       openFolderLabel: 'Open existing vault',
       subtitle: 'Markdown knowledge management for the age of AI',
       templateDescription: isOffline
         ? `Requires internet — clone later. Suggested path: ${defaultVaultPath}`
         : 'Download the getting started vault',
-      title: 'Welcome to Tolaria',
+      title: 'Welcome to DreamForge',
     }
   }
 
@@ -437,9 +437,9 @@ export function WelcomeScreen({
             icon={<Plus size={18} style={{ color: 'var(--accent-blue)' }} />}
             iconBg="var(--accent-blue-light)"
             label="Create empty vault"
-            description="Start fresh in an empty folder with Tolaria defaults"
+            description="Start fresh in an empty folder with DreamForge defaults"
             loadingLabel="Creating vault…"
-            loadingDescription="Preparing Tolaria defaults in the selected folder"
+            loadingDescription="Preparing DreamForge defaults in the selected folder"
             onClick={onCreateEmptyVault}
             disabled={busy}
             loading={creatingAction === 'empty'}
