@@ -400,3 +400,39 @@
 
 
 
+
+## §30 v0.3.0 — Coverage ramp + gate baseline lock (2026-06-18)
+- **v0.3.0 ship** (test-only milestone): 214 new tests (3581 → 3760) across 18 new test files
+- **Coverage gate polarity flip**: v0.2 gate branches 60% was BELOW the actual 61.90% measurement, which let dead-code branches silently drag the average down without tripping CI. v0.3 gate 63.5% is just BELOW the 63.62% measurement so any drop blocks merge
+- **Ramp plan** (per user "不要再冲 70; 先 lock baseline 防回退"):
+  - PR 12: 60 → 62.5 lock (5 test files, 99 new tests)
+  - PR 13: 62.5 → 63.5 bump (4 test files, 37 new tests)
+  - PR 14/15: optional, only if a real used-code surface emerges
+- **Coverage progression vs v0.2.0**:
+  - statements 70.51% → 71.98% (+1.47)
+  - branches  61.90% → 63.62% (+1.72)  ← target ramp
+  - functions 72.03% → 73.32% (+1.29)
+  - lines     73.06% → 74.47% (+1.41)
+- **Test totals**: vitest 3581 (PR 12 base) → 3760 (PR 13 final); cargo test 710 (unchanged)
+- **Push to real remote** (first time):
+  - `git remote add origin git@github.com:OmixNet/dreamforge.git` (HTTPS auth failed in non-interactive shell — `Device not configured`; existing local ed25519 SSH key worked after switching remote URL to `git@`)
+  - v0.2.0 tag + 9 commits pushed (af93ac4)
+  - v0.3.0 ship doc commit + tag pushed (3ebc2a5)
+- **PR 12 lessons** (cross-project):
+  - **mock-handler shape parity**: TS `mockInvoke` + Rust `PersistedVaultList` shape must be 1:1. Added Rust field `hidden_defaults: String[]` → mock `mockVaultList` also needs it, else `result.hiddenDefaults` returns `undefined` not `[]` → test fail. Grep Rust struct before writing new mock.
+  - **VaultEntry.path is absolute**: PR 9.5 lesson still applies. New path helpers must use `pathRelativeToRoot` + `isInFolder`, not re-invent.
+  - **PR 11.5 zero Rust changes**: `vault_list.rs` was already multi-vault capable (PR 1 changed APP_CONFIG_DIR). PR 11.5 just added `VaultSettingsSection.tsx` + `addVault` plumbing. Grep Rust layer first before writing frontend feature.
+  - **mock-handlers for new tauri commands**: `rename_vault_folder` + `delete_vault_folder` had no mock handler — folder-action hook success paths failed silently. Added stub handlers; consistent with other vault_* mocks.
+- **PR 13 lessons** (cross-project):
+  - **Diminishing returns on test ramps**: each new test file added ~0.1-0.5pp branches after PR 12.2. Most remaining used code is either component-rendering (JSX) or pulls in unrelated deps (useAppPreferences → 4 separate hooks). At some point, marginal cost > marginal value.
+  - **Used code is at ~84% branches, not 63%**: Tolaria-residual files (AiWorkspace, ConflictResolver, etc.) drag the average. They survive DREAMFORGE_SLIM deletes but aren't exercised in slim mode. Future PR 14/15 may selectively exclude from coverage include to lift the gate measurement.
+  - **Buffer for coverage gates**: 62.5 (0.47pp buffer) was too tight when more tests added; 63.5 (0.12pp buffer) is even tighter. Future re-baseline: target 0.3-0.5pp buffer.
+- **decisions**:
+  - Coverage gate format in `vite.config.ts` includes the ramp plan as an in-code comment (single source of truth for "why this number")
+  - v0.3.0 ship doc lives at `docs/reports/v0.3.0-ship-2026-06-18.md` (per memory rule: release journal in docs/ + git, not in memory)
+  - PR 14/15 conditional: only if a real used-code surface (not component-rendering, not multi-dep integration) becomes worth covering
+- **next-step backlog** (v0.3.x → v0.4+):
+  - PR 14: optional branches 63.5 → 64 if a used-code surface emerges
+  - PR 15: optional 64 → 65
+  - PR 16+: feature work (BlockNote 0.5+ upgrade, cloud LLM multi-provider, real git remote for dreamforge confirmed)
+  - GUI verify round (user-driven): macOS TCC blocks Mavis; user opens .app from `src-tauri/target/release/bundle/macos/DreamForge.app` and confirms Settings → Vaults + multi-vault switcher
