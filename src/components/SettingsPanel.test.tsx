@@ -166,8 +166,9 @@ describe('SettingsPanel', () => {
 
     fireEvent.mouseDown(screen.getByRole('tab', { name: 'Local model' }), { button: 0, ctrlKey: false })
     fireEvent.change(screen.getByLabelText('Model ID'), { target: { value: 'llama3.2' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Test model' }))
-    expect(await screen.findByText('Connection works. The model replied successfully.')).toBeInTheDocument()
+    // v0.5 PR 26 P2c-1: "Test model" button is removed (no HTTP smoke
+    // test in v0.5 P2b scope discipline). The Add button stays.
+    expect(screen.queryByRole('button', { name: 'Test model' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Add local model' })).toBeInTheDocument()
     expect(screen.queryByText('Recognized local agents')).not.toBeInTheDocument()
 

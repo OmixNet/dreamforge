@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import {
   DEFAULT_MODEL_CAPABILITIES,
   aiModelProviderCatalog,
@@ -11,7 +11,15 @@ import {
   type AiModelProviderKind,
 } from '../lib/aiTargets'
 import type { createTranslator } from '../lib/i18n'
-import { deleteAiModelProviderApiKey, saveAiModelProviderApiKey, testAiModelProvider } from '../utils/aiProviderSecrets'
+import {
+  deleteAiModelProviderApiKey,
+  hasAiModelProviderApiKey,
+  saveAiModelProviderApiKey,
+} from '../utils/aiProviderSecrets'
+import {
+  readLlmApiKeyEnvPublic,
+  writeLlmApiKeyEnv,
+} from '../lib/dreamCliPath'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import {
@@ -22,9 +30,28 @@ import {
   SelectValue,
 } from './ui/select'
 
+// v0.5 PR 26 P2c-1: localStorage key for the active provider's env var NAME
+// (not value) is `dreamforge.llmApiKeyEnv` — defined in src/lib/dreamCliPath.ts
+// (PR 24 P2a) and re-exported via `readLlmApiKeyEnvPublic` /
+// `writeLlmApiKeyEnv`. Set after save, cleared on delete if it matches.
+// Picked up by DreamPanel at dream CLI invocation time to populate the
+// `llm_api_key_env` Rust command arg (PR 24 P2a wiring).
+
+function readActiveLlmApiKeyEnv(): string {
+  return readLlmApiKeyEnvPublic()
+}
+
+function writeActiveLlmApiKeyEnv(envName: string | null): void {
+  // null or empty → clear
+  if (!envName) {
+    writeLlmApiKeyEnv('')
+    return
+  }
+  writeLlmApiKeyEnv(envName)
+}
+
 type Translate = ReturnType<typeof createTranslator>
 type ProviderMode = 'local' | 'api'
-type TestState = 'idle' | 'testing' | 'success'
 
 interface AiProviderSettingsProps {
   t: Translate
@@ -113,8 +140,12 @@ function providerModeDescription(mode: ProviderMode, t: Translate): string {
   return mode === 'local' ? t('settings.aiProviders.localDescription') : t('settings.aiProviders.apiDescription')
 }
 
-function providerStorageLabel(provider: AiModelProvider, t: Translate): string {
-  if (provider.api_key_storage === 'local_file') return t('settings.aiProviders.keyLocalSaved')
+function providerStorageLabel(provider: AiModelProvider, keyConfigured: boolean, t: Translate): string {
+  if (provider.api_key_storage === 'local_file') {
+    return keyConfigured
+      ? t('settings.aiProviders.keyLocalSaved')
+      : t('settings.aiProviders.keyLocalNotConfigured')
+  }
   if (provider.api_key_storage === 'env' && provider.api_key_env_var) {
     return t('settings.aiProviders.keyEnvSaved', { env: provider.api_key_env_var })
   }
@@ -240,11 +271,13 @@ function ProviderList({
   t,
   mode,
   providers,
+  keyConfiguredByProviderId,
   onRemove,
 }: {
   t: Translate
   mode: ProviderMode
   providers: AiModelProvider[]
+  keyConfiguredByProviderId: ReadonlyMap<string, boolean>
   onRemove: (providerId: string) => void
 }) {
   const visible = visibleProviders(providers, mode)
@@ -254,19 +287,22 @@ function ProviderList({
 
   return (
     <div className="space-y-2">
-      {configuredModelTargets(visible).map((target) => (
-        <div key={target.id} className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm">
-          <div className="min-w-0">
-            <div className="truncate font-medium text-foreground">{target.label}</div>
-            <div className="truncate text-xs text-muted-foreground">
-              {target.provider.base_url || t('settings.aiProviders.defaultEndpoint')} · {providerStorageLabel(target.provider, t)}
+      {configuredModelTargets(visible).map((target) => {
+        const configured = keyConfiguredByProviderId.get(target.provider.id) ?? false
+        return (
+          <div key={target.id} className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm">
+            <div className="min-w-0">
+              <div className="truncate font-medium text-foreground">{target.label}</div>
+              <div className="truncate text-xs text-muted-foreground">
+                {target.provider.base_url || t('settings.aiProviders.defaultEndpoint')} · {providerStorageLabel(target.provider, configured, t)}
+              </div>
             </div>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onRemove(target.provider.id)}>
+              {t('common.remove')}
+            </Button>
           </div>
-          <Button type="button" variant="ghost" size="sm" onClick={() => onRemove(target.provider.id)}>
-            {t('common.remove')}
-          </Button>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -274,19 +310,47 @@ function ProviderList({
 export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderSettingsProps) {
   const [draft, setDraft] = useState<ProviderDraft>(() => initialDraft(mode))
   const [error, setError] = useState<string | null>(null)
-  const [testState, setTestState] = useState<TestState>('idle')
+  // v0.5 PR 26 P2c-1: per-provider Keychain status map. Populated by polling
+  // `has_ai_model_provider_api_key` for each configured provider so the UI
+  // can show "configured" vs "not set" without ever receiving the KEY VALUE.
+  const [keyConfiguredByProviderId, setKeyConfiguredByProviderId] = useState<ReadonlyMap<string, boolean>>(
+    () => new Map(),
+  )
   const updateDraft = (patch: Partial<ProviderDraft>) => setDraft((current) => ({ ...current, ...patch }))
-  const resetTest = () => {
-    setTestState('idle')
-    setError(null)
-  }
   const updateForm = (patch: Partial<ProviderDraft>) => {
-    resetTest()
+    setError(null)
     updateDraft(patch)
   }
   const updateKind = (kind: AiModelProviderKind) => updateForm(providerPresetPatch(kind))
   const canSave = draft.name.trim() && draft.modelId.trim() && (draft.apiKeyStorage !== 'local_file' || draft.apiKey.trim())
-  const apiKeyOverride = draft.apiKeyStorage === 'local_file' ? draft.apiKey : null
+
+  // Poll Keychain status for each configured provider on mount + whenever
+  // the providers list changes. Status is a bool only — the KEY VALUE
+  // is fetched by Rust and dropped immediately (PR 25 P2b invariant).
+  //
+  // Implementation note: the fetch is inlined inside useEffect (not via a
+  // useCallback wrapper) so the eslint `react-hooks/set-state-in-effect`
+  // rule sees setState only inside an async callback after `await`. The
+  // rule's intent — "don't trigger cascading re-renders from synchronous
+  // setState in the effect body" — is honored because the setState runs
+  // after the IPC round-trip completes, not synchronously.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const visible = visibleProviders(providers, mode)
+      const entries = await Promise.all(
+        visible
+          .filter((provider) => provider.api_key_storage === 'local_file')
+          .map(async (provider) => [provider.id, await hasAiModelProviderApiKey(provider.id)] as const),
+      )
+      if (!cancelled) {
+        setKeyConfiguredByProviderId(new Map(entries))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [providers, mode])
 
   const addProvider = async () => {
     const providerId = `${draft.kind}-${Date.now().toString(36)}`
@@ -295,27 +359,42 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
       if (draft.apiKeyStorage === 'local_file') {
         await saveAiModelProviderApiKey(providerId, draft.apiKey)
       }
+      // Bridge env var NAME into localStorage so DreamPanel picks it up
+      // at dream CLI invocation time (PR 24 P2a wiring reads this key).
+      // The KEY VALUE never enters localStorage — only the env var NAME
+      // (e.g. "OPENROUTER_API_KEY"). The user's shell still holds the
+      // actual value under that name.
+      if (draft.apiKeyStorage === 'local_file' && draft.apiKeyEnvVar) {
+        writeActiveLlmApiKeyEnv(draft.apiKeyEnvVar)
+      }
       onChange(normalizeAiModelProviders([...providers, buildProvider(draft, providerId)]))
       setDraft((current) => ({ ...draftFromProviderKind(current.kind), name: current.name, baseUrl: current.baseUrl }))
-      setTestState('idle')
+      // useEffect re-polls status when `providers` updates above
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error))
     }
   }
-  const testProvider = async () => {
+
+  const removeProvider = async (providerId: string) => {
     setError(null)
-    setTestState('testing')
     try {
-      await testAiModelProvider(buildProvider(draft, 'draft-provider-test'), draft.modelId, apiKeyOverride)
-      setTestState('success')
+      // Find the removed provider so we can clear the active env var
+      // pointer from localStorage IF it pointed at this provider.
+      const removed = providers.find((provider) => provider.id === providerId)
+      await deleteAiModelProviderApiKey(providerId)
+      onChange(providers.filter((provider) => provider.id !== providerId))
+      if (
+        removed &&
+        removed.api_key_storage === 'local_file' &&
+        removed.api_key_env_var &&
+        readActiveLlmApiKeyEnv() === removed.api_key_env_var
+      ) {
+        writeActiveLlmApiKeyEnv(null)
+      }
+      // useEffect re-polls status when `providers` updates above
     } catch (error) {
-      setTestState('idle')
       setError(error instanceof Error ? error.message : String(error))
     }
-  }
-  const removeProvider = (providerId: string) => {
-    void deleteAiModelProviderApiKey(providerId)
-    onChange(providers.filter((provider) => provider.id !== providerId))
   }
 
   return (
@@ -324,7 +403,13 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
         <div className="text-sm font-medium text-foreground">{providerModeTitle(mode, t)}</div>
         <div className="mt-1 text-xs leading-5 text-muted-foreground">{providerModeDescription(mode, t)}</div>
       </div>
-      <ProviderList t={t} mode={mode} providers={providers} onRemove={removeProvider} />
+      <ProviderList
+        t={t}
+        mode={mode}
+        providers={providers}
+        keyConfiguredByProviderId={keyConfiguredByProviderId}
+        onRemove={removeProvider}
+      />
       <div className="grid grid-cols-2 gap-3">
         <ProviderKindSelect mode={mode} t={t} value={draft.kind} onChange={updateKind} />
         <LabeledInput label={t('settings.aiProviders.name')} value={draft.name} onChange={(name) => updateForm({ name })} />
@@ -335,22 +420,14 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
       <div className="text-xs leading-5 text-muted-foreground">
         {mode === 'api' ? t('settings.aiProviders.keySafetyLocal') : t('settings.aiProviders.localSafety')}
       </div>
-      {testState === 'success' ? <div className="text-xs text-emerald-700">{t('settings.aiProviders.testSuccess')}</div> : null}
       {error ? <div className="text-xs text-destructive">{error}</div> : null}
       <div className="flex items-center gap-3">
         <Button type="button" size="sm" onClick={() => void addProvider()} disabled={!canSave}>
           {mode === 'local' ? t('settings.aiProviders.addLocal') : t('settings.aiProviders.addApi')}
         </Button>
-        <Button
-          type="button"
-          variant="link"
-          size="sm"
-          className="h-auto px-0 text-muted-foreground hover:text-foreground"
-          onClick={() => void testProvider()}
-          disabled={!canSave || testState === 'testing'}
-        >
-          {testState === 'testing' ? t('settings.aiProviders.testing') : t('settings.aiProviders.test')}
-        </Button>
+        {/* v0.5 P2b scope discipline: HTTP smoke test deferred. Test
+            button removed — no way to call the (non-existent)
+            test_ai_model_provider tauri command from v0.5. */}
       </div>
     </div>
   )

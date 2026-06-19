@@ -827,5 +827,6 @@
   "settings.data.exportSuccess": "Pengaturan diekspor ke",
   "settings.data.importSuccess": "Pengaturan diimpor dari",
   "settings.data.exportError": "Tidak dapat mengekspor pengaturan:",
-  "settings.data.importError": "Tidak dapat mengimpor pengaturan:"
+  "settings.data.importError": "Tidak dapat mengimpor pengaturan:",
+  "settings.aiProviders.keyLocalNotConfigured": "local key not set"
 }

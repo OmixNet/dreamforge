@@ -827,5 +827,6 @@
   "settings.data.exportSuccess": "Налаштування експортовано в",
   "settings.data.importSuccess": "Налаштування імпортовано з",
   "settings.data.exportError": "Не вдалося експортувати налаштування:",
-  "settings.data.importError": "Не вдалося імпортувати налаштування:"
+  "settings.data.importError": "Не вдалося імпортувати налаштування:",
+  "settings.aiProviders.keyLocalNotConfigured": "local key not set"
 }

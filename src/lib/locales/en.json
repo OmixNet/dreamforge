@@ -302,6 +302,7 @@
   "settings.aiProviders.empty": "No providers configured in this section yet.",
   "settings.aiProviders.defaultEndpoint": "default endpoint",
   "settings.aiProviders.keyLocalSaved": "local key saved",
+  "settings.aiProviders.keyLocalNotConfigured": "local key not set",
   "settings.aiProviders.keyEnvSaved": "key from {env}",
   "settings.aiProviders.noKey": "no API key",
   "settings.workflow.title": "Workflow",

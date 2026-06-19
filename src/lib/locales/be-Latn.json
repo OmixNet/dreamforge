@@ -827,5 +827,6 @@
   "settings.data.exportSuccess": "Nalady ekspartavany ŭ",
   "settings.data.importSuccess": "Nalady impartavany z",
   "settings.data.exportError": "Nie ŭdalosia ekspartavać nalady:",
-  "settings.data.importError": "Nie ŭdalosia impartavać nalady:"
+  "settings.data.importError": "Nie ŭdalosia impartavać nalady:",
+  "settings.aiProviders.keyLocalNotConfigured": "local key not set"
 }

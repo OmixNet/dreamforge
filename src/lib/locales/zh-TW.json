@@ -827,5 +827,6 @@
   "settings.data.exportSuccess": "設定已匯出到",
   "settings.data.importSuccess": "設定已從",
   "settings.data.exportError": "無法匯出設定:",
-  "settings.data.importError": "無法匯入設定:"
+  "settings.data.importError": "無法匯入設定:",
+  "settings.aiProviders.keyLocalNotConfigured": "local key not set"
 }

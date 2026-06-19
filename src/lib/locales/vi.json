@@ -827,5 +827,6 @@
   "settings.data.exportSuccess": "Đã xuất cài đặt tới",
   "settings.data.importSuccess": "Đã nhập cài đặt từ",
   "settings.data.exportError": "Không thể xuất cài đặt:",
-  "settings.data.importError": "Không thể nhập cài đặt:"
+  "settings.data.importError": "Không thể nhập cài đặt:",
+  "settings.aiProviders.keyLocalNotConfigured": "local key not set"
 }

@@ -827,5 +827,6 @@
   "settings.data.exportSuccess": "設定をエクスポートしました:",
   "settings.data.importSuccess": "設定をインポートしました:",
   "settings.data.exportError": "設定をエクスポートできませんでした:",
-  "settings.data.importError": "設定をインポートできませんでした:"
+  "settings.data.importError": "設定をインポートできませんでした:",
+  "settings.aiProviders.keyLocalNotConfigured": "local key not set"
 }

@@ -827,5 +827,6 @@
   "settings.data.exportSuccess": "Paramètres exportés vers",
   "settings.data.importSuccess": "Paramètres importés depuis",
   "settings.data.exportError": "Impossible d'exporter les paramètres :",
-  "settings.data.importError": "Impossible d'importer les paramètres :"
+  "settings.data.importError": "Impossible d'importer les paramètres :",
+  "settings.aiProviders.keyLocalNotConfigured": "local key not set"
 }

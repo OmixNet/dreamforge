@@ -827,5 +827,6 @@
   "settings.data.exportSuccess": "Налады экспартаваны ў",
   "settings.data.importSuccess": "Налады імпартаваны з",
   "settings.data.exportError": "Не ўдалося экспартаваць налады:",
-  "settings.data.importError": "Не ўдалося імпартаваць налады:"
+  "settings.data.importError": "Не ўдалося імпартаваць налады:",
+  "settings.aiProviders.keyLocalNotConfigured": "local key not set"
 }

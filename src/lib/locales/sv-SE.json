@@ -827,5 +827,6 @@
   "settings.data.exportSuccess": "Inställningar exporterade till",
   "settings.data.importSuccess": "Inställningar importerade från",
   "settings.data.exportError": "Kunde inte exportera inställningar:",
-  "settings.data.importError": "Kunde inte importera inställningar:"
+  "settings.data.importError": "Kunde inte importera inställningar:",
+  "settings.aiProviders.keyLocalNotConfigured": "local key not set"
 }

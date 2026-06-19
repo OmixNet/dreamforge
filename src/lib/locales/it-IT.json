@@ -827,5 +827,6 @@
   "settings.data.exportSuccess": "Impostazioni esportate in",
   "settings.data.importSuccess": "Impostazioni importate da",
   "settings.data.exportError": "Impossibile esportare le impostazioni:",
-  "settings.data.importError": "Impossibile importare le impostazioni:"
+  "settings.data.importError": "Impossibile importare le impostazioni:",
+  "settings.aiProviders.keyLocalNotConfigured": "local key not set"
 }

@@ -665,6 +665,24 @@ export const mockHandlers: Record<string, (args: any) => any> = {
     return 'Vault repaired'
   },
   reinit_telemetry: (): null => null,
+  // v0.5 PR 26 P2c-1: macOS Keychain tauri command mocks for LLM provider
+  // API keys. Mirrors the PR 25 Rust commands (src-tauri/src/commands/
+  // ai_provider.rs). Mock state is in-memory only — does NOT touch the
+  // user's real Keychain. Tests that need specific configured/not-configured
+  // state should override via mockInvoke.mockResolvedValueOnce in their
+  // own beforeEach.
+  save_ai_model_provider_api_key: (_args?: {
+    providerId?: string
+    apiKey?: string
+  }): null => null,
+  has_ai_model_provider_api_key: (args?: { providerId?: string }): {
+    provider_id: string
+    configured: boolean
+  } => ({
+    provider_id: args?.providerId ?? '',
+    configured: false,
+  }),
+  delete_ai_model_provider_api_key: (_args?: { providerId?: string }): null => null,
   // DREAMFORGE_SLIM: DreamVault CLI mock handlers (PR2)
   // PR 10: add llmBaseUrl / llmModel args (accepted but ignored in mock)
   // v0.5 PR 24 P2a: add llmApiKeyEnv — env var NAME (not value). The mock
