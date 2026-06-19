@@ -56,6 +56,10 @@
     "targets": "app",
     "createUpdaterArtifacts": false,
     "category": "Productivity",
+    "macOS": {
+      "signingIdentity": "-",
+      "entitlements": null
+    },
     "windows": {
       "webviewInstallMode": {
         "type": "downloadBootstrapper"

@@ -44,6 +44,11 @@ const ALLOWED_PATH_PATTERNS: RegExp[] = [
   // The test file itself intentionally contains "DreamForge" in
   // assertion messages and scenario descriptions.
   /^src\/lib\/dreamxRebrand\.test\.ts$/u,
+  // The bundle-scan test intentionally references "DreamForge" and
+  // "Tolaria" in assertion descriptions (it scans for these).
+  /^src\/scripts\/dreamxAppBundleScan\.test\.ts$/u,
+  // Post-ship checklist doc references the previous brand as history.
+  /^docs\/post-ship-v0\.4\.0-checklist\.md$/u,
 ]
 
 function isAllowedPath(relPath: string): boolean {

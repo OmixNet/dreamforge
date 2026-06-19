@@ -513,7 +513,7 @@ export const mockHandlers: Record<string, (args: any) => any> = {
     gemini: { installed: false, version: null },
     kiro: { installed: false, version: null },
   }),
-  get_agent_docs_path: () => '/mock/Tolaria/resources/agent-docs',
+  get_agent_docs_path: () => '/mock/dreamforge/resources/agent-docs',
   get_vault_ai_guidance_status: () => ({ ...mockVaultAiGuidanceStatus }),
   restore_vault_ai_guidance: () => {
     mockVaultAiGuidanceStatus = {
@@ -645,7 +645,7 @@ export const mockHandlers: Record<string, (args: any) => any> = {
       tolaria: {
         type: 'stdio',
         command: 'node',
-        args: ['/mock/Tolaria/mcp-server/index.js'],
+        args: ['/mock/dreamforge/mcp-server/index.js'],
         env: {
           WS_UI_PORT: '9711',
         },

@@ -55,7 +55,7 @@ export function LlmSettingsField({ testId = 'settings-llm' }: LlmSettingsFieldPr
       <p className="text-xs text-muted-foreground">
         OpenAI-compatible endpoint. Leave empty to use dream CLI default
         (<code>http://127.0.0.1:11434</code> for local Ollama). The <code>/v1</code> suffix is
-        optional — dreamforge will strip it before passing to the dream CLI.
+        optional — DreamX will strip it before passing to the dream CLI.
       </p>
       <input
         id={`${testId}-base-url`}
@@ -96,7 +96,7 @@ export function LlmSettingsField({ testId = 'settings-llm' }: LlmSettingsFieldPr
           Clear
         </button>
         <span className="text-xs text-muted-foreground">
-          API key: set <code>DREAMFORGE_LLM_API_KEY</code> in your shell env (never stored in dreamforge).
+          API key: set <code>DREAMFORGE_LLM_API_KEY</code> in your shell env (never stored in DreamX).
         </span>
       </div>
     </div>

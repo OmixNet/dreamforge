@@ -74,7 +74,7 @@ export function VaultSettingsSection({
       <div>
         <p className="text-sm font-medium text-foreground">Vaults</p>
         <p className="text-xs text-muted-foreground">
-          Manage the vaults dreamforge can open. The active vault is highlighted.
+          Manage the vaults DreamX can open. The active vault is highlighted.
         </p>
       </div>
 
@@ -152,7 +152,7 @@ export function VaultSettingsSection({
       </Button>
 
       <p className="text-[11px] text-muted-foreground">
-        Vaults are stored in vaults.json under the dreamforge config directory.
+        Vaults are stored in vaults.json under the DreamX config directory.
       </p>
     </div>
   )
