@@ -91,6 +91,15 @@ pub struct Settings {
     pub sidebar_type_pluralization_enabled: Option<bool>,
     pub initial_h1_auto_rename_enabled: Option<bool>,
     // DREAMFORGE_SLIM: 5 个 AI 字段物理删除 (PR 4)
+    // v0.5 PR 23: AI provider config is now stored here too. Kept as
+    // opaque serde_json::Value to preserve the TS-side shape (which
+    // includes nested AiModelProvider + AiModelDefinition + capabilities
+    // arrays). Phase 2 will add proper Rust types when the dream CLI
+    // bridge starts consuming provider-specific config.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ai_model_providers: Option<Vec<serde_json::Value>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_ai_target: Option<String>,
     pub hide_gitignored_files: Option<bool>,
     pub all_notes_show_pdfs: Option<bool>,
     pub all_notes_show_images: Option<bool>,
@@ -198,6 +207,12 @@ fn normalize_settings(settings: Settings) -> Settings {
         sidebar_type_pluralization_enabled: settings.sidebar_type_pluralization_enabled,
         initial_h1_auto_rename_enabled: settings.initial_h1_auto_rename_enabled,
         // DREAMFORGE_SLIM: 5 AI normalize 物理删除 (PR 4)
+        // v0.5 PR 23: ai_model_providers + default_ai_target 透传 (opaque).
+        // 字段 owner 是 TS 端 (SettingsPanel AiProviderSettings + lib/aiTargets),
+        // Rust 端不做 normalize / validate, 只 preserve through JSON.
+        // Phase 2 PR (dream CLI env wiring) 才在 Rust 端 consume.
+        ai_model_providers: settings.ai_model_providers,
+        default_ai_target: settings.default_ai_target,
         hide_gitignored_files: settings.hide_gitignored_files,
         all_notes_show_pdfs: settings.all_notes_show_pdfs,
         all_notes_show_images: settings.all_notes_show_images,
@@ -353,6 +368,23 @@ mod tests {
             sidebar_type_pluralization_enabled: Some(false),
             initial_h1_auto_rename_enabled: Some(false),
             // DREAMFORGE_SLIM: 5 AI default 物理删除 (PR 4)
+            // v0.5 PR 23: AI provider config round-trip
+            ai_model_providers: Some(vec![serde_json::json!({
+                "id": "openrouter",
+                "kind": "open_router",
+                "name": "OpenRouter",
+                "base_url": "https://openrouter.ai/api/v1",
+                "runtime_base_url": "https://openrouter.ai/api",
+                "default_model_id": "anthropic/claude-sonnet-4.5",
+                "api_key_env_var": "OPENROUTER_API_KEY",
+                "models": [{
+                    "id": "anthropic/claude-sonnet-4.5",
+                    "label": "Claude Sonnet 4.5",
+                    "capabilities": ["chat", "tools"]
+                }],
+                "enabled": true,
+            })]),
+            default_ai_target: Some("openrouter".to_string()),
             hide_gitignored_files: Some(false),
             multi_workspace_enabled: Some(true),
             all_notes_show_pdfs: Some(true),
@@ -362,6 +394,95 @@ mod tests {
         let json = serde_json::to_string(&settings).unwrap();
         let parsed: Settings = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, settings);
+    }
+
+    #[test]
+    fn test_ai_model_providers_none_roundtrips_as_null() {
+        // When TS hasn't configured any providers (legacy settings, fresh install),
+        // Rust must preserve the absence rather than dropping the field.
+        let settings = Settings::default();
+        assert!(settings.ai_model_providers.is_none());
+        assert!(settings.default_ai_target.is_none());
+
+        let json = serde_json::to_string(&settings).unwrap();
+        // `skip_serializing_if = "Option::is_none"` on ai_model_providers +
+        // default_ai_target, so the JSON must omit them entirely (no `"ai_model_providers":null`).
+        assert!(
+            !json.contains("ai_model_providers"),
+            "ai_model_providers field must be omitted when None; got: {json}"
+        );
+        assert!(
+            !json.contains("default_ai_target"),
+            "default_ai_target field must be omitted when None; got: {json}"
+        );
+
+        let parsed: Settings = serde_json::from_str(&json).unwrap();
+        assert!(parsed.ai_model_providers.is_none());
+        assert!(parsed.default_ai_target.is_none());
+    }
+
+    #[test]
+    fn test_ai_model_providers_preserves_nested_shape_through_disk() {
+        // The field is opaque serde_json::Value on purpose — Phase 2 PR will
+        // add typed Rust structs once dream CLI starts consuming the config.
+        // Until then, save_settings_at → get_settings_at MUST NOT lose nested
+        // shape (models array, capabilities, env var names with underscores).
+        let original = Settings {
+            ai_model_providers: Some(vec![
+                serde_json::json!({
+                    "id": "openrouter",
+                    "kind": "open_router",
+                    "api_key_env_var": "OPENROUTER_API_KEY",
+                    "base_url": "https://openrouter.ai/api/v1",
+                    "models": [
+                        {"id": "anthropic/claude-sonnet-4.5", "label": "Claude Sonnet 4.5"},
+                        {"id": "openai/gpt-5", "label": "GPT-5"},
+                    ],
+                }),
+                serde_json::json!({
+                    "id": "ollama-local",
+                    "kind": "ollama",
+                    "base_url": "http://localhost:11434",
+                    "api_key_env_var": null,
+                }),
+            ]),
+            default_ai_target: Some("openrouter".to_string()),
+            ..Settings::default()
+        };
+
+        let reloaded = save_and_reload(original.clone());
+
+        assert_eq!(reloaded.ai_model_providers.as_ref().unwrap().len(), 2);
+        let openrouter = &reloaded.ai_model_providers.as_ref().unwrap()[0];
+        assert_eq!(openrouter["id"], "openrouter");
+        assert_eq!(openrouter["kind"], "open_router");
+        assert_eq!(openrouter["api_key_env_var"], "OPENROUTER_API_KEY");
+        assert_eq!(openrouter["models"].as_array().unwrap().len(), 2);
+        assert_eq!(openrouter["models"][1]["id"], "openai/gpt-5");
+        let ollama = &reloaded.ai_model_providers.as_ref().unwrap()[1];
+        assert!(ollama["api_key_env_var"].is_null());
+
+        assert_eq!(reloaded.default_ai_target.as_deref(), Some("openrouter"));
+    }
+
+    #[test]
+    fn test_legacy_settings_without_ai_fields_load_with_none() {
+        // Backwards compat: a settings.json from v0.4.x (no AI provider fields)
+        // must still parse cleanly into Settings, with ai_model_providers = None
+        // and default_ai_target = None. This is the migration guarantee — a user
+        // upgrading from v0.4.0 → v0.5.x must not lose their existing settings.
+        let legacy_json = r#"{
+            "auto_pull_interval_minutes": 10,
+            "git_enabled": false,
+            "theme_mode": "dark",
+            "ui_language": "zh-Hans"
+        }"#;
+        let parsed: Settings = serde_json::from_str(legacy_json).unwrap();
+        assert_eq!(parsed.auto_pull_interval_minutes, Some(10));
+        assert_eq!(parsed.theme_mode.as_deref(), Some("dark"));
+        assert_eq!(parsed.ui_language.as_deref(), Some("zh-Hans"));
+        assert!(parsed.ai_model_providers.is_none());
+        assert!(parsed.default_ai_target.is_none());
     }
 
     #[test]

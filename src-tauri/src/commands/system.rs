@@ -655,6 +655,61 @@ mod tests {
     }
 
     #[test]
+    fn export_envelope_round_trips_ai_provider_config_v0_5() {
+        // v0.5 PR 23: the export/import envelope must preserve the new AI
+        // provider config (`ai_model_providers` array + `default_ai_target`)
+        // byte-for-byte so a user who exports settings, wipes settings.json,
+        // and imports again lands on identical provider config. The fields
+        // are opaque serde_json::Value on the Rust side — the envelope must
+        // not flatten, drop, or rename them.
+        let mut original = sample_settings();
+        original.ai_model_providers = Some(vec![
+            serde_json::json!({
+                "id": "openrouter",
+                "kind": "open_router",
+                "api_key_env_var": "OPENROUTER_API_KEY",
+                "base_url": "https://openrouter.ai/api/v1",
+                "models": [
+                    {"id": "anthropic/claude-sonnet-4.5", "label": "Claude Sonnet 4.5"},
+                ],
+            }),
+            serde_json::json!({
+                "id": "anthropic-direct",
+                "kind": "anthropic",
+                "api_key_env_var": "ANTHROPIC_API_KEY",
+                "base_url": "https://api.anthropic.com",
+            }),
+        ]);
+        original.default_ai_target = Some("openrouter".to_string());
+
+        let json = build_settings_export_json(&original, "0.5.0", "2026-06-20T10:00:00Z".to_string())
+            .expect("export should serialize");
+        let restored = parse_settings_import_json(&json).expect("import should parse exported JSON");
+
+        let restored_providers = restored
+            .ai_model_providers
+            .as_ref()
+            .expect("ai_model_providers must round-trip");
+        assert_eq!(restored_providers.len(), 2);
+        assert_eq!(restored_providers[0]["id"], "openrouter");
+        assert_eq!(restored_providers[0]["api_key_env_var"], "OPENROUTER_API_KEY");
+        assert_eq!(restored_providers[0]["models"][0]["id"], "anthropic/claude-sonnet-4.5");
+        assert_eq!(restored_providers[1]["kind"], "anthropic");
+        assert_eq!(restored_providers[1]["base_url"], "https://api.anthropic.com");
+
+        assert_eq!(restored.default_ai_target.as_deref(), Some("openrouter"));
+
+        // Regression guard: the JSON envelope must surface the field under
+        // its snake_case name and NOT collapse it into a sibling structure.
+        let value: serde_json::Value = serde_json::from_str(&json).expect("envelope is JSON");
+        let provider_arr = value["settings"]["ai_model_providers"]
+            .as_array()
+            .expect("settings.ai_model_providers must be an array");
+        assert_eq!(provider_arr.len(), 2);
+        assert_eq!(value["settings"]["default_ai_target"], "openrouter");
+    }
+
+    #[test]
     fn export_envelope_includes_metadata() {
         let json = build_settings_export_json(
             &Settings::default(),
