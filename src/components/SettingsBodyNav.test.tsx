@@ -7,8 +7,7 @@ import { createTranslator } from '../lib/i18n'
 /**
  * v0.3 PR 14: SettingsBodyNav slim-mode coverage.
  * Asserts that the AI Agents nav item is hidden when DREAMFORGE_SLIM_MODE
- * is true, and that the other entries (sync / workspaces / autogit /
- * appearance / vault content / workflow / privacy) remain visible.
+ * is true, while the DreamX API model provider entry remains visible.
  *
  * The default render is in slim mode (the test file lives under DREAMFORGE_SLIM_MODE
  * = true; the gate is verified at module-load). Non-slim rendering is
@@ -20,12 +19,11 @@ describe('SettingsBodyNav (slim mode)', () => {
     expect(DREAMFORGE_SLIM_MODE).toBe(true)
   })
 
-  it('hides the AI Agents nav item in slim mode', () => {
+  it('replaces the AI Agents nav item with API models in slim mode', () => {
     const t = createTranslator('en')
     const { container } = render(<SettingsBodyNav t={t} />)
-    // The bot icon for AI Agents is rendered as part of the nav button — its
-    // label is `t('settings.aiAgents.title')` which is "AI Agents" in English.
     expect(container.textContent).not.toContain('AI Agents')
+    expect(screen.getByText('API models')).toBeInTheDocument()
   })
 
   it('keeps the other nav items visible in slim mode', () => {

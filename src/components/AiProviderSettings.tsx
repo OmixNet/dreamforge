@@ -18,8 +18,10 @@ import {
 } from '../utils/aiProviderSecrets'
 import {
   readLlmApiKeyProviderIdPublic,
+  writeLlmBaseUrl,
   writeLlmApiKeyEnv,
   writeLlmApiKeyProviderId,
+  writeLlmModel,
 } from '../lib/dreamCliPath'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -368,6 +370,7 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
 
   const addProvider = async () => {
     const providerId = `${draft.kind}-${Date.now().toString(36)}`
+    const provider = buildProvider(draft, providerId)
     setError(null)
     try {
       if (draft.apiKeyStorage === 'local_file') {
@@ -377,11 +380,15 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
       // localStorage so DreamPanel passes them to `dreamvault_run`, which
       // uses the provider id to look up the API key in macOS Keychain.
       // The KEY VALUE never enters localStorage — only metadata.
-      if (draft.apiKeyStorage === 'local_file' && draft.apiKeyEnvVar) {
+      if ((draft.apiKeyStorage === 'local_file' || draft.apiKeyStorage === 'env') && draft.apiKeyEnvVar) {
         writeActiveLlmApiKeyEnv(draft.apiKeyEnvVar)
         writeActiveLlmApiKeyProviderId(providerId)
+      } else {
+        clearActiveLlmApiKey()
       }
-      onChange(normalizeAiModelProviders([...providers, buildProvider(draft, providerId)]))
+      writeLlmBaseUrl(provider.base_url ?? '')
+      writeLlmModel(provider.models[0]?.id ?? '')
+      onChange(normalizeAiModelProviders([...providers, provider]))
       setDraft((current) => ({ ...draftFromProviderKind(current.kind), name: current.name, baseUrl: current.baseUrl }))
       // useEffect re-polls status when `providers` updates above
     } catch (error) {

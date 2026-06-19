@@ -368,7 +368,7 @@ body.mac-chrome .app:not(:has(.app__sidebar)):not(:has(.app__note-list)) .breadc
     padding: 0 !important;
   }
 
-  // DREAMFORGE_SLIM: mermaid-diagram / tldraw-whiteboard / math-block-shell 物理删除 (PR 9.5, katex dep PR 8 删)
+  /* DREAMFORGE_SLIM: mermaid-diagram / tldraw-whiteboard / math-block-shell 物理删除 (PR 9.5, katex dep PR 8 删) */
   body.tolaria-note-pdf-exporting :is(.bn-block-outer, figure, table, pre) {
     break-inside: avoid;
     page-break-inside: avoid;
@@ -378,8 +378,8 @@ body.mac-chrome .app:not(:has(.app__sidebar)):not(:has(.app__note-list)) .breadc
     max-width: 100% !important;
   }
 
-  // DREAMFORGE_SLIM: mermaid-diagram / tldraw-whiteboard / math-block-shell 物理删除 (PR 9.5, katex dep PR 8 删)
-  // .editor__code-block-copy 保留 (是 v0.1 code block 复制按钮)
+  /* DREAMFORGE_SLIM: mermaid-diagram / tldraw-whiteboard / math-block-shell 物理删除 (PR 9.5, katex dep PR 8 删) */
+  /* .editor__code-block-copy 保留 (是 v0.1 code block 复制按钮) */
   body.tolaria-note-pdf-exporting :is([data-radix-popper-content-wrapper]) {
     display: none !important;
   }

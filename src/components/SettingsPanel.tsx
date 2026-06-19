@@ -801,7 +801,15 @@ function SettingsAgentWorkflowSections({
 }: SettingsBodyProps) {
   return (
     <>
-      {!DREAMFORGE_SLIM_MODE && (
+      {DREAMFORGE_SLIM_MODE ? (
+        <SettingsSection id={SETTINGS_SECTION_IDS.ai}>
+          <SlimApiModelSettingsSection
+            t={t}
+            aiModelProviders={aiModelProviders}
+            setAiModelProviders={setAiModelProviders}
+          />
+        </SettingsSection>
+      ) : (
         <SettingsSection id={SETTINGS_SECTION_IDS.ai}>
           <AiAgentSettingsSection
             t={t}
@@ -842,6 +850,28 @@ function SettingsAgentWorkflowSections({
           setAnalytics={setAnalytics}
         />
       </SettingsSection>
+    </>
+  )
+}
+
+function SlimApiModelSettingsSection({
+  t,
+  aiModelProviders,
+  setAiModelProviders,
+}: Pick<SettingsBodyProps, 't' | 'aiModelProviders' | 'setAiModelProviders'>) {
+  return (
+    <>
+      <SectionHeading title={t('settings.aiProviders.apiTitle')} />
+      <SettingsGroup>
+        <div className="space-y-3 p-4">
+          <AiProviderSettings
+            t={t}
+            mode="api"
+            providers={aiModelProviders}
+            onChange={setAiModelProviders}
+          />
+        </div>
+      </SettingsGroup>
     </>
   )
 }

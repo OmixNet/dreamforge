@@ -177,6 +177,37 @@ describe('AiProviderSettings', () => {
     })
   })
 
+  it('save: writes the provider base URL and model to DreamPanel runtime config', async () => {
+    vi.mocked(invoke).mockResolvedValue(null)
+
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={[]}
+        onChange={() => {}}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText(/settings\.aiProviders\.baseUrl/), {
+      target: { value: 'https://openrouter.ai/api/v1' },
+    })
+    fireEvent.change(screen.getByLabelText(/settings\.aiProviders\.model/), {
+      target: { value: 'anthropic/claude-sonnet-4.5' },
+    })
+    const keyInputs = screen.getAllByLabelText(/settings\.aiProviders\.key$/)
+    fireEvent.change(keyInputs[keyInputs.length - 1], {
+      target: { value: 'sk-test' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /settings\.aiProviders\.addApi/ }))
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem('dreamforge.llmBaseUrl')).toBe('https://openrouter.ai/api/v1')
+    })
+    expect(window.localStorage.getItem('dreamforge.llmModel')).toBe('anthropic/claude-sonnet-4.5')
+  })
+
   it('save: writes to onChange with provider config that omits the api key value', async () => {
     vi.mocked(invoke).mockResolvedValue(null)
     const onChange = vi.fn()

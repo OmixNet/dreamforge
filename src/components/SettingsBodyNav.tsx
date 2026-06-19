@@ -16,9 +16,8 @@ interface SettingsNavItem {
 }
 
 export function SettingsBodyNav({ t }: SettingsBodyNavProps) {
-  // Slim mode hides AI-related entries — see lib/dreamforgeMode.ts. Other
-  // Tolaria-only entries (release channel, MCP) are already gated at the
-  // App.tsx layer via prop forwarding; this is the slim-specific nav filter.
+  // Slim mode hides agent/MCP surfaces but keeps API model providers visible
+  // because DreamX needs them for the Dream CLI cloud LLM path.
   const items: SettingsNavItem[] = [
     { id: SETTINGS_SECTION_IDS.sync, label: t('settings.sync.title'), Icon: RefreshCw },
     { id: SETTINGS_SECTION_IDS.workspaces, label: t('settings.workspaces.title'), Icon: Cube },
@@ -26,7 +25,7 @@ export function SettingsBodyNav({ t }: SettingsBodyNavProps) {
     { id: SETTINGS_SECTION_IDS.appearance, label: t('settings.appearance.title'), Icon: Palette },
     { id: SETTINGS_SECTION_IDS.content, label: t('settings.vaultContent.title'), Icon: Article },
     ...(DREAMFORGE_SLIM_MODE
-      ? []
+      ? [{ id: SETTINGS_SECTION_IDS.ai, label: t('settings.aiProviders.apiTitle'), Icon: Bot } as const]
       : [{ id: SETTINGS_SECTION_IDS.ai, label: t('settings.aiAgents.title'), Icon: Bot } as const]),
     { id: SETTINGS_SECTION_IDS.workflow, label: t('settings.workflow.title'), Icon: ListChecks },
     { id: SETTINGS_SECTION_IDS.privacy, label: t('settings.privacy.title'), Icon: ShieldCheck },

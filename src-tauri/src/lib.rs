@@ -455,8 +455,6 @@ mod tests {
 
     #[cfg(desktop)]
     use super::spawn_startup_tasks_for_vault_with;
-    #[cfg(desktop)]
-    use std::path::PathBuf;
 
     #[cfg(all(desktop, unix))]
     use super::vault_asset_scope_roots;
