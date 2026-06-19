@@ -788,3 +788,92 @@
 - **next-step backlog**:
   - **v0.4.0 tag candidate** (if user confirms): PR 16/17/18/19/20/21 累计 + coverage 72.19/63.87 + 3797/3797 vitest + 718/718 cargo + dream-cli-verify 13/0/0 + tauri build 26-28s + GUI verify pass. 这是 ship 节奏
   - PR 22+: BlockNote 0.5+ / Cloud LLM multi-provider / Settings UX polish
+
+## §39 PR 22 — v0.4.1 small fix (codesign + UI 降噪 + bundle scan) (2026-06-19)
+- **scope**: 4 件 Day-1 observation by user 抓到的残留
+- **背景**: v0.4.0 tag 后 user 跑 Day-1 real use,在 /Applications/DreamX.app 实测,4 个 issue
+- **Issue + fix**:
+
+### A. codesign `code has no resources but signature indicates they must be present` (blocking for distribution)
+- **root cause**: Rust Cargo default 给 binary 加一个 `linker-signed` ad-hoc signature(flag `0x20002 adhoc,linker-signed`),它"声称"binary 应该有 sealed resources 但 Rust binary 不内嵌 resource(icon / Info.plist 在 .app bundle 里单独放). Tauri 2.x 检测到 binary 已有 linker signature 就跳过自己的 codesign step,所以 `_CodeSignature/` 目录从来不存在,`Info.plist=not bound`,Gatekeeper / `spctl --assess` 失败
+- **fix**: `tauri.conf.json` 加 `"bundle.macOS": { "signingIdentity": "-", "entitlements": null }`
+- **效果**: Tauri 现在 ad-hoc sign 整个 bundle. build output 显式:
+  ```
+  Signing with identity "-"
+  Signing .../DreamX.app
+  /.../DreamX.app: replacing existing signature
+  ```
+- **verify**:
+  ```
+  $ codesign --verify --deep --strict /Applications/DreamX.app
+  (no error)
+  
+  $ codesign -dv /Applications/DreamX.app
+  Format=app bundle with Mach-O thin (arm64)
+  CodeDirectory v=20500 size=32217 flags=0x10002(adhoc,runtime) hashes=1000+3
+  Signature=adhoc
+  Info.plist entries=16
+  Sealed Resources version=2 rules=13 files=1
+  ```
+- **notarization 还是 skip** (no Apple Developer ID),留到 user 加 Apple Developer Program 时
+
+### B. test vault "Hello DreamForge" → "Hello DreamX" (vault 内容,不是 app bundle)
+- `dreamforge-test-vault/notes/hello.md` (out-of-repo,user 自己改)
+- 已在 PR 22 前 commit 时 verify
+
+### C. UI 文案降噪 (5 处,internal ID 保留)
+| file | before | after |
+| --- | --- | --- |
+| `VaultSettingsSection.tsx:77` | "Manage the vaults **dreamforge** can open" | "Manage the vaults **DreamX** can open" |
+| `VaultSettingsSection.tsx:155` | "Vaults are stored ... under the **dreamforge** config directory" | "... under the **DreamX** config directory" |
+| `LlmSettingsField.tsx:58` | "**dreamforge** will strip it before passing to the dream CLI" | "**DreamX** will strip it ..." |
+| `LlmSettingsField.tsx:99` | "API key: set `DREAMFORGE_LLM_API_KEY` in your shell env (never stored in **dreamforge**)" | "... (never stored in **DreamX**)" (env var 名 `DREAMFORGE_LLM_API_KEY` 保留 — compat surface) |
+| `DataSettingsSection.tsx:26` | default export filename `dreamforge-settings-YYYY-MM-DD.json` | `dreamx-settings-YYYY-MM-DD.json` (import 还是 content-based,旧 filename 仍可 import) |
+
+### D. App bundle hygiene guard (新 test,7 cases)
+- 新 file `src/scripts/dreamxAppBundleScan.test.ts`:
+  1. `codesign --verify --deep --strict` on built .app 干净
+  2. `Signature=adhoc` + `Sealed Resources version=` present
+  3. `CFBundleDisplayName` = DreamX (Dock / About / 通知)
+  4. `CFBundleName` = DreamX
+  5. `CFBundleIdentifier` = `com.biomatrix.dreamforge` (compat 锁住)
+  6. `Info.plist` 没 user-visible `DreamForge` / `Tolaria`
+  7. JS bundle (`dist/assets/index-*.js`) DreamX count > 5× DreamForge count + zero `Tolaria`
+- 找不到 `src-tauri/target/.../DreamX.app` 时 skip (不 block `pnpm vitest`)
+- **额外**: 修 `src/mock-tauri/mock-handlers.ts` 里 `/mock/Tolaria/{resources,mcp-server}/...` → `/mock/dreamforge/...`. 这些是 mock-only 路径,无语义,但 JS bundle 里有 `Tolaria` 字符串会扫到
+- **allowlist 更新** (`src/lib/dreamxRebrand.test.ts`):
+  - `src/scripts/dreamxAppBundleScan.test.ts` 加 (test 故意含 `DreamForge` / `Tolaria`)
+  - `docs/post-ship-v0.4.0-checklist.md` 加 (post-ship 文档引用旧品牌做历史记录)
+
+### E. explicit NOT changed (compat layer)
+- bundle id `com.biomatrix.dreamforge`
+- config dir `~/Library/Application Support/com.biomatrix.dreamforge/`
+- env var `DREAMFORGE_DREAM_CLI` / `DREAMFORGE_LLM_API_KEY` / `DREAMFORGE_SLIM_MODE`
+- localStorage key prefix `dreamforge-*`
+- file token prefix `@@DREAMFORGE_FILE_ATTACHMENT:`
+- URL param `dreamforge_pdf_preview=`
+- sentinel `__dreamforge_no_workspace__`
+- Rust crate name `tolaria_lib` (symbol path 里有 `tolaria_lib::*`)
+- git author `Tolaria <vault@tolaria.default>` (compat:用户已有 commit 署名不变)
+- AGENTS.md template (新 vault 种子) 里 `Tolaria Vault` heading (template 内容)
+
+### build verify
+- tsc 0 / eslint 0 / vitest 3804/3804 (+7 bundle scan) / cargo 718/718
+- tauri build OK → codesign verify passes on built .app
+- coverage 72.18/63.85/73.53/74.69 (不变)
+- dream-cli-verify 13/0/0
+
+### commit
+- `c4fb7d9` (7 files, 187+/7-, 1 新 file `dreamxAppBundleScan.test.ts`)
+
+### decision matrix 结果
+- user 在 PR 20 GUI verify 后跑 Day-1 observation,4 个 issue + scope 控制
+- "暂不建议再动 namespace migration" — `dreamforge` 兼容层继续保留一个 version cycle
+- "v0.5 再开 Anthropic/Gemini/OpenRouter" — Provider 是新能力,会引入配置 + Key 管理 + 错误处理 + 模型兼容测试,现在还有 rebrand + codesign 残留,先收干净更稳
+
+### next-step backlog
+- **PR 23+**: 用户跑 v0.4.1 的 Day-1 observation(等 user 真用),看 v0.4.1 是否解决 codesign + UI 残留
+- **v0.5.0**: Cloud LLM multi-provider (Anthropic + Gemini + OpenRouter) — 需 DreamVault Swift 改 (AiModelProviderKind 已 union)
+- **v0.5.x**: BlockNote 0.5+ upgrade (risky) / Settings UX polish
+- **未来**: Apple Developer Program → 真 codesign + notarization
+- **更未来**: namespace migration 第二轮 (compat layer 也改),需 user sign-off 命名 final 后
