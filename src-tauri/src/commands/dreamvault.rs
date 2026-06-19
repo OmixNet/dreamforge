@@ -103,6 +103,31 @@ fn dreamvault_cli_candidates() -> Vec<PathBuf> {
     ]
 }
 
+/// v0.5 P2a: Resolve which env var to read the user's LLM API key from.
+///
+/// Priority:
+///   1. Provider-specific override (e.g. `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`,
+///      `GEMINI_API_KEY`) — comes from the active provider's `api_key_env_var`
+///      field in settings. The user's shell holds the actual key under that
+///      name, and DreamX reads + injects the value into the dream subprocess.
+///   2. Legacy fallback `DREAMFORGE_LLM_API_KEY` — preserves PR 10 behavior
+///      for users who haven't yet picked a multi-provider setup.
+///
+/// Empty / whitespace-only override is treated as "unset" (falls back) so
+/// that a stale or blank provider config in Settings doesn't accidentally
+/// look up a nonsense env var.
+///
+/// NOTE: This function returns the SOURCE env var name (the one to read from
+/// the user's shell). The TARGET name injected into the dream subprocess is
+/// always `DREAMFORGE_LLM_API_KEY` — the dream CLI Swift code reads only
+/// that name, and we want to keep the dream CLI contract stable across PRs.
+pub fn resolve_api_key_env_name(llm_api_key_env: Option<&str>) -> &str {
+    llm_api_key_env
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .unwrap_or(LLM_API_KEY_ENV)
+}
+
 /// PR 10: Strip trailing `/v1` from an OpenAI-compatible base URL.
 /// OllamaProvider (in DreamVault) auto-appends `/v1/chat/completions`, so the
 /// base URL passed to dream must NOT include `/v1` (would result in
@@ -160,6 +185,7 @@ fn run_dreamvault_action(
     dream_cli_path: Option<&str>,
     llm_base_url: Option<&str>,
     llm_model: Option<&str>,
+    llm_api_key_env: Option<&str>,
 ) -> Result<DreamVaultCommandOutput, String> {
     let spec = build_dreamvault_command(
         action,
@@ -172,9 +198,16 @@ fn run_dreamvault_action(
     let mut command = Command::new(&spec.program);
     command.args(&spec.args);
 
-    // PR 10: inject DREAMFORGE_LLM_API_KEY from user's shell env into dream subprocess
-    // (key never enters CLI args; ps aux shows env var NAME only, not value)
-    if let Ok(key) = std::env::var(LLM_API_KEY_ENV) {
+    // v0.5 P2a: read the API key from the provider-specific env var (e.g.
+    // OPENROUTER_API_KEY) when TS passes an override; otherwise fall back
+    // to the legacy DREAMFORGE_LLM_API_KEY (PR 10). The value is injected
+    // into the dream subprocess as DREAMFORGE_LLM_API_KEY — dream CLI Swift
+    // code reads only that name, so the contract stays stable across PRs.
+    //
+    // Safety invariant: the key NEVER enters dream CLI args (ps aux would
+    // leak it). It only travels via Command::env() into the subprocess env.
+    let source_env = resolve_api_key_env_name(llm_api_key_env);
+    if let Ok(key) = std::env::var(source_env) {
         let trimmed = key.trim();
         if !trimmed.is_empty() {
             command.env(LLM_API_KEY_ENV, trimmed);
@@ -211,8 +244,9 @@ fn run_dreamvault_action(
 pub async fn dreamvault_status(
     vault_path: String,
     dream_cli_path: Option<String>,
-    llm_base_url: Option<String>, // PR 10
-    llm_model: Option<String>,     // PR 10
+    llm_base_url: Option<String>,         // PR 10
+    llm_model: Option<String>,            // PR 10
+    llm_api_key_env: Option<String>,      // v0.5 P2a
 ) -> Result<DreamVaultCommandOutput, String> {
     tauri::async_runtime::spawn_blocking(move || {
         run_dreamvault_action(
@@ -221,6 +255,7 @@ pub async fn dreamvault_status(
             dream_cli_path.as_deref(),
             llm_base_url.as_deref(),
             llm_model.as_deref(),
+            llm_api_key_env.as_deref(),
         )
     })
     .await
@@ -231,8 +266,9 @@ pub async fn dreamvault_status(
 pub async fn dreamvault_run(
     vault_path: String,
     dream_cli_path: Option<String>,
-    llm_base_url: Option<String>, // PR 10
-    llm_model: Option<String>,     // PR 10
+    llm_base_url: Option<String>,         // PR 10
+    llm_model: Option<String>,            // PR 10
+    llm_api_key_env: Option<String>,      // v0.5 P2a
 ) -> Result<DreamVaultCommandOutput, String> {
     tauri::async_runtime::spawn_blocking(move || {
         run_dreamvault_action(
@@ -241,6 +277,7 @@ pub async fn dreamvault_run(
             dream_cli_path.as_deref(),
             llm_base_url.as_deref(),
             llm_model.as_deref(),
+            llm_api_key_env.as_deref(),
         )
     })
     .await
@@ -251,8 +288,9 @@ pub async fn dreamvault_run(
 pub async fn dreamvault_report(
     vault_path: String,
     dream_cli_path: Option<String>,
-    llm_base_url: Option<String>, // PR 10
-    llm_model: Option<String>,     // PR 10
+    llm_base_url: Option<String>,         // PR 10
+    llm_model: Option<String>,            // PR 10
+    llm_api_key_env: Option<String>,      // v0.5 P2a
 ) -> Result<DreamVaultCommandOutput, String> {
     tauri::async_runtime::spawn_blocking(move || {
         run_dreamvault_action(
@@ -261,6 +299,7 @@ pub async fn dreamvault_report(
             dream_cli_path.as_deref(),
             llm_base_url.as_deref(),
             llm_model.as_deref(),
+            llm_api_key_env.as_deref(),
         )
     })
     .await
@@ -459,6 +498,72 @@ mod tests {
         assert!(
             joined.contains("DreamVault/.build/arm64-apple-macosx/debug/dream"),
             "candidate list should include the local arm64 debug CLI path"
+        );
+    }
+
+    // v0.5 PR 24 P2a: multi-provider API key env var override.
+    //
+    // Each LLM provider in the catalog exposes a different env var name for
+    // its API key (OpenRouter → OPENROUTER_API_KEY, Anthropic → ANTHROPIC_API_KEY,
+    // Gemini → GEMINI_API_KEY, etc). The user's shell holds the actual key in
+    // one of those names. DreamX must:
+    //   1. Read the env var name from TS (provider config's `api_key_env_var`).
+    //   2. Look up the value in the user's shell env.
+    //   3. Inject the value into the dream subprocess as `DREAMFORGE_LLM_API_KEY`
+    //      (dream CLI Swift code reads only that name — no dream CLI change
+    //      needed for P2a).
+    //
+    // Backward compat: when no override is given, fall back to the legacy
+    // `DREAMFORGE_LLM_API_KEY` env var (PR 10 behavior).
+
+    #[test]
+    fn resolve_api_key_env_name_uses_override_when_provided() {
+        // OpenRouter provider config says api_key_env_var = "OPENROUTER_API_KEY"
+        assert_eq!(
+            resolve_api_key_env_name(Some("OPENROUTER_API_KEY")),
+            "OPENROUTER_API_KEY"
+        );
+        // Anthropic
+        assert_eq!(
+            resolve_api_key_env_name(Some("ANTHROPIC_API_KEY")),
+            "ANTHROPIC_API_KEY"
+        );
+        // Gemini
+        assert_eq!(
+            resolve_api_key_env_name(Some("GEMINI_API_KEY")),
+            "GEMINI_API_KEY"
+        );
+        // Custom provider with arbitrary name
+        assert_eq!(
+            resolve_api_key_env_name(Some("MY_CUSTOM_LLM_KEY")),
+            "MY_CUSTOM_LLM_KEY"
+        );
+    }
+
+    #[test]
+    fn resolve_api_key_env_name_falls_back_when_none() {
+        // No override → legacy PR 10 behavior (DREAMFORGE_LLM_API_KEY)
+        assert_eq!(resolve_api_key_env_name(None), "DREAMFORGE_LLM_API_KEY");
+    }
+
+    #[test]
+    fn resolve_api_key_env_name_falls_back_when_empty_or_whitespace() {
+        // Empty / whitespace-only override is treated as "unset" — falls back
+        // to legacy DREAMFORGE_LLM_API_KEY. This handles the case where the
+        // user clears the active provider in Settings or sets a blank name.
+        assert_eq!(resolve_api_key_env_name(Some("")), "DREAMFORGE_LLM_API_KEY");
+        assert_eq!(resolve_api_key_env_name(Some("   ")), "DREAMFORGE_LLM_API_KEY");
+        assert_eq!(resolve_api_key_env_name(Some("\t")), "DREAMFORGE_LLM_API_KEY");
+    }
+
+    #[test]
+    fn resolve_api_key_env_name_trims_overridden_value() {
+        // Some shells / config files accidentally include whitespace around
+        // env var names. Treat whitespace as part of "unset" only when the
+        // trimmed value is empty; otherwise honor the trimmed name.
+        assert_eq!(
+            resolve_api_key_env_name(Some("  OPENROUTER_API_KEY  ")),
+            "OPENROUTER_API_KEY"
         );
     }
 }

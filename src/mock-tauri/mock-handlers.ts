@@ -667,17 +667,35 @@ export const mockHandlers: Record<string, (args: any) => any> = {
   reinit_telemetry: (): null => null,
   // DREAMFORGE_SLIM: DreamVault CLI mock handlers (PR2)
   // PR 10: add llmBaseUrl / llmModel args (accepted but ignored in mock)
-  dreamvault_status: (args?: { vaultPath?: string | null; llmBaseUrl?: string | null; llmModel?: string | null }) => ({
+  // v0.5 PR 24 P2a: add llmApiKeyEnv — env var NAME (not value). The mock
+  // accepts the arg for type-completeness but does not surface it in output,
+  // mirroring how llmBaseUrl / llmModel are handled.
+  dreamvault_status: (args?: {
+    vaultPath?: string | null
+    llmBaseUrl?: string | null
+    llmModel?: string | null
+    llmApiKeyEnv?: string | null
+  }) => ({
     stdout: `Vault: ${args?.vaultPath ?? '/mock/vault'}\nRaw candidates: 1\nNotes: 3\nWiki: 1\nMemory: present\nLast dream: 2026-06-15T10:30:00Z`,
     stderr: '',
     success: true,
   }),
-  dreamvault_run: (args?: { vaultPath?: string | null; llmBaseUrl?: string | null; llmModel?: string | null }) => ({
+  dreamvault_run: (args?: {
+    vaultPath?: string | null
+    llmBaseUrl?: string | null
+    llmModel?: string | null
+    llmApiKeyEnv?: string | null
+  }) => ({
     stdout: `vault: ${args?.vaultPath ?? '/mock/vault'}\ndream cycle complete\n  - 收集 raw: 1\n  - 通过整合: 3\n  - 已 git commit\n  - dream-report: ${args?.vaultPath ?? '/mock/vault'}/.dream/reports/latest.md`,
     stderr: '',
     success: true,
   }),
-  dreamvault_report: (args?: { vaultPath?: string | null; llmBaseUrl?: string | null; llmModel?: string | null }) => ({
+  dreamvault_report: (args?: {
+    vaultPath?: string | null
+    llmBaseUrl?: string | null
+    llmModel?: string | null
+    llmApiKeyEnv?: string | null
+  }) => ({
     stdout: `${args?.vaultPath ?? '/mock/vault'}/.dream/reports/2026-06-15T10-30-00Z.md\n${args?.vaultPath ?? '/mock/vault'}/.dream/reports/2026-06-14T08-15-00Z.md`,
     stderr: '',
     success: true,
