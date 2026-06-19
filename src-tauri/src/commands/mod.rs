@@ -1,6 +1,15 @@
 // DREAMFORGE_SLIM: mod ai 物理删除 (PR 4, 12 个 AI module 全删)
 // DREAMFORGE_SLIM: git_clone 物理删除 (PR 7, lib.rs invoke_handler 已注释, clone_repo 也没用)
 // DREAMFORGE_SLIM: pdf_export 物理删除 (PR 7, lib.rs invoke_handler 已注释, objc2-web-kit dep 也清理)
+// DREAMFORGE_SLIM: mod ai 物理删除 (PR 4, 12 个 AI module 全删)
+// DREAMFORGE_SLIM: git_clone 物理删除 (PR 7, lib.rs invoke_handler 已注释, clone_repo 也没用)
+// DREAMFORGE_SLIM: pdf_export 物理删除 (PR 7, lib.rs invoke_handler 已注释, objc2-web-kit dep 也清理)
+// v0.5 PR 25 P2b: ai_provider is the new home for LLM provider API key
+// management (Keychain save/delete/check). Kept here alongside other
+// `commands/*` modules per the AGENTS.md §5 rule that new tauri commands
+// go through `commands/<name>.rs` + `pub use` re-export, never directly
+// added to `lib.rs::invoke_handler`.
+mod ai_provider;
 mod app_icon;
 mod clipboard;
 mod delete;
@@ -16,6 +25,7 @@ mod version;
 
 use std::borrow::Cow;
 
+pub use ai_provider::*;
 pub use app_icon::*;
 pub use clipboard::*;
 pub use delete::*;

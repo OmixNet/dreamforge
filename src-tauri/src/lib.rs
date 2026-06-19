@@ -398,7 +398,13 @@ macro_rules! app_invoke_handler {
             vault_watcher::stop_vault_watcher,
             commands::dreamvault_status,
             commands::dreamvault_run,
-            commands::dreamvault_report
+            commands::dreamvault_report,
+            // v0.5 PR 25 P2b: macOS Keychain for LLM provider API keys.
+            // Pure helpers + mockable wrappers in commands/ai_provider.rs.
+            // Real Keychain tests gated behind #[ignore].
+            commands::save_ai_model_provider_api_key,
+            commands::has_ai_model_provider_api_key,
+            commands::delete_ai_model_provider_api_key
         ]
     };
 }

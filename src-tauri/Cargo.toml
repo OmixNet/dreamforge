@@ -45,5 +45,10 @@ objc2 = "0.6.3"
 objc2-app-kit = "0.3.2"
 objc2-foundation = "0.3.2"
 objc2-web-kit = { version = "0.3.2", features = ["WKWebView", "objc2-app-kit"] }
+# v0.5 PR 25 P2b: macOS Keychain for LLM provider API keys (security boundary).
+# security-framework = Apple's Security framework binding. Used via
+# `security_framework::passwords` for set/get/delete generic passwords.
+# Only included on macOS — DreamX is macOS-only.
+security-framework = "2"
 
 [dev-dependencies]
