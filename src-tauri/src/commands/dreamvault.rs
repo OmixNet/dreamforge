@@ -128,6 +128,144 @@ pub fn resolve_api_key_env_name(llm_api_key_env: Option<&str>) -> &str {
         .unwrap_or(LLM_API_KEY_ENV)
 }
 
+/// v0.5 PR 27 P2c-1.5: which source provided the API key that was
+/// injected into the dream subprocess.
+///
+/// `Keychain` is the preferred source (PR 25 + PR 26 closed loop):
+/// user saves key in Settings → key stored in macOS Keychain →
+/// DreamX reads from Keychain at dream CLI invocation time.
+///
+/// `ShellEnv` is the fallback (PR 24 P2a + PR 10 legacy): user set
+/// `OPENROUTER_API_KEY=sk-...` in their shell → DreamX reads from
+/// shell env. Useful for CI / headless setups where the user prefers
+/// to manage keys outside the GUI.
+///
+/// `None` means no key was injected. This is NOT an error when the
+/// active provider is None (backward compat with non-LLM dream runs);
+/// when a provider id IS given and both sources are empty, `inject_api_key`
+/// returns an Err instead.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ApiKeySource {
+    Keychain,
+    ShellEnv,
+    None,
+}
+
+/// v0.5 PR 27 P2c-1.5: inject the LLM API key into the dream subprocess.
+///
+/// Priority:
+///   1. **Keychain** — if `provider_id` is given and Keychain has the key
+///      for that id, use it. This is the closed-loop path: user saves
+///      key in Settings → Keychain stores it → DreamX reads from Keychain
+///      at dream CLI invocation time.
+///   2. **Shell env** — fallback to the env var name resolved by
+///      `resolve_api_key_env_name(env_name)`. PR 10 / PR 24 behavior for
+///      users who manage keys outside the GUI.
+///   3. **Error if provider id given but no key found** — when the user
+///      has selected an active provider (provider_id is Some) and neither
+///      source has the key, return a stable error so the user gets a
+///      clear "missing key" message instead of the dream CLI's generic
+///      auth failure.
+///
+/// **Security invariant**: the key value never enters an error message,
+/// log line, or return value. It only flows through `Command::env()` and
+/// is dropped immediately after.
+pub fn inject_api_key(
+    command: &mut std::process::Command,
+    provider_id: Option<&str>,
+    env_name: Option<&str>,
+) -> Result<ApiKeySource, String> {
+    inject_api_key_with_lookup(
+        command,
+        provider_id,
+        env_name,
+        #[cfg(target_os = "macos")]
+        real_keychain_read_value,
+        #[cfg(not(target_os = "macos"))]
+        |_| {
+            Err(crate::commands::ai_provider::provider_error(
+                crate::commands::ai_provider::ProviderOp::Check,
+                "macOS Keychain is only available on macOS",
+            ))
+        },
+    )
+}
+
+#[cfg(target_os = "macos")]
+fn real_keychain_read_value(
+    provider_id: &str,
+) -> Result<crate::commands::ai_provider::KeychainReadOutcome, String> {
+    crate::commands::ai_provider::keychain_read_value(provider_id)
+}
+
+/// v0.5 PR 27 P2c-1.5: testable variant of `inject_api_key` that takes
+/// a closure for the Keychain lookup. Production code calls this with
+/// `real_keychain_read_value`; tests pass a closure returning
+/// `KeychainReadOutcome::Found` / `Empty` / `NotConfigured` without
+/// touching real macOS Keychain.
+///
+/// See `tests::inject_api_key_*` for the contract.
+fn inject_api_key_with_lookup<F>(
+    command: &mut std::process::Command,
+    provider_id: Option<&str>,
+    env_name: Option<&str>,
+    keychain_lookup: F,
+) -> Result<ApiKeySource, String>
+where
+    F: Fn(&str) -> Result<crate::commands::ai_provider::KeychainReadOutcome, String>,
+{
+    let resolved_env_name = resolve_api_key_env_name(env_name);
+
+    // Step 1: try Keychain first (closed-loop path)
+    if let Some(pid) = provider_id.map(str::trim).filter(|s| !s.is_empty()) {
+        match keychain_lookup(pid) {
+            Ok(crate::commands::ai_provider::KeychainReadOutcome::Found(value)) => {
+                let trimmed = value.trim();
+                if !trimmed.is_empty() {
+                    command.env(LLM_API_KEY_ENV, trimmed);
+                    return Ok(ApiKeySource::Keychain);
+                }
+                // Empty after trim — treat as not configured, fall through.
+            }
+            Ok(crate::commands::ai_provider::KeychainReadOutcome::Empty) => {
+                // Fall through to shell env.
+            }
+            Ok(crate::commands::ai_provider::KeychainReadOutcome::NotConfigured) => {
+                // Fall through to shell env.
+            }
+            Err(error) => return Err(error),
+        }
+    }
+
+    // Step 2: shell env fallback (PR 24 / PR 10 behavior)
+    if let Ok(value) = std::env::var(resolved_env_name) {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            command.env(LLM_API_KEY_ENV, trimmed);
+            return Ok(ApiKeySource::ShellEnv);
+        }
+    }
+
+    // Step 3: no key found. If provider_id was given, this is a hard error
+    // so the user gets a stable "missing key" message instead of a
+    // generic dream CLI auth failure. If no provider_id, preserve the
+    // PR 24 / PR 10 behavior (no key → no injection, dream CLI decides).
+    if provider_id
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .is_some()
+    {
+        Err(format!(
+            "ai-provider check: no API key configured for provider '{}' \
+             (save key in Settings → AI or set {} in your shell)",
+            provider_id.unwrap_or("?"),
+            resolved_env_name,
+        ))
+    } else {
+        Ok(ApiKeySource::None)
+    }
+}
+
 /// PR 10: Strip trailing `/v1` from an OpenAI-compatible base URL.
 /// OllamaProvider (in DreamVault) auto-appends `/v1/chat/completions`, so the
 /// base URL passed to dream must NOT include `/v1` (would result in
@@ -186,6 +324,7 @@ fn run_dreamvault_action(
     llm_base_url: Option<&str>,
     llm_model: Option<&str>,
     llm_api_key_env: Option<&str>,
+    llm_api_key_provider_id: Option<&str>, // v0.5 PR 27 P2c-1.5
 ) -> Result<DreamVaultCommandOutput, String> {
     let spec = build_dreamvault_command(
         action,
@@ -198,21 +337,21 @@ fn run_dreamvault_action(
     let mut command = Command::new(&spec.program);
     command.args(&spec.args);
 
-    // v0.5 P2a: read the API key from the provider-specific env var (e.g.
-    // OPENROUTER_API_KEY) when TS passes an override; otherwise fall back
-    // to the legacy DREAMFORGE_LLM_API_KEY (PR 10). The value is injected
-    // into the dream subprocess as DREAMFORGE_LLM_API_KEY — dream CLI Swift
-    // code reads only that name, so the contract stays stable across PRs.
+    // v0.5 PR 27 P2c-1.5: closed-loop key resolution.
+    //   - If `llm_api_key_provider_id` is given, try Keychain first
+    //     (PR 25 + PR 26: Settings UI saves key → Keychain stores it →
+    //     DreamX reads from Keychain here → injects into dream subprocess).
+    //   - Fall back to shell env (PR 24 + PR 10) for backward compat
+    //     with users who manage keys outside the GUI.
+    //   - If provider id is given but neither source has a key, return
+    //     a stable "missing key" error so the user sees a clear message
+    //     instead of a generic dream CLI auth failure.
     //
-    // Safety invariant: the key NEVER enters dream CLI args (ps aux would
-    // leak it). It only travels via Command::env() into the subprocess env.
-    let source_env = resolve_api_key_env_name(llm_api_key_env);
-    if let Ok(key) = std::env::var(source_env) {
-        let trimmed = key.trim();
-        if !trimmed.is_empty() {
-            command.env(LLM_API_KEY_ENV, trimmed);
-        }
-    }
+    // Safety invariant: the key VALUE never enters dream CLI args (ps aux
+    // would leak it). It only travels via Command::env() into the
+    // subprocess env. The inject_api_key function drops the value
+    // immediately after Command::env().
+    inject_api_key(&mut command, llm_api_key_provider_id, llm_api_key_env)?;
 
     let output = command.output().map_err(|error| {
         format!(
@@ -244,9 +383,10 @@ fn run_dreamvault_action(
 pub async fn dreamvault_status(
     vault_path: String,
     dream_cli_path: Option<String>,
-    llm_base_url: Option<String>,         // PR 10
-    llm_model: Option<String>,            // PR 10
-    llm_api_key_env: Option<String>,      // v0.5 P2a
+    llm_base_url: Option<String>,             // PR 10
+    llm_model: Option<String>,                // PR 10
+    llm_api_key_env: Option<String>,          // v0.5 P2a
+    llm_api_key_provider_id: Option<String>,  // v0.5 PR 27 P2c-1.5
 ) -> Result<DreamVaultCommandOutput, String> {
     tauri::async_runtime::spawn_blocking(move || {
         run_dreamvault_action(
@@ -256,6 +396,7 @@ pub async fn dreamvault_status(
             llm_base_url.as_deref(),
             llm_model.as_deref(),
             llm_api_key_env.as_deref(),
+            llm_api_key_provider_id.as_deref(),
         )
     })
     .await
@@ -266,9 +407,10 @@ pub async fn dreamvault_status(
 pub async fn dreamvault_run(
     vault_path: String,
     dream_cli_path: Option<String>,
-    llm_base_url: Option<String>,         // PR 10
-    llm_model: Option<String>,            // PR 10
-    llm_api_key_env: Option<String>,      // v0.5 P2a
+    llm_base_url: Option<String>,             // PR 10
+    llm_model: Option<String>,                // PR 10
+    llm_api_key_env: Option<String>,          // v0.5 P2a
+    llm_api_key_provider_id: Option<String>,  // v0.5 PR 27 P2c-1.5
 ) -> Result<DreamVaultCommandOutput, String> {
     tauri::async_runtime::spawn_blocking(move || {
         run_dreamvault_action(
@@ -278,6 +420,7 @@ pub async fn dreamvault_run(
             llm_base_url.as_deref(),
             llm_model.as_deref(),
             llm_api_key_env.as_deref(),
+            llm_api_key_provider_id.as_deref(),
         )
     })
     .await
@@ -288,9 +431,10 @@ pub async fn dreamvault_run(
 pub async fn dreamvault_report(
     vault_path: String,
     dream_cli_path: Option<String>,
-    llm_base_url: Option<String>,         // PR 10
-    llm_model: Option<String>,            // PR 10
-    llm_api_key_env: Option<String>,      // v0.5 P2a
+    llm_base_url: Option<String>,             // PR 10
+    llm_model: Option<String>,                // PR 10
+    llm_api_key_env: Option<String>,          // v0.5 P2a
+    llm_api_key_provider_id: Option<String>,  // v0.5 PR 27 P2c-1.5
 ) -> Result<DreamVaultCommandOutput, String> {
     tauri::async_runtime::spawn_blocking(move || {
         run_dreamvault_action(
@@ -300,6 +444,7 @@ pub async fn dreamvault_report(
             llm_base_url.as_deref(),
             llm_model.as_deref(),
             llm_api_key_env.as_deref(),
+            llm_api_key_provider_id.as_deref(),
         )
     })
     .await
@@ -565,5 +710,171 @@ mod tests {
             resolve_api_key_env_name(Some("  OPENROUTER_API_KEY  ")),
             "OPENROUTER_API_KEY"
         );
+    }
+
+    // v0.5 PR 27 P2c-1.5: closed-loop key resolution tests.
+    //
+    // These exercise `inject_api_key_with_lookup` with a mock Keychain
+    // lookup closure so the test suite stays free of real macOS Keychain
+    // dependencies. Real Keychain coverage lives in
+    // `commands::ai_provider::tests::keychain_integration` behind #[ignore].
+
+    use crate::commands::ai_provider::{KeychainReadOutcome, ProviderOp};
+    use std::process::Command;
+
+    /// Build a fresh Command and run `inject_api_key_with_lookup` against
+    /// a mock Keychain lookup closure. Returns the source outcome.
+    fn run_inject<F>(
+        provider_id: Option<&str>,
+        env_name: Option<&str>,
+        lookup: F,
+    ) -> Result<ApiKeySource, String>
+    where
+        F: Fn(&str) -> Result<KeychainReadOutcome, String>,
+    {
+        let mut command = Command::new("/bin/true");
+        inject_api_key_with_lookup(&mut command, provider_id, env_name, lookup)
+    }
+
+    #[test]
+    fn inject_uses_keychain_when_configured_and_provider_id_given() {
+        // The closed-loop path: PR 25 Keychain + PR 26 UI saved the key;
+        // here DreamX reads it from Keychain and injects into the subprocess.
+        // The lookup closure returns Found("sk-or-v1-...") without ever
+        // touching real Keychain.
+        let result = run_inject(
+            Some("openrouter"),
+            Some("OPENROUTER_API_KEY"),
+            |_pid| Ok(KeychainReadOutcome::Found("sk-or-v1-test-123".to_string())),
+        );
+        assert_eq!(result, Ok(ApiKeySource::Keychain));
+    }
+
+    #[test]
+    fn inject_falls_back_to_shell_env_when_keychain_not_configured() {
+        // Backward compat with PR 24 / PR 10: user has shell env set but
+        // hasn't used the Settings UI. Keychain lookup returns NotConfigured,
+        // shell env has the key → use shell env.
+        //
+        // We don't manipulate process env here (racy across parallel tests);
+        // we just verify that when Keychain says NotConfigured, the function
+        // continues to the shell env branch. If shell env happens to have
+        // the var in the test runner, ShellEnv is returned; otherwise the
+        // function returns "missing key" error (provider id is Some).
+        // Both outcomes prove the fall-through happened correctly.
+        let lookup_result = run_inject(
+            Some("openrouter"),
+            Some("OPENROUTER_API_KEY_NONEXISTENT_FOR_TEST"),
+            |_pid| Ok(KeychainReadOutcome::NotConfigured),
+        );
+        match lookup_result {
+            Ok(ApiKeySource::ShellEnv) => { /* shell env happened to have it — OK */ }
+            Err(msg) => {
+                assert!(msg.contains("no API key configured"));
+                assert!(msg.contains("OPENROUTER_API_KEY_NONEXISTENT_FOR_TEST"));
+                assert!(msg.contains("openrouter"));
+            }
+            Ok(ApiKeySource::Keychain) => panic!("Keychain said NotConfigured — must not return Keychain source"),
+            Ok(ApiKeySource::None) => panic!("provider id was Some — must return Err or ShellEnv, never None"),
+        }
+    }
+
+    #[test]
+    fn inject_falls_back_when_keychain_returns_empty() {
+        // Edge case: Keychain entry exists but is empty / whitespace-only.
+        // The PR 25 wrapper returns `Empty` for this. Caller should fall
+        // through to shell env (same as NotConfigured).
+        let lookup_result = run_inject(
+            Some("openrouter"),
+            Some("OPENROUTER_API_KEY_NONEXISTENT_FOR_TEST"),
+            |_pid| Ok(KeychainReadOutcome::Empty),
+        );
+        match lookup_result {
+            Ok(ApiKeySource::ShellEnv) => { /* OK */ }
+            Err(msg) => assert!(msg.contains("no API key configured")),
+            Ok(ApiKeySource::Keychain) => panic!("Empty must not return Keychain source"),
+            Ok(ApiKeySource::None) => panic!("provider id was Some — must not return None"),
+        }
+    }
+
+    #[test]
+    fn inject_errors_with_stable_message_when_provider_id_but_no_key() {
+        // Critical UX path: user selected OpenRouter in Settings → UI
+        // saved the provider config BUT the key was never saved (e.g. user
+        // forgot to click Save, or Keychain entry was lost). User runs
+        // "Run Dream" and sees a CLEAR error instead of dream CLI's
+        // generic auth failure.
+        let result = run_inject(
+            Some("openrouter"),
+            Some("OPENROUTER_API_KEY_NONEXISTENT_FOR_TEST"),
+            |_pid| Ok(KeychainReadOutcome::NotConfigured),
+        );
+        let err = result.expect_err("must error when provider id given but no key in either source");
+        // Stable error format (locked by this test):
+        assert!(err.starts_with("ai-provider check: "), "got: {err}");
+        assert!(err.contains("no API key configured"), "got: {err}");
+        assert!(err.contains("openrouter"), "got: {err}");
+        assert!(err.contains("OPENROUTER_API_KEY_NONEXISTENT_FOR_TEST"), "got: {err}");
+        assert!(err.contains("Settings"), "got: {err}"); // hints at the fix path
+        assert!(err.contains("shell"), "got: {err}"); // hints at the fallback path
+    }
+
+    #[test]
+    fn inject_does_not_leak_key_value_into_error_message() {
+        // Critical security invariant: even on error, the key value MUST
+        // NOT appear in the error message returned by inject_api_key.
+        //
+        // Architecture: the security guarantee is enforced at the
+        // Keychain WRAPPER level (`commands::ai_provider::keychain_read_value`
+        // uses `format_provider_error(ProviderOp::Check, error)` which only
+        // formats the SecurityError description, never the value). This
+        // test verifies inject_api_key DOES NOT re-wrap or augment the
+        // Keychain error in a way that could accidentally include the
+        // value — i.e. it propagates the wrapper's error verbatim.
+        //
+        // The lookup closure returns a realistic Keychain-shaped error
+        // (matches what the wrapper produces: "ai-provider check: <err>").
+        let wrapper_error = "ai-provider check: security framework error -25291";
+        let result = run_inject(
+            Some("openrouter"),
+            Some("OPENROUTER_API_KEY"),
+            |_pid| Err(wrapper_error.to_string()),
+        );
+        let err = result.expect_err("must propagate Keychain error");
+        // Inject must propagate verbatim — no re-formatting that could
+        // accidentally include the value.
+        assert_eq!(err, wrapper_error);
+        // The key value (which was never even passed to the lookup) must
+        // obviously not appear. This is a sanity assertion on the test
+        // itself, not on the implementation, but locks the invariant.
+        assert!(!err.contains("sk-"), "key value shape must not appear: {err}");
+    }
+
+    #[test]
+    fn inject_no_provider_id_no_shell_env_returns_none_for_backward_compat() {
+        // PR 24 / PR 10 behavior: when no provider id is given AND no
+        // shell env has the key, do NOT error. dream CLI may run without
+        // an LLM (e.g. local-only vault, Ollama offline, etc).
+        let result = run_inject(
+            None,
+            Some("DREAMFORGE_LLM_API_KEY_NONEXISTENT_FOR_TEST"),
+            |_pid| Ok(KeychainReadOutcome::NotConfigured),
+        );
+        // Either ShellEnv (if env happened to be set) or None is acceptable.
+        match result {
+            Ok(ApiKeySource::ShellEnv) => { /* OK */ }
+            Ok(ApiKeySource::None) => { /* OK — backward compat */ }
+            Err(msg) => panic!("no provider id must not error: {msg}"),
+            Ok(ApiKeySource::Keychain) => panic!("Keychain returned NotConfigured — must not return Keychain"),
+        }
+    }
+
+    #[test]
+    fn inject_provider_op_label_is_stable() {
+        // The error format is part of the public contract (v0.5 success
+        // criterion #5: legible errors). Pin it here so a refactor doesn't
+        // accidentally rename the operation label.
+        let err = crate::commands::ai_provider::provider_error(ProviderOp::Check, "test reason");
+        assert_eq!(err, "ai-provider check: test reason");
     }
 }

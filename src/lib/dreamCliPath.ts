@@ -21,8 +21,14 @@ const STORAGE_KEY_LLM_BASE_URL = 'dreamforge.llmBaseUrl'
 const STORAGE_KEY_LLM_MODEL = 'dreamforge.llmModel'
 // v0.5 PR 24 P2a: env var NAME (not value) for the active provider's API key.
 // Stores e.g. "OPENROUTER_API_KEY" / "ANTHROPIC_API_KEY" / "GEMINI_API_KEY".
-// The KEY VALUE stays in the user's shell env and is read at dream-invoke time.
+// v0.5 PR 27 P2c-1.5: the KEY VALUE lives in macOS Keychain (PR 25), so
+// the user's shell env is now the FALLBACK (PR 24 behavior). DreamX Rust
+// reads from Keychain first by provider id, falls back to this env var name.
 const STORAGE_KEY_LLM_API_KEY_ENV = 'dreamforge.llmApiKeyEnv'
+// v0.5 PR 27 P2c-1.5: provider id for the active provider. Written together
+// with `llmApiKeyEnv` so DreamPanel can pass BOTH to `dreamvault_run` and
+// the Rust side can look up the API key in macOS Keychain by provider id.
+const STORAGE_KEY_LLM_API_KEY_PROVIDER_ID = 'dreamforge.llmApiKeyProviderId'
 
 export function readDreamCliPath(): string {
   return readStringFromStorage(STORAGE_KEY)
@@ -92,6 +98,20 @@ export function resolveLlmApiKeyEnvForInvoke(): string | null {
   return envName.length > 0 ? envName : null
 }
 
+/**
+ * v0.5 PR 27 P2c-1.5: returns the active provider id (e.g. "openrouter-abc123")
+ * so the Rust side can look up the API key in macOS Keychain (PR 25 wrapper)
+ * BEFORE falling back to the shell env var. Paired with
+ * `resolveLlmApiKeyEnvForInvoke` — both are set together when the user saves
+ * a provider in Settings and cleared together on delete.
+ *
+ * Empty / unset → null (Rust treats this as "no Keychain lookup; shell env only").
+ */
+export function resolveLlmApiKeyProviderIdForInvoke(): string | null {
+  const providerId = readLlmApiKeyProviderIdPublic()
+  return providerId.length > 0 ? providerId : null
+}
+
 // Internal helpers
 
 function readLlmApiKeyEnv(): string {
@@ -104,6 +124,21 @@ export function writeLlmApiKeyEnv(value: string): void {
 
 export function readLlmApiKeyEnvPublic(): string {
   return readLlmApiKeyEnv()
+}
+
+/**
+ * v0.5 PR 27 P2c-1.5: provider id of the active LLM provider. Paired
+ * with `llmApiKeyEnv` — both are set together after a successful save
+ * and cleared together after delete. Read by DreamPanel at dream CLI
+ * invocation time so the Rust side can look up the API key in macOS
+ * Keychain by provider id (PR 25 wrapper).
+ */
+export function writeLlmApiKeyProviderId(value: string): void {
+  writeStringToStorage(STORAGE_KEY_LLM_API_KEY_PROVIDER_ID, value)
+}
+
+export function readLlmApiKeyProviderIdPublic(): string {
+  return readStringFromStorage(STORAGE_KEY_LLM_API_KEY_PROVIDER_ID)
 }
 
 function readStringFromStorage(key: string): string {

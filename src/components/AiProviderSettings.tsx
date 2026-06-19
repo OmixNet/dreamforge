@@ -17,8 +17,9 @@ import {
   saveAiModelProviderApiKey,
 } from '../utils/aiProviderSecrets'
 import {
-  readLlmApiKeyEnvPublic,
+  readLlmApiKeyProviderIdPublic,
   writeLlmApiKeyEnv,
+  writeLlmApiKeyProviderId,
 } from '../lib/dreamCliPath'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -37,8 +38,8 @@ import {
 // Picked up by DreamPanel at dream CLI invocation time to populate the
 // `llm_api_key_env` Rust command arg (PR 24 P2a wiring).
 
-function readActiveLlmApiKeyEnv(): string {
-  return readLlmApiKeyEnvPublic()
+function readActiveLlmApiKeyProviderId(): string {
+  return readLlmApiKeyProviderIdPublic()
 }
 
 function writeActiveLlmApiKeyEnv(envName: string | null): void {
@@ -48,6 +49,19 @@ function writeActiveLlmApiKeyEnv(envName: string | null): void {
     return
   }
   writeLlmApiKeyEnv(envName)
+}
+
+function writeActiveLlmApiKeyProviderId(providerId: string | null): void {
+  if (!providerId) {
+    writeLlmApiKeyProviderId('')
+    return
+  }
+  writeLlmApiKeyProviderId(providerId)
+}
+
+function clearActiveLlmApiKey(): void {
+  writeActiveLlmApiKeyEnv(null)
+  writeActiveLlmApiKeyProviderId(null)
 }
 
 type Translate = ReturnType<typeof createTranslator>
@@ -359,13 +373,13 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
       if (draft.apiKeyStorage === 'local_file') {
         await saveAiModelProviderApiKey(providerId, draft.apiKey)
       }
-      // Bridge env var NAME into localStorage so DreamPanel picks it up
-      // at dream CLI invocation time (PR 24 P2a wiring reads this key).
-      // The KEY VALUE never enters localStorage — only the env var NAME
-      // (e.g. "OPENROUTER_API_KEY"). The user's shell still holds the
-      // actual value under that name.
+      // v0.5 PR 27 P2c-1.5: bridge BOTH env var NAME and provider id into
+      // localStorage so DreamPanel passes them to `dreamvault_run`, which
+      // uses the provider id to look up the API key in macOS Keychain.
+      // The KEY VALUE never enters localStorage — only metadata.
       if (draft.apiKeyStorage === 'local_file' && draft.apiKeyEnvVar) {
         writeActiveLlmApiKeyEnv(draft.apiKeyEnvVar)
+        writeActiveLlmApiKeyProviderId(providerId)
       }
       onChange(normalizeAiModelProviders([...providers, buildProvider(draft, providerId)]))
       setDraft((current) => ({ ...draftFromProviderKind(current.kind), name: current.name, baseUrl: current.baseUrl }))
@@ -383,13 +397,10 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
       const removed = providers.find((provider) => provider.id === providerId)
       await deleteAiModelProviderApiKey(providerId)
       onChange(providers.filter((provider) => provider.id !== providerId))
-      if (
-        removed &&
-        removed.api_key_storage === 'local_file' &&
-        removed.api_key_env_var &&
-        readActiveLlmApiKeyEnv() === removed.api_key_env_var
-      ) {
-        writeActiveLlmApiKeyEnv(null)
+      if (removed && readActiveLlmApiKeyProviderId() === providerId) {
+        // The removed provider WAS the active one — clear both pointers
+        // so DreamPanel doesn't pass a dangling provider id to dreamvault_run.
+        clearActiveLlmApiKey()
       }
       // useEffect re-polls status when `providers` updates above
     } catch (error) {

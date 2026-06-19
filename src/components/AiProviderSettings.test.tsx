@@ -147,6 +147,36 @@ describe('AiProviderSettings', () => {
     expect(stored).not.toContain('sk-or-v1')
   })
 
+  it('save: writes provider id to localStorage dreamforge.llmApiKeyProviderId', async () => {
+    vi.mocked(invoke).mockResolvedValue(null)
+
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={[]}
+        onChange={() => {}}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText(/settings\.aiProviders\.model/), {
+      target: { value: 'gpt-4.1-mini' },
+    })
+    const keyInputs = screen.getAllByLabelText(/settings\.aiProviders\.key$/)
+    fireEvent.change(keyInputs[keyInputs.length - 1], {
+      target: { value: 'sk-test' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /settings\.aiProviders\.addApi/ }))
+
+    await waitFor(() => {
+      const id = window.localStorage.getItem('dreamforge.llmApiKeyProviderId')
+      expect(id).toBeTruthy()
+      // Format is `${kind}-${base36 timestamp}` per the addProvider impl.
+      expect(id).toMatch(/^open_ai-[a-z0-9]+$/)
+    })
+  })
+
   it('save: writes to onChange with provider config that omits the api key value', async () => {
     vi.mocked(invoke).mockResolvedValue(null)
     const onChange = vi.fn()
@@ -226,10 +256,12 @@ describe('AiProviderSettings', () => {
     })
   })
 
-  it('delete: clears localStorage dreamforge.llmApiKeyEnv when the removed provider was active', async () => {
+  it('delete: clears localStorage pointers when the removed provider was active', async () => {
     vi.mocked(invoke).mockResolvedValue(null)
     // Pre-set localStorage as if this provider was the active one
+    // (PR 27 P2c-1.5: both env var NAME and provider id are paired)
     window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'OPENROUTER_API_KEY')
+    window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter-active')
 
     const providers: AiModelProvider[] = [
       {
@@ -257,6 +289,7 @@ describe('AiProviderSettings', () => {
     await waitFor(() => {
       expect(window.localStorage.getItem('dreamforge.llmApiKeyEnv')).toBeNull()
     })
+    expect(window.localStorage.getItem('dreamforge.llmApiKeyProviderId')).toBeNull()
   })
 
   // -- Test button hidden (no HTTP smoke in v0.5) --

@@ -243,6 +243,65 @@ pub fn keychain_exists(provider_id: &str) -> Result<bool, String> {
     }
 }
 
+/// Outcome of a Keychain read attempt.
+///
+/// v0.5 PR 27 P2c-1.5: `inject_api_key` uses this enum to decide whether
+/// to fall back to shell env (`NotConfigured` → fall through) or surface
+/// a hard error (`Error`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KeychainReadOutcome {
+    /// Keychain entry exists and has a non-empty value. The `String` is
+    /// the trimmed UTF-8 value. Caller MUST inject + drop; do NOT log,
+    /// store, or return to a UI surface.
+    Found(String),
+    /// Keychain entry exists but value is empty / whitespace-only. Treat
+    /// as "not configured" so the caller falls back to shell env.
+    Empty,
+    /// errSecItemNotFound — no entry exists for this provider id.
+    NotConfigured,
+}
+
+/// Read the API key value for a provider from macOS Keychain.
+///
+/// **Security invariant**: the returned `String` MUST be injected into
+/// the dream subprocess via `Command::env()` and immediately dropped.
+/// It MUST NOT appear in any log, error message, return value exposed
+/// to the IPC boundary, or persistent storage.
+///
+/// Returns:
+/// - `Ok(KeychainReadOutcome::Found(value))` — entry exists, value non-empty
+/// - `Ok(KeychainReadOutcome::Empty)` — entry exists but empty / whitespace
+/// - `Ok(KeychainReadOutcome::NotConfigured)` — no entry (errSecItemNotFound)
+/// - `Err(...)` — Keychain error (auth, sandbox, etc.)
+#[cfg(target_os = "macos")]
+pub fn keychain_read_value(provider_id: &str) -> Result<KeychainReadOutcome, String> {
+    let provider_id = validate_provider_id(provider_id)?;
+    match passwords::get_generic_password(KEYCHAIN_SERVICE, provider_id) {
+        Ok(secret) => {
+            // Convert bytes to UTF-8 string and trim. Real API keys are
+            // ASCII so lossy is fine; non-ASCII would mean user pasted
+            // garbage into the Settings field.
+            let value = String::from_utf8_lossy(&secret).trim().to_string();
+            // Drop the byte buffer immediately after copying to String.
+            drop(secret);
+            if value.is_empty() {
+                Ok(KeychainReadOutcome::Empty)
+            } else {
+                Ok(KeychainReadOutcome::Found(value))
+            }
+        }
+        Err(error) => {
+            const ITEM_NOT_FOUND: i32 = -25300;
+            let code = error.code();
+            if code == ITEM_NOT_FOUND {
+                Ok(KeychainReadOutcome::NotConfigured)
+            } else {
+                Err(format_provider_error(ProviderOp::Check, error))
+            }
+        }
+    }
+}
+
 /// Delete the API key for a provider. Returns Ok(()) on success, even if
 /// the key was not configured (idempotent — Keychain returns
 /// errSecItemNotFound in that case, we map to Ok).
@@ -546,6 +605,37 @@ mod tests {
         _check_type(keychain_delete);
     }
 
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn keychain_read_value_signature_returns_outcome_enum() {
+        fn _check_type(_: impl Fn(&str) -> Result<KeychainReadOutcome, String>) {}
+        _check_type(keychain_read_value);
+    }
+
+    #[test]
+    fn keychain_read_outcome_distinguishes_configured_vs_not() {
+        // Pure value test — covers the public enum shape so callers can
+        // pattern-match reliably. The enum is the only contract between
+        // `keychain_read_value` and `inject_api_key` in dreamvault.rs.
+        assert_eq!(KeychainReadOutcome::NotConfigured, KeychainReadOutcome::NotConfigured);
+        assert_eq!(KeychainReadOutcome::Empty, KeychainReadOutcome::Empty);
+        assert_eq!(
+            KeychainReadOutcome::Found("sk-test".to_string()),
+            KeychainReadOutcome::Found("sk-test".to_string())
+        );
+        // Found values are equal by content (PartialEq + Eq).
+        assert_ne!(
+            KeychainReadOutcome::Found("sk-a".to_string()),
+            KeychainReadOutcome::Found("sk-b".to_string())
+        );
+        // Found vs Empty/NotConfigured are different shapes.
+        assert_ne!(KeychainReadOutcome::Found("x".to_string()), KeychainReadOutcome::Empty);
+        assert_ne!(
+            KeychainReadOutcome::Found("x".to_string()),
+            KeychainReadOutcome::NotConfigured
+        );
+    }
+
     // Real Keychain integration tests — gated behind #[ignore].
     // These hit macOS Keychain and require user keychain unlock access.
     // Run with: `cargo test --lib -- --ignored keychain_integration`
@@ -606,6 +696,38 @@ mod tests {
             assert!(keychain_set("Bad-Id", "sk-test").is_err());
             assert!(keychain_exists("Bad-Id").is_err());
             assert!(keychain_delete("Bad-Id").is_err());
+        }
+
+        #[test]
+        #[ignore]
+        fn real_keychain_read_value_returns_found_after_set() {
+            // v0.5 PR 27 P2c-1.5: closed-loop test for the P2c-1.5 fix.
+            // The end-to-end data flow is: TS Save → Keychain store →
+            // dreamvault_run → keychain_read_value → Command::env. This
+            // test verifies the middle link (Keychain read).
+            let id = random_test_id();
+            let key = "sk-or-v1-test-only-not-a-real-key";
+
+            keychain_set(&id, key).expect("set should succeed on macOS");
+
+            let outcome = keychain_read_value(&id).expect("read should succeed");
+            match outcome {
+                KeychainReadOutcome::Found(value) => assert_eq!(value, key),
+                KeychainReadOutcome::Empty => panic!("expected Found, got Empty"),
+                KeychainReadOutcome::NotConfigured => panic!("expected Found, got NotConfigured"),
+            }
+
+            // Cleanup
+            keychain_delete(&id).expect("delete should succeed");
+        }
+
+        #[test]
+        #[ignore]
+        fn real_keychain_read_value_returns_not_configured_for_missing() {
+            let id = random_test_id();
+            // Never saved — read should return NotConfigured, not error.
+            let outcome = keychain_read_value(&id).expect("read should succeed for missing entry");
+            assert_eq!(outcome, KeychainReadOutcome::NotConfigured);
         }
     }
 }
