@@ -92,11 +92,13 @@ function VaultPathBadge({
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 4,
-            padding: '2px 6px',
-            borderRadius: 3,
+            gap: 6,
+            padding: '3px 8px',
+            borderRadius: 999,
+            background: 'color-mix(in srgb, var(--surface-card) 64%, transparent)',
+            border: '1px solid var(--border-subtle)',
             fontSize: 12,
-            color: 'var(--muted-foreground)',
+            color: 'var(--text-secondary)',
             maxWidth: compact ? 140 : 240,
           }}
           data-testid="status-vault-path"

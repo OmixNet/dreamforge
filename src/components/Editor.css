@@ -69,6 +69,7 @@ body.mac-chrome .app:not(:has(.app__sidebar)):not(:has(.app__note-list)) .breadc
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  background: var(--surface-editor);
 }
 
 /* BlockNote container */
@@ -111,12 +112,12 @@ body.mac-chrome .app:not(:has(.app__sidebar)):not(:has(.app__note-list)) .breadc
 .editor__blocknote-container .bn-container {
   width: 100%;
   height: 100%;
-  background: var(--bg-primary);
+  background: var(--surface-editor);
   color: var(--text-primary);
   font-size: 15px;
   /* Override BlockNote's internal color variables so .bn-editor background
      matches our vault theme instead of BlockNote's hardcoded light/dark defaults. */
-  --bn-colors-editor-background: var(--bg-primary);
+  --bn-colors-editor-background: var(--surface-editor);
   --bn-colors-editor-text: var(--text-primary);
   --bn-colors-menu-background: var(--surface-popover);
   --bn-colors-menu-text: var(--text-primary);

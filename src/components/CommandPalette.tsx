@@ -166,7 +166,7 @@ function CommandPaletteInput({
   return (
     <Input
       ref={inputRef}
-      className="h-auto rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-4 py-3 text-[15px] text-foreground shadow-none transition-none outline-none placeholder:text-muted-foreground focus-visible:border-border focus-visible:ring-0 md:text-[15px]"
+      className="h-auto rounded-none border-x-0 border-t-0 border-b border-[var(--border-subtle)] bg-transparent px-4 py-3 text-[14px] text-foreground shadow-none transition-none outline-none placeholder:text-muted-foreground focus-visible:border-[var(--border-subtle)] focus-visible:ring-0 md:text-[14px]"
       type="text"
       placeholder={placeholder}
       value={query}
@@ -230,7 +230,10 @@ function CommandPaletteResults({
       {sections.map(({ group, items, startIndex }) => {
         return (
           <div key={group}>
-            <div className="px-4 pb-1 pt-2 text-[11px] font-medium text-muted-foreground">
+            <div
+              className="px-4 pb-1.5 pt-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+              data-command-palette-group="true"
+            >
               {localizeCommandGroup(group, locale)}
             </div>
             {items.map((command, index) => {
@@ -268,7 +271,7 @@ function CommandPaletteFooter({
   }
 }) {
   return (
-    <div className="flex items-center gap-4 border-t border-border px-4 py-1.5 text-[11px] text-muted-foreground">
+    <div className="flex items-center gap-4 border-t border-[var(--border-subtle)] bg-[var(--surface-panel)] px-4 py-2 text-[11px] text-muted-foreground">
       <span>{aiMode ? footerText.aiMode.replace('{agent}', aiAgentLabel) : footerText.navigate}</span>
       <span>{aiMode ? footerText.send : footerText.select}</span>
       <span>{footerText.close}</span>
@@ -423,7 +426,9 @@ function OpenCommandPalette({
     <div
       ref={rootRef}
       data-command-palette="true"
-      className="fixed inset-0 z-[1000] flex justify-center bg-[var(--shadow-dialog)] pt-[15vh]"
+      data-testid="command-palette-overlay"
+      data-codex-surface="overlay"
+      className="fixed inset-0 z-[1000] flex justify-center bg-[var(--shadow-overlay)] pt-[13vh] backdrop-blur-[2px]"
     >
       <button
         type="button"
@@ -432,8 +437,10 @@ function OpenCommandPalette({
         onClick={onClose}
       />
       <div
+        data-testid="command-palette-shell"
+        data-codex-surface="palette"
         className={cn(
-          'relative z-10 flex w-[520px] max-h-[440px] max-w-[90vw] flex-col self-start overflow-hidden rounded-xl border border-[var(--border-dialog)] bg-popover shadow-[0_8px_32px_var(--shadow-dialog)]',
+          'relative z-10 flex w-[560px] max-h-[460px] max-w-[90vw] flex-col self-start overflow-hidden rounded-lg border border-[var(--border-dialog)] bg-[var(--surface-popover)] shadow-[0_24px_80px_var(--shadow-dialog)]',
           aiMode && 'min-h-[220px]',
         )}
       >
@@ -486,13 +493,15 @@ function CommandRow({ command, selected, onHover, onSelect }: CommandRowProps) {
       type="button"
       data-selected={selected}
       className={cn(
-        'mx-1 flex w-[calc(100%-0.5rem)] cursor-pointer items-center justify-between rounded-md border-0 bg-transparent px-3 py-1.5 text-left transition-colors',
-        selected ? 'bg-accent' : 'hover:bg-secondary',
+        'mx-1.5 flex w-[calc(100%-0.75rem)] cursor-pointer items-center justify-between rounded-md border border-transparent bg-transparent px-3 py-2 text-left transition-colors',
+        selected
+          ? 'border-[var(--border-focus)] bg-[var(--accent-blue-bg)]'
+          : 'hover:bg-[var(--state-hover)]',
       )}
       onClick={onSelect}
       onMouseMove={onHover}
     >
-      <span className="text-sm text-foreground">{command.label}</span>
+      <span className="text-[13px] text-foreground">{command.label}</span>
       {command.shortcut && (
         <span className="text-[11px] text-muted-foreground">{command.shortcut}</span>
       )}

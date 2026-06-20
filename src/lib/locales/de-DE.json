@@ -291,7 +291,7 @@
   "settings.aiProviders.keyStorage.none": "Kein Schlüssel",
   "settings.aiProviders.keyEnv": "API-Schlüssel-Umgebungsvariable",
   "settings.aiProviders.keySafety": "DreamX speichert keine API-Schlüssel von Anbietern in den Einstellungen. Bei gehosteten APIs legen Sie den Schlüssel in einer Umgebungsvariablen ab und geben hier den Namen dieser Variablen ein.",
-  "settings.aiProviders.keySafetyLocal": "Gespeicherte API-Schlüssel werden in die lokalen App-Daten von DreamX mit Dateiberechtigungen nur für den Eigentümer geschrieben. Sie werden weder in den Vault-Einstellungen gespeichert noch zwischen Geräten synchronisiert.",
+  "settings.aiProviders.keySafetyLocal": "Gespeicherte API-Schlüssel werden im macOS-Schlüsselbund abgelegt. Sie werden weder in den Vault-Einstellungen gespeichert noch zwischen Geräten synchronisiert.",
   "settings.aiProviders.localSafety": "Lokale Anbieter werden von diesem Gerät aus aufgerufen. Wenn Ihr lokaler Server einen Schlüssel benötigt, fügen Sie ihn stattdessen als API-Modell hinzu.",
   "settings.aiProviders.add": "Provider hinzufügen",
   "settings.aiProviders.addLocal": "Lokales Modell hinzufügen",

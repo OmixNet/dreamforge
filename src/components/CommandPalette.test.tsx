@@ -183,6 +183,13 @@ describe('CommandPalette', () => {
     expect(screen.getByPlaceholderText('Type a command...')).toBeInTheDocument()
   })
 
+  it('uses the Codex-style command palette shell', () => {
+    render(<CommandPalette open={true} commands={commands} onClose={onClose} />)
+
+    expect(screen.getByTestId('command-palette-overlay')).toHaveAttribute('data-codex-surface', 'overlay')
+    expect(screen.getByTestId('command-palette-shell')).toHaveAttribute('data-codex-surface', 'palette')
+  })
+
   it('opts the command input out of spellcheck without disabling IME autocorrection', () => {
     render(<CommandPalette open={true} commands={commands} onClose={onClose} />)
     const input = screen.getByPlaceholderText('Type a command...')
@@ -562,12 +569,8 @@ describe('CommandPalette', () => {
     it('preserves default section order with empty query', () => {
       render(<CommandPalette open={true} commands={relevanceCommands} onClose={onClose} />)
 
-      const groupHeaders = screen.getAllByText(
-        (_content, el) =>
-          el?.tagName === 'DIV' &&
-          el.classList.contains('text-[11px]') &&
-          el.classList.contains('font-medium') &&
-          !!el.textContent,
+      const groupHeaders = Array.from(
+        document.querySelectorAll('[data-command-palette-group="true"]'),
       ).map(el => el.textContent)
 
       // Default order: Navigation < Note < View

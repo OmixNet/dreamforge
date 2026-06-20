@@ -33,15 +33,15 @@ export function SettingsBodyNav({ t }: SettingsBodyNavProps) {
   ]
 
   return (
-    <div className="hidden w-64 shrink-0 border-r border-border px-3 py-4 md:block">
-      <div className="sticky top-0 space-y-1.5">
+    <div className="hidden w-60 shrink-0 border-r border-[var(--border-subtle)] bg-[var(--surface-sidebar)] px-3 py-4 md:block">
+      <div className="sticky top-0 space-y-1">
         {items.map((item) => (
           <Button
             key={item.id}
             type="button"
             variant="ghost"
             size="sm"
-            className="h-10 w-full justify-start gap-2.5 px-2.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+            className="h-9 w-full justify-start gap-2.5 px-2.5 text-[13px] font-medium text-muted-foreground hover:bg-[var(--state-hover)] hover:text-foreground"
             onClick={() => document.getElementById(item.id)?.scrollIntoView({ block: 'start', behavior: 'smooth' })}
           >
             <item.Icon size={16} weight="regular" className="shrink-0" />

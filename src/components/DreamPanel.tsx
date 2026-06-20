@@ -9,6 +9,7 @@ import {
 } from '../lib/dreamCliPath'
 import { ActionTooltip } from './ui/action-tooltip'
 import { Button } from './ui/button'
+import { TooltipProvider } from './ui/tooltip'
 
 interface DreamVaultCommandOutput {
   stdout: string
@@ -51,10 +52,11 @@ async function runDreamCommand(
     llmApiKeyProviderId?: string
   } = { vaultPath }
   if (dreamCliPath) args.dreamCliPath = dreamCliPath
-  if (llmBaseUrl) args.llmBaseUrl = llmBaseUrl
-  if (llmModel) args.llmModel = llmModel
-  if (llmApiKeyEnv) args.llmApiKeyEnv = llmApiKeyEnv
-  if (llmApiKeyProviderId) args.llmApiKeyProviderId = llmApiKeyProviderId
+  const commandNeedsLlm = command !== 'dreamvault_status'
+  if (commandNeedsLlm && llmBaseUrl) args.llmBaseUrl = llmBaseUrl
+  if (commandNeedsLlm && llmModel) args.llmModel = llmModel
+  if (commandNeedsLlm && llmApiKeyEnv) args.llmApiKeyEnv = llmApiKeyEnv
+  if (commandNeedsLlm && llmApiKeyProviderId) args.llmApiKeyProviderId = llmApiKeyProviderId
   return isTauri()
     ? invoke<DreamVaultCommandOutput>(command, args)
     : mockInvoke<DreamVaultCommandOutput>(command, args)
@@ -105,73 +107,84 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki }: DreamPanelPr
   }, [vaultPath, runCommand])
 
   const isBusy = runningCommand !== null
+  const statusState = error ? 'error' : isBusy ? 'running' : 'ready'
+  const statusLabel = error ? 'Issue' : isBusy ? 'Running' : 'Ready'
 
   return (
-    <section className="app__dream-panel" aria-label="Dream panel">
-      <header className="border-b border-border px-4 py-3">
-        <h2 className="text-sm font-semibold text-foreground">Dream</h2>
-        {lastRunAt && (
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            last updated {new Date(lastRunAt).toLocaleString()}
-          </p>
-        )}
-      </header>
+    <TooltipProvider>
+      <section className="app__dream-panel" aria-label="Dream panel">
+        <header className="dreamx-panel-header">
+          <div className="min-w-0">
+            <div className="dreamx-panel-kicker">Dream Engine</div>
+            <h2 className="dreamx-panel-title">Dream</h2>
+            {lastRunAt && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {new Date(lastRunAt).toLocaleString()}
+              </p>
+            )}
+          </div>
+          <span className="dreamx-panel-status" data-state={statusState}>
+            {statusLabel}
+          </span>
+        </header>
 
-      <div className="flex flex-col gap-2 border-b border-border px-4 py-3">
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => runCommand('dreamvault_run')}
-          disabled={isBusy}
-        >
-          Run Dream
-        </Button>
-        <div className="flex gap-2">
-          <ActionTooltip copy={{ label: 'Refresh vault status' }} side="bottom" align="start">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => runCommand('dreamvault_status')}
-              disabled={isBusy}
-              className="flex-1"
-            >
-              Status
-            </Button>
-          </ActionTooltip>
-          <ActionTooltip copy={{ label: 'Open MEMORY.md' }} side="bottom" align="end">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={onOpenMemory}
-              disabled={!onOpenMemory}
-              className="flex-1"
-            >
-              MEMORY.md
-            </Button>
-          </ActionTooltip>
-          <ActionTooltip copy={{ label: 'Open wiki/' }} side="bottom" align="end">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={onOpenWiki}
-              disabled={!onOpenWiki}
-              className="flex-1"
-            >
-              wiki/
-            </Button>
-          </ActionTooltip>
+        <div className="dreamx-panel-actions">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => runCommand('dreamvault_run')}
+            disabled={isBusy}
+            className="w-full"
+          >
+            Run Dream
+          </Button>
+          <div className="flex gap-2">
+            <ActionTooltip copy={{ label: 'Refresh vault status' }} side="bottom" align="start">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => runCommand('dreamvault_status')}
+                disabled={isBusy}
+                className="flex-1"
+              >
+                Status
+              </Button>
+            </ActionTooltip>
+            <ActionTooltip copy={{ label: 'Open MEMORY.md' }} side="bottom" align="end">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onOpenMemory}
+                disabled={!onOpenMemory}
+                className="flex-1"
+              >
+                MEMORY.md
+              </Button>
+            </ActionTooltip>
+            <ActionTooltip copy={{ label: 'Open wiki/' }} side="bottom" align="end">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onOpenWiki}
+                disabled={!onOpenWiki}
+                className="flex-1"
+              >
+                wiki/
+              </Button>
+            </ActionTooltip>
+          </div>
         </div>
-      </div>
 
-      <pre
-        className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap px-4 py-3 text-xs leading-5 text-muted-foreground"
-        aria-live="polite"
-      >
-        {error ? `Error: ${error}` : output}
-      </pre>
-    </section>
+        <pre
+          className="dreamx-panel-output"
+          aria-live="polite"
+        >
+          {error ? `Error: ${error}` : output}
+        </pre>
+      </section>
+    </TooltipProvider>
   )
 }

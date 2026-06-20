@@ -35,20 +35,21 @@ function countEntriesInFolder(vaultPath: string, entries: VaultEntry[], folder: 
 export function SlimSidebar({ vaultPath, entries, selection, onSelect, locale }: SlimSidebarProps) {
   return (
     <nav
-      className="flex h-full min-h-0 flex-col gap-1 overflow-y-auto border-r border-border bg-background px-2 py-3"
+      className="dreamx-sidebar flex h-full min-h-0 flex-col gap-1 overflow-y-auto px-2 py-3"
       aria-label="Slim sidebar"
       data-testid="slim-sidebar"
       data-locale={locale ?? 'default'}
     >
-      <header className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Vault
+      <header className="dreamx-sidebar__brand">
+        <span className="dreamx-sidebar__mark" aria-hidden="true" />
+        <span className="min-w-0">
+          <span className="dreamx-sidebar__title block truncate">DreamX</span>
+          <span className="dreamx-sidebar__subtitle block truncate">Vault</span>
+        </span>
       </header>
       {SLIM_FOLDERS.map((folder) => {
         const isActive = selection === folder.id
         const count = countEntriesInFolder(vaultPath, entries, folder.id)
-        const baseClass = folder.readOnly
-          ? 'flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors opacity-70 '
-          : 'flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors '
         return (
           <button
             key={folder.id}
@@ -57,21 +58,18 @@ export function SlimSidebar({ vaultPath, entries, selection, onSelect, locale }:
             data-testid={`slim-sidebar-${folder.id}`}
             title={folder.readOnly ? `${folder.label} is read-only — engine writes here via the Dream CLI` : undefined}
             aria-current={isActive ? 'page' : undefined}
-            className={
-              baseClass +
-              (isActive
-                ? 'bg-accent text-foreground'
-                : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground')
-            }
+            className={`dreamx-sidebar__item ${folder.readOnly ? 'opacity-70' : ''} ${
+              isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
             <span
               aria-hidden="true"
-              className="flex size-5 items-center justify-center rounded border border-border bg-card text-[10px] font-semibold"
+              className="dreamx-sidebar__glyph"
             >
               {folder.icon}
             </span>
             <span className="flex-1 truncate">{folder.label}</span>
-            <span className="text-xs tabular-nums text-muted-foreground">{count}</span>
+            <span className="dreamx-sidebar__count">{count}</span>
           </button>
         )
       })}

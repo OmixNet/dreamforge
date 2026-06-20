@@ -121,6 +121,11 @@ describe('DreamX.app bundle hygiene (codesign + rebrand guard)', () => {
       expect(infoPlistGet(BUILT_APP, 'CFBundleIdentifier')).toBe('com.biomatrix.dreamforge')
     })
 
+    it('does not request legacy Carbon launch mode', () => {
+      if (!existsSync(BUILT_APP)) return
+      expect(infoPlistGet(BUILT_APP, 'LSRequiresCarbon')).toBe('false')
+    })
+
     it('Info.plist has no DreamForge or Tolaria in user-visible strings', () => {
       if (!existsSync(BUILT_APP)) return
       const plistPath = `${BUILT_APP}/Contents/Info.plist`

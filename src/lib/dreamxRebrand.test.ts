@@ -116,6 +116,13 @@ describe('PR 20 — DreamX user-visible brand', () => {
     expect(plist).toContain('DreamX')
   })
 
+  it('src-tauri/Info.plist explicitly disables legacy Carbon launch mode', () => {
+    const plistPath = join(REPO_ROOT, 'src-tauri', 'Info.plist')
+    const plist = readFileSync(plistPath, 'utf8')
+    expect(plist).toContain('<key>LSRequiresCarbon</key>')
+    expect(plist).toContain('<false/>')
+  })
+
   it('index.html title is DreamX', () => {
     const indexPath = join(REPO_ROOT, 'index.html')
     const html = readFileSync(indexPath, 'utf8')

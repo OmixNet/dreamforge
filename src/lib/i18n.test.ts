@@ -83,6 +83,16 @@ describe('i18n', () => {
     }
   })
 
+  it('describes locally saved API keys as macOS Keychain storage', () => {
+    const english = translate('en', 'settings.aiProviders.keySafetyLocal')
+    const chinese = translate('zh-CN', 'settings.aiProviders.keySafetyLocal')
+
+    expect(english).toContain('macOS Keychain')
+    expect(english).not.toContain('local app data')
+    expect(chinese).toContain('macOS 钥匙串')
+    expect(chinese).not.toContain('本地应用数据')
+  })
+
   it('keeps every locale’s key set in lockstep with English (v0.3.1 i18n guard)', () => {
     // Each locale file must have the exact same set of translation keys as
     // en.json — the source of truth. A new key in en.json without matching

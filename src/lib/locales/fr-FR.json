@@ -291,7 +291,7 @@
   "settings.aiProviders.keyStorage.none": "Aucune clé",
   "settings.aiProviders.keyEnv": "Variable d'environnement de la clé API",
   "settings.aiProviders.keySafety": "DreamX ne stocke pas les clés API des fournisseurs dans les paramètres. Pour les API hébergées, placez la clé dans une variable d'environnement et saisissez le nom de cette variable ici.",
-  "settings.aiProviders.keySafetyLocal": "Les clés API enregistrées sont écrites dans les données locales de l'application DreamX, avec des autorisations de fichier réservées au propriétaire. Elles ne sont pas stockées dans les paramètres du coffre-fort ni synchronisées entre les appareils.",
+  "settings.aiProviders.keySafetyLocal": "Les clés API enregistrées sont stockées dans le trousseau macOS. Elles ne sont pas stockées dans les paramètres du coffre-fort ni synchronisées entre les appareils.",
   "settings.aiProviders.localSafety": "Les fournisseurs locaux sont appelés depuis cet appareil. Si votre serveur local nécessite une clé, ajoutez-la plutôt en tant que modèle d'API.",
   "settings.aiProviders.add": "Ajouter un fournisseur",
   "settings.aiProviders.addLocal": "Ajouter un modèle local",

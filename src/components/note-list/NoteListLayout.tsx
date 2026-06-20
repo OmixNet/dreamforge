@@ -373,7 +373,7 @@ export function NoteListLayout({
   return (
     <div
       ref={noteListPanelRef}
-      className="flex flex-col select-none overflow-hidden border-r border-border bg-card text-foreground"
+      className="flex flex-col select-none overflow-hidden border-r border-border bg-surface-panel text-foreground"
       style={{ height: '100%' }}
       onBlurCapture={handleNoteListPanelBlurCapture}
       onFocusCapture={handleNoteListPanelFocusCapture}

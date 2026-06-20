@@ -307,7 +307,12 @@ export function NoteListHeader({
 
   return (
     <>
-      <div ref={dragRegionRef} className="flex h-[52px] shrink-0 items-center justify-between border-b border-border px-4" style={{ cursor: 'default', paddingLeft: collapsedSidebarPadding }}>
+      <div
+        ref={dragRegionRef}
+        className="flex h-[56px] shrink-0 items-center justify-between border-b border-border bg-surface-panel px-4"
+        style={{ cursor: 'default', paddingLeft: collapsedSidebarPadding }}
+        data-testid="note-list-header"
+      >
         <HeaderLeading
           title={title}
           typeDocument={typeDocument}

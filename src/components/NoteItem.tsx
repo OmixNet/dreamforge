@@ -97,14 +97,14 @@ type NoteItemSurfaceProps = {
   testId?: string
 }
 
-const NOTE_ITEM_BASE_CLASS_NAME = 'relative w-full border-0 border-b border-[var(--border)] bg-transparent p-0 text-left transition-colors'
+const NOTE_ITEM_BASE_CLASS_NAME = 'group relative w-full border-0 border-b border-[var(--border-subtle)] bg-transparent p-0 text-left transition-[background-color,box-shadow,border-color] duration-150'
 const BINARY_NOTE_STYLE: CSSProperties = { padding: '14px 16px' }
 const NOTE_ITEM_ROW_CLASS_NAMES: Record<NoteItemRowState, string> = {
   binary: 'cursor-default opacity-50',
   multiSelected: 'cursor-pointer',
   selected: 'cursor-pointer border-l-[3px]',
   highlighted: 'cursor-pointer bg-muted hover:bg-muted',
-  default: 'cursor-pointer hover:bg-muted',
+  default: 'cursor-pointer hover:bg-[var(--state-hover-subtle)]',
 }
 
 function resolveNoteItemRowState({ isUnavailableBinary, isSelected, isMultiSelected, isHighlighted }: NoteItemVisualState): NoteItemRowState {
@@ -332,8 +332,14 @@ function NoteDateRow({
 
 function noteItemStyle(isSelected: boolean, isMultiSelected: boolean, typeColor: string, typeLightColor: string): CSSProperties {
   const base: CSSProperties = { padding: isSelected && !isMultiSelected ? '14px 16px 14px 13px' : '14px 16px' }
-  if (isMultiSelected) base.backgroundColor = 'color-mix(in srgb, var(--accent-blue) 10%, transparent)'
-  else if (isSelected) { base.borderLeftColor = typeColor; base.backgroundColor = typeLightColor }
+  if (isMultiSelected) base.backgroundColor = 'color-mix(in srgb, var(--accent-blue) 11%, var(--surface-card))'
+  else if (isSelected) {
+    base.borderLeftColor = typeColor
+    base.backgroundColor = `color-mix(in srgb, ${typeColor} 9%, var(--surface-card))`
+    base.boxShadow = `inset 0 0 0 1px color-mix(in srgb, ${typeColor} 12%, transparent)`
+  } else if (typeLightColor) {
+    base.backgroundColor = undefined
+  }
   return base
 }
 

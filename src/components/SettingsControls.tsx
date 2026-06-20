@@ -12,7 +12,7 @@ import { Switch } from './ui/switch'
 type SelectOption = { value: string; label: string }
 type ControlWidth = 'auto' | 'compact' | 'default' | 'wide'
 
-const SETTINGS_GROUP_ITEM_CLASS = 'border-b border-border px-4 py-3 last:border-b-0'
+const SETTINGS_GROUP_ITEM_CLASS = 'border-b border-[var(--border-subtle)] px-4 py-3.5 last:border-b-0'
 
 function sanitizePositiveInteger(value: number | null | undefined, fallback: number): number {
   if (value === null || value === undefined || !Number.isFinite(value) || value < 1) return fallback
@@ -28,7 +28,7 @@ export function SettingsSection({
   showDivider?: boolean
 }) {
   return (
-    <div id={id} className="scroll-mt-4" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '18px 0' }}>
+    <div id={id} className="flex scroll-mt-4 flex-col gap-3.5 py-[18px]">
       {children}
     </div>
   )
@@ -45,13 +45,7 @@ export function SectionHeading({
   return (
     <div className="flex items-center gap-2">
       {icon ? <span className="flex size-5 items-center justify-center text-muted-foreground">{icon}</span> : null}
-      <div
-        style={{
-          fontSize: 14,
-          fontWeight: 600,
-          color: 'var(--foreground)',
-        }}
-      >
+      <div className="text-[13px] font-semibold text-foreground">
         {title}
       </div>
     </div>
@@ -59,7 +53,11 @@ export function SectionHeading({
 }
 
 export function SettingsGroup({ children }: { children: ReactNode }) {
-  return <div className="overflow-hidden rounded-md border border-border bg-card">{children}</div>
+  return (
+    <div className="overflow-hidden rounded-md border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-[0_1px_0_rgba(255,255,255,0.02)]">
+      {children}
+    </div>
+  )
 }
 
 export function SettingsGroupItem({
@@ -98,7 +96,7 @@ export function SettingsRow({
       data-testid={testId}
     >
       <div className="min-w-0 flex-1 space-y-1">
-        <div className="text-sm font-medium text-foreground">{label}</div>
+        <div className="text-[13px] font-medium text-foreground">{label}</div>
         {description ? <div className="text-xs leading-5 text-muted-foreground">{description}</div> : null}
       </div>
       <div className={`w-full min-w-0 lg:shrink-0 ${controlWidthClass(controlWidth)}`}>{children}</div>
@@ -127,7 +125,7 @@ export function SelectControl({
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger
         id={id}
-        className="w-full bg-transparent"
+        className="w-full"
         aria-label={ariaLabel}
         data-testid={testId}
         data-value={value}
@@ -177,7 +175,7 @@ export function NumberInputControl({
 
 export function SettingsSwitchControl({
   id,
-  label,
+      label,
   checked,
   onChange,
   disabled = false,
@@ -210,7 +208,7 @@ export function LabeledSelect({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label htmlFor={triggerId} style={{ fontSize: 12, fontWeight: 500, color: 'var(--foreground)' }}>{label}</label>
+      <label htmlFor={triggerId} className="text-xs font-medium text-foreground">{label}</label>
       <SelectControl
         id={triggerId}
         value={value}
@@ -239,7 +237,7 @@ export function LabeledNumberInput({
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--foreground)' }} htmlFor={testId}>{label}</label>
+      <label className="text-xs font-medium text-foreground" htmlFor={testId}>{label}</label>
       <NumberInputControl
         value={value}
         onValueChange={onValueChange}

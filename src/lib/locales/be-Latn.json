@@ -291,7 +291,7 @@
   "settings.aiProviders.keyStorage.none": "Biez kliuča",
   "settings.aiProviders.keyEnv": "Zmiennaja asiaroddzia",
   "settings.aiProviders.keySafety": "Kliučy nie zachoŭvajucca ŭ naladach schovišča.",
-  "settings.aiProviders.keySafetyLocal": "Lakaĺnyja kliučy zachoŭvajucca z abaronienymi pravami dostupu.",
+  "settings.aiProviders.keySafetyLocal": "Zachavanyja API-kliučy zachoŭvajucca ŭ macOS Keychain i nie sinchranizujucca pamiž pryładami.",
   "settings.aiProviders.localSafety": "Lakaĺnyja pravajdery vykarystoŭvajucca na hetaj pryladzie.",
   "settings.aiProviders.add": "Dadać pravajdera",
   "settings.aiProviders.addLocal": "Dadać lakaĺnuju madeĺ",

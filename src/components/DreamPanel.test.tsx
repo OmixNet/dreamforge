@@ -56,7 +56,7 @@ describe('DreamPanel', () => {
     })
   })
 
-  it('sends both llmApiKeyEnv and llmApiKeyProviderId when active provider is configured', async () => {
+  it('does not send LLM provider credentials for mount-time status checks', async () => {
     // v0.5 PR 27 P2c-1.5: closed-loop data flow. Settings → Keychain +
     // localStorage pointer pair → DreamPanel reads both → dreamvault_run
     // uses provider id to look up the key in macOS Keychain.
@@ -71,6 +71,24 @@ describe('DreamPanel', () => {
     render(<DreamPanel vaultPath="/tmp/vault" />)
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith('dreamvault_status', {
+        vaultPath: '/tmp/vault',
+      })
+    })
+  })
+
+  it('sends both llmApiKeyEnv and llmApiKeyProviderId for explicit Run Dream', async () => {
+    window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'OPENROUTER_API_KEY')
+    window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter-abc123')
+    vi.mocked(mockInvoke)
+      .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+      .mockResolvedValueOnce({ stdout: 'dream ok', stderr: '', success: true })
+
+    render(<DreamPanel vaultPath="/tmp/vault" />)
+    await screen.findByText(/status ok/)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('dreamvault_run', {
         vaultPath: '/tmp/vault',
         llmApiKeyEnv: 'OPENROUTER_API_KEY',
         llmApiKeyProviderId: 'openrouter-abc123',

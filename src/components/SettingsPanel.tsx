@@ -458,14 +458,17 @@ function SettingsPanelInner({
   return (
     <div
       ref={backdropRef}
-      className="fixed inset-0 z-[1300] flex items-center justify-center"
+      className="fixed inset-0 z-[1300] flex items-center justify-center p-6 backdrop-blur-[2px]"
       style={{ background: 'var(--shadow-overlay)' }}
       data-testid="settings-panel"
+      data-codex-surface="overlay"
     >
       <SettingsBackdropCloseButton onClose={onClose} t={t} />
       <div
         ref={panelRef}
-        className="relative rounded-lg border border-border bg-background shadow-[0_18px_55px_var(--shadow-dialog)]"
+        data-testid="settings-panel-shell"
+        data-codex-surface="settings"
+        className="relative overflow-hidden rounded-lg border border-[var(--border-dialog)] bg-[var(--surface-dialog)] shadow-[0_24px_80px_var(--shadow-dialog)]"
         style={{ width: 'min(960px, calc(100vw - 48px))', maxHeight: '86vh', display: 'flex', flexDirection: 'column' }}
       >
         <SettingsHeader onClose={onClose} t={t} />
@@ -506,10 +509,9 @@ function SettingsBackdropCloseButton({ onClose, t }: { onClose: () => void; t: T
 function SettingsHeader({ onClose, t }: { onClose: () => void; t: Translate }) {
   return (
     <div
-      className="flex items-center justify-between shrink-0"
-      style={{ height: 56, padding: '0 24px', borderBottom: '1px solid var(--border)' }}
+      className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--surface-panel)] px-5"
     >
-      <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--foreground)' }}>{t('settings.title')}</span>
+      <span className="text-[15px] font-semibold text-foreground">{t('settings.title')}</span>
       <Button
         variant="ghost"
         size="icon-sm"
@@ -637,9 +639,9 @@ function SettingsDataSections({ t, onSettingsReloaded }: Pick<SettingsBodyProps,
 
 function SettingsBody(props: SettingsBodyProps) {
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden">
+    <div className="flex min-h-0 flex-1 overflow-hidden bg-[var(--surface-panel)]">
       <SettingsBodyNav t={props.t} />
-      <div className="min-w-0 flex-1 overflow-auto px-6 py-4">
+      <div className="min-w-0 flex-1 overflow-auto bg-[var(--surface-app)] px-6 py-4">
         <SettingsSyncAndAppearanceSections {...props} />
         <SettingsContentSections {...props} />
         <SettingsAgentWorkflowSections {...props} />
