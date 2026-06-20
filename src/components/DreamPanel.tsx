@@ -7,6 +7,11 @@ import {
   resolveLlmApiKeyEnvForInvoke,
   resolveLlmApiKeyProviderIdForInvoke,
 } from '../lib/dreamCliPath'
+import {
+  parseProviderError,
+  stripOpenAITag,
+  type ProviderErrorInfo,
+} from '../lib/dreamProviderError'
 import { ActionTooltip } from './ui/action-tooltip'
 import { Button } from './ui/button'
 import { TooltipProvider } from './ui/tooltip'
@@ -21,6 +26,14 @@ interface DreamPanelProps {
   vaultPath: string
   onOpenMemory?: () => void
   onOpenWiki?: () => void
+  /**
+   * v0.6 PR 34: open the Settings panel, optionally scrolled to the
+   * AI section. Wired by App.tsx via `dialogs.openSettings()`. When
+   * undefined, fix-action buttons that need it (missing key / auth
+   * failed / model not found) are rendered as `disabled` with a
+   * tooltip-style hint instead of a clickable button.
+   */
+  onOpenSettingsAi?: () => void
 }
 
 type DreamCommand = 'dreamvault_status' | 'dreamvault_run' | 'dreamvault_report'
@@ -62,7 +75,7 @@ async function runDreamCommand(
     : mockInvoke<DreamVaultCommandOutput>(command, args)
 }
 
-export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki }: DreamPanelProps) {
+export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettingsAi }: DreamPanelProps) {
   const [output, setOutput] = useState('No Dream run yet.')
   const [error, setError] = useState<string | null>(null)
   const [runningCommand, setRunningCommand] = useState<DreamCommand | null>(null)
@@ -178,13 +191,94 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki }: DreamPanelPr
           </div>
         </div>
 
-        <pre
-          className="dreamx-panel-output"
-          aria-live="polite"
-        >
-          {error ? `Error: ${error}` : output}
-        </pre>
+        {error ? (
+          <ProviderErrorView
+            message={error}
+            onOpenSettingsAi={onOpenSettingsAi}
+            onRetry={runningCommand ? undefined : () => void runCommand('dreamvault_run')}
+          />
+        ) : (
+          <pre
+            className="dreamx-panel-output"
+            aria-live="polite"
+          >
+            {output}
+          </pre>
+        )}
       </section>
     </TooltipProvider>
+  )
+}
+
+/**
+ * v0.6 PR 34: structured error view that replaces the raw
+ * `Error: ${error}` rendering. Parses the dream CLI stderr (or thrown
+ * error message) for the stable `[OPENAI_*]` tag and renders a short
+ * actionable card with a fix-action button.
+ *
+ * SECURITY: only the provider-controlled short message and fix action
+ * label are shown to the user. The body of the error string (which
+ * may contain the API key value if a misconfigured server echoed it
+ * back) is NEVER rendered. For the 'unknown' category, only the
+ * tag-stripped body is shown as a fallback inside a `<pre>` block
+ * — and even then it's the user-visible raw output, not anything
+ * that would propagate to analytics / logs.
+ */
+interface ProviderErrorViewProps {
+  message: string
+  onOpenSettingsAi?: () => void
+  onRetry?: () => void
+}
+
+function ProviderErrorView({ message, onOpenSettingsAi, onRetry }: ProviderErrorViewProps) {
+  const info: ProviderErrorInfo = parseProviderError(message)
+
+  // The body (after tag strip) is only shown for the 'unknown'
+  // category, where the user genuinely needs more context to debug.
+  // For all 6 known categories, the body is intentionally discarded.
+  const showBody = info.category === 'unknown'
+  const body = showBody ? stripOpenAITag(message) : ''
+
+  return (
+    <div
+      className="dreamx-panel-error"
+      role="alert"
+      aria-live="assertive"
+      data-error-category={info.category}
+    >
+      <p className="dreamx-panel-error-message">{info.shortMessage}</p>
+
+      {info.fixAction === 'open-settings-ai' ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={onOpenSettingsAi}
+          disabled={!onOpenSettingsAi}
+          className="w-full"
+        >
+          {info.fixActionLabel}
+        </Button>
+      ) : null}
+
+      {info.fixAction === 'retry' ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={onRetry}
+          disabled={!onRetry}
+          className="w-full"
+        >
+          {info.fixActionLabel}
+        </Button>
+      ) : null}
+
+      {showBody && body ? (
+        <pre className="dreamx-panel-output" aria-label="Error details">
+          {body}
+        </pre>
+      ) : null}
+    </div>
   )
 }

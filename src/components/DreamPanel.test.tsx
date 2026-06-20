@@ -181,6 +181,70 @@ describe('DreamPanel', () => {
     await screen.findByText(/status ok/)
     fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
 
-    expect(await screen.findByText(/Error: dream CLI not found/)).toBeInTheDocument()
+    // v0.6 PR 34: error without a [OPENAI_*] tag maps to 'unknown'
+    // category, which shows a generic message + the raw body in a pre
+    // block. We assert both: the short message AND the body echo.
+    expect(await screen.findByText(/Dream run failed/)).toBeInTheDocument()
+    expect(await screen.findByText(/dream CLI not found/)).toBeInTheDocument()
+  })
+
+  it('renders structured error UI with fix-action button for [OPENAI_MISSING_KEY]', async () => {
+    vi.mocked(mockInvoke)
+      .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+      .mockRejectedValueOnce(
+        new Error(
+          '[OPENAI_MISSING_KEY] OpenAI-compatible missing API key: set DREAMFORGE_LLM_API_KEY',
+        ),
+      )
+
+    const onOpenSettingsAi = vi.fn()
+    render(<DreamPanel vaultPath="/tmp/vault" onOpenSettingsAi={onOpenSettingsAi} />)
+    await screen.findByText(/status ok/)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+    // Short message is shown, NOT the raw stderr
+    expect(await screen.findByText(/No API key configured/)).toBeInTheDocument()
+    expect(screen.queryByText(/set DREAMFORGE_LLM_API_KEY/)).not.toBeInTheDocument()
+    // Fix action button is rendered
+    const button = screen.getByRole('button', { name: /Open Settings → AI/ })
+    fireEvent.click(button)
+    expect(onOpenSettingsAi).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders Retry fix-action for [OPENAI_TIMEOUT]', async () => {
+    vi.mocked(mockInvoke)
+      .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+      .mockRejectedValueOnce(
+        new Error('[OPENAI_TIMEOUT] OpenAI-compatible request timed out'),
+      )
+
+    render(<DreamPanel vaultPath="/tmp/vault" />)
+    await screen.findByText(/status ok/)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+    expect(await screen.findByText(/request timed out/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+  })
+
+  it('never leaks API key value to the UI when body echoes it back', async () => {
+    const SECRET = 'sk-or-v1-SECRET-LEAK-12345'
+    vi.mocked(mockInvoke)
+      .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+      .mockRejectedValueOnce(
+        new Error(
+          `[OPENAI_NETWORK_FAILED] OpenAI-compatible network failed: HTTP 500: ${SECRET}`,
+        ),
+      )
+
+    const { container } = render(<DreamPanel vaultPath="/tmp/vault" />)
+    await screen.findByText(/status ok/)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+    // Wait for the error view to render
+    await screen.findByText(/Could not reach the provider/)
+
+    // The apiKey value must NOT appear anywhere in the rendered DOM.
+    const html = container.innerHTML
+    expect(html).not.toContain(SECRET)
   })
 })

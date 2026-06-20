@@ -16,6 +16,7 @@ import { AppAiWorkspaceSurface } from './components/AppAiWorkspaceSurface'
 import { AiWorkspaceFloatingButton } from './components/AiWorkspaceFloatingButton'
 import { AiWorkspaceWindowApp } from './components/AiWorkspaceWindowApp'
 import { SettingsPanel } from './components/SettingsPanel'
+import { SETTINGS_SECTION_IDS } from './components/settingsSectionIds'
 import { CloneVaultModal } from './components/CloneVaultModal'
 import { FeedbackDialog } from './components/FeedbackDialog'
 // DREAMFORGE_SLIM: McpSetupDialog 物理删除 (PR 6)
@@ -459,7 +460,7 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
   const handleOpenSettings = useCallback(() => {
     setSettingsInitialSectionId(null)
     dialogs.openSettings()
-  }, [dialogs])
+  }, [dialogs, setSettingsInitialSectionId])
 
   // DREAMFORGE_SLIM: handleOpenVaultSettings 物理删除 (PR 6)
 
@@ -1726,6 +1727,13 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
             vaultPath={resolvedPath}
             onOpenMemory={handleOpenMemory}
             onOpenWiki={handleOpenWiki}
+            onOpenSettingsAi={() => {
+              // v0.6 PR 34: open Settings scrolled to the AI section
+              // so the user lands on the provider config when a missing
+              // key / auth failure / model-not-found needs fixing.
+              setSettingsInitialSectionId(SETTINGS_SECTION_IDS.ai)
+              dialogs.openSettings()
+            }}
           />
         </div>
         {!DREAMFORGE_SLIM_MODE && <UpdateBanner status={updateStatus} actions={updateActions} locale={appLocale} />}
