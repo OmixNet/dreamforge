@@ -304,6 +304,7 @@
   "settings.aiProviders.keyLocalSaved": "захаваны лакальна",
   "settings.aiProviders.keyEnvSaved": "ключ з {env}",
   "settings.aiProviders.noKey": "няма ключа API",
+  "settings.aiProviders.advanced": "Advanced",
   "settings.workflow.title": "Працоўны працэс (Workflow)",
   "settings.workflow.description": "Наладка функцыянавання Уваходных (Inbox).",
   "settings.workflow.explicit": "Размяркоўваць нататкі ўручную",

@@ -304,6 +304,7 @@
   "settings.aiProviders.keyLocalSaved": "lokal nyckel sparad",
   "settings.aiProviders.keyEnvSaved": "nyckel från {env}",
   "settings.aiProviders.noKey": "ingen API-nyckel",
+  "settings.aiProviders.advanced": "Advanced",
   "settings.workflow.title": "Arbetsflöde",
   "settings.workflow.description": "Välj om DreamX ska visa Inkorgsarbetsflödet, samt hur det förflyttar sig mellan objekt medan du sorterar dem.",
   "settings.workflow.explicit": "Organisera anteckningar explicit",

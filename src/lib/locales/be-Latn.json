@@ -304,6 +304,7 @@
   "settings.aiProviders.keyLocalSaved": "zachavany lakaĺna",
   "settings.aiProviders.keyEnvSaved": "kliuč z {env}",
   "settings.aiProviders.noKey": "niama kliuča API",
+  "settings.aiProviders.advanced": "Advanced",
   "settings.workflow.title": "Pracoŭny praces (Workflow)",
   "settings.workflow.description": "Naladka funkcyjanavannia Uvachodnych (Inbox).",
   "settings.workflow.explicit": "Razmiarkoŭvać natatki ŭručnuju",

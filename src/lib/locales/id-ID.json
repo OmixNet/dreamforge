@@ -304,6 +304,7 @@
   "settings.aiProviders.keyLocalSaved": "kunci lokal disimpan",
   "settings.aiProviders.keyEnvSaved": "kunci dari {env}",
   "settings.aiProviders.noKey": "tidak ada kunci API",
+  "settings.aiProviders.advanced": "Advanced",
   "settings.workflow.title": "Alur Kerja",
   "settings.workflow.description": "Pilih apakah DreamX menampilkan alur kerja Kotak Masuk, serta bagaimana ia berpindah melalui item saat Anda menyortirnya.",
   "settings.workflow.explicit": "Atur catatan secara eksplisit",

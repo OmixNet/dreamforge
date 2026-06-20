@@ -304,6 +304,7 @@
   "settings.aiProviders.keyLocalSaved": "ローカルキーが保存されました",
   "settings.aiProviders.keyEnvSaved": "{env} のキー",
   "settings.aiProviders.noKey": "API キーがありません",
+  "settings.aiProviders.advanced": "Advanced",
   "settings.workflow.title": "ワークフロー",
   "settings.workflow.description": "DreamXが受信トレイのワークフローを表示するかどうか、およびあなたがアイテムをトリアージする際にDreamXがアイテム間を移動する方法を選択します。",
   "settings.workflow.explicit": "ノートを明示的に整理する",

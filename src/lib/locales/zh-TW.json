@@ -304,6 +304,7 @@
   "settings.aiProviders.keyLocalSaved": "已儲存本機金鑰",
   "settings.aiProviders.keyEnvSaved": "來自 {env} 的金鑰",
   "settings.aiProviders.noKey": "沒有 API 金鑰",
+  "settings.aiProviders.advanced": "Advanced",
   "settings.workflow.title": "工作流",
   "settings.workflow.description": "選擇 DreamX 是否顯示收件箱工作流，以及整理時如何移動到下一項。",
   "settings.workflow.explicit": "顯式整理筆記",

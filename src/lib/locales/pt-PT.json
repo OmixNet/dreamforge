@@ -304,6 +304,7 @@
   "settings.aiProviders.keyLocalSaved": "chave local guardada",
   "settings.aiProviders.keyEnvSaved": "chave de {env}",
   "settings.aiProviders.noKey": "sem chave de API",
+  "settings.aiProviders.advanced": "Advanced",
   "settings.workflow.title": "Fluxo de trabalho",
   "settings.workflow.description": "Escolha se a DreamX deve mostrar o fluxo de trabalho da Caixa de entrada e como este se desloca pelos elementos enquanto os tria.",
   "settings.workflow.explicit": "Organizar notas explicitamente",

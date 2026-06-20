@@ -304,6 +304,7 @@
   "settings.aiProviders.keyLocalSaved": "Lokaler Schlüssel gespeichert",
   "settings.aiProviders.keyEnvSaved": "Schlüssel aus {env}",
   "settings.aiProviders.noKey": "Kein API-Schlüssel",
+  "settings.aiProviders.advanced": "Advanced",
   "settings.workflow.title": "Workflow",
   "settings.workflow.description": "Legen Sie fest, ob DreamX den Inbox-Workflow anzeigt und wie DreamX bei der Triage durch die Elemente navigiert.",
   "settings.workflow.explicit": "Notizen explizit organisieren",

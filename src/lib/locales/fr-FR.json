@@ -304,6 +304,7 @@
   "settings.aiProviders.keyLocalSaved": "clé locale enregistrée",
   "settings.aiProviders.keyEnvSaved": "clé de {env}",
   "settings.aiProviders.noKey": "aucune clé API",
+  "settings.aiProviders.advanced": "Advanced",
   "settings.workflow.title": "Flux de travail",
   "settings.workflow.description": "Choisissez si DreamX affiche le flux de travail de la boîte de réception, ainsi que la manière dont il parcourt les éléments pendant que vous les triez.",
   "settings.workflow.explicit": "Organiser les notes de manière explicite",

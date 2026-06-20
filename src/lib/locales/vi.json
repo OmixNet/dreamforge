@@ -304,6 +304,7 @@
   "settings.aiProviders.keyLocalSaved": "đã lưu khóa cục bộ",
   "settings.aiProviders.keyEnvSaved": "khóa từ {env}",
   "settings.aiProviders.noKey": "không có khóa API",
+  "settings.aiProviders.advanced": "Advanced",
   "settings.workflow.title": "Quy trình",
   "settings.workflow.description": "Chọn xem DreamX có hiển thị quy trình Hộp thư đến hay không, và cách nó chuyển qua các mục khi bạn phân loại chúng.",
   "settings.workflow.explicit": "Sắp xếp ghi chú rõ ràng",

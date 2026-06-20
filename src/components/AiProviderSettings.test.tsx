@@ -340,4 +340,111 @@ describe('AiProviderSettings', () => {
     expect(screen.queryByRole('button', { name: /settings\.aiProviders\.test$/ })).toBeNull()
     expect(screen.queryByRole('button', { name: /settings\.aiProviders\.testing/ })).toBeNull()
   })
+
+  // -- v0.6 PR 35: simplified 4-step main flow + collapsed Advanced --
+
+  it('PR 35: shows the 4 main fields (Provider, Base URL, Model, API key) by default', () => {
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={[]}
+        onChange={() => {}}
+      />,
+    )
+
+    // The 4 main fields must be present in the DOM at mount time, with
+    // no interaction needed. PR 35's simplification promise: a user
+    // looking at the form sees exactly these 4 fields, nothing else.
+    expect(screen.getByLabelText(/settings\.aiProviders\.kind/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/settings\.aiProviders\.baseUrl/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/settings\.aiProviders\.model/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/settings\.aiProviders\.key$/)).toBeInTheDocument()
+  })
+
+  it('PR 35: hides Name and API key storage mode in collapsed Advanced section by default', () => {
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={[]}
+        onChange={() => {}}
+      />,
+    )
+
+    // Name and storage mode live in <details> collapsed by default.
+    // queryByLabelText returns null for elements not in the document,
+    // which is what we want here — they're rendered inside <details>
+    // (so they're in the DOM) but `<details>` hides children by default
+    // until the user clicks <summary>. The user-visible state is
+    // "hidden", so we assert that the parent <details> is not open.
+    const details = document.querySelector('details')
+    expect(details).not.toBeNull()
+    expect(details?.hasAttribute('open')).toBe(false)
+
+    // The Advanced label IS visible (it's the <summary>)
+    expect(screen.getByText(/settings\.aiProviders\.advanced/)).toBeInTheDocument()
+  })
+
+  it('PR 35: Add button is enabled with only Model ID + API key (no custom name required)', () => {
+    vi.mocked(invoke).mockResolvedValue(null)
+
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={[]}
+        onChange={() => {}}
+      />,
+    )
+
+    // Fill model id
+    fireEvent.change(screen.getByLabelText(/settings\.aiProviders\.model/), {
+      target: { value: 'gpt-4.1-mini' },
+    })
+    // Fill API key
+    const keyInputs = screen.getAllByLabelText(/settings\.aiProviders\.key$/)
+    fireEvent.change(keyInputs[keyInputs.length - 1], {
+      target: { value: 'sk-or-v1-test' },
+    })
+
+    // Add button should be enabled WITHOUT the user filling in the
+    // custom Name field (which lives in the collapsed Advanced).
+    const addButton = screen.getByRole('button', { name: /settings\.aiProviders\.addApi/ })
+    expect(addButton).toBeEnabled()
+  })
+
+  it('PR 35: Add button is DISABLED when Model ID is empty', () => {
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={[]}
+        onChange={() => {}}
+      />,
+    )
+
+    // No model id filled in
+    const addButton = screen.getByRole('button', { name: /settings\.aiProviders\.addApi/ })
+    expect(addButton).toBeDisabled()
+  })
+
+  it('PR 35: Add button is DISABLED when API key is empty (local_file mode default)', () => {
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={[]}
+        onChange={() => {}}
+      />,
+    )
+
+    // Fill only model id, leave API key empty
+    fireEvent.change(screen.getByLabelText(/settings\.aiProviders\.model/), {
+      target: { value: 'gpt-4.1-mini' },
+    })
+
+    const addButton = screen.getByRole('button', { name: /settings\.aiProviders\.addApi/ })
+    expect(addButton).toBeDisabled()
+  })
 })

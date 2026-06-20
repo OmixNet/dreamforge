@@ -304,6 +304,7 @@
   "settings.aiProviders.keyLocalSaved": "Локальный ключ сохранен",
   "settings.aiProviders.keyEnvSaved": "Ключ из {env}",
   "settings.aiProviders.noKey": "Нет ключа API",
+  "settings.aiProviders.advanced": "Advanced",
   "settings.workflow.title": "Рабочий процесс",
   "settings.workflow.description": "Выберите, будет ли DreamX отображать рабочий процесс в папке «Входящие», а также порядок перемещения по элементам во время их сортировки.",
   "settings.workflow.explicit": "Явно упорядочивать заметки",

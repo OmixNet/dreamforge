@@ -304,6 +304,7 @@
   "settings.aiProviders.keyLocalSaved": "локальний ключ збережено",
   "settings.aiProviders.keyEnvSaved": "ключ із {env}",
   "settings.aiProviders.noKey": "немає ключа API",
+  "settings.aiProviders.advanced": "Advanced",
   "settings.workflow.title": "Робочий процес",
   "settings.workflow.description": "Виберіть, чи показує DreamX робочий процес «Вхідні», а також як він рухається елементами під час їх сортування.",
   "settings.workflow.explicit": "Впорядковувати нотатки явно",

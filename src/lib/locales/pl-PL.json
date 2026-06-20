@@ -304,6 +304,7 @@
   "settings.aiProviders.keyLocalSaved": "Zapisano klucz lokalny",
   "settings.aiProviders.keyEnvSaved": "klucz z {env}",
   "settings.aiProviders.noKey": "Brak klucza API",
+  "settings.aiProviders.advanced": "Advanced",
   "settings.workflow.title": "Przepływ pracy",
   "settings.workflow.description": "Wybierz, czy DreamX pokazuje przepływ pracy Skrzynki odbiorczej i jak przechodzi między elementami podczas segregacji.",
   "settings.workflow.explicit": "Porządkuj notatki jawnie",

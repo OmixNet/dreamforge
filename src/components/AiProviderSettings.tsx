@@ -245,6 +245,14 @@ function ApiKeyStorageFields({
   draft: ProviderDraft
   updateDraft: (patch: Partial<ProviderDraft>) => void
 }) {
+  // v0.6 PR 35: API key input lives in the main flow (top-level
+  // `LabeledInput` with label "settings.aiProviders.key"). This
+  // component renders the storage mode select and the env-var
+  // input (only for `env` mode). The local_file mode in advanced
+  // is just a mode selector — the actual key value comes from the
+  // main-flow field. This eliminates the duplicate "API key" label
+  // that would otherwise appear in both the main flow and the
+  // advanced storage fields.
   const triggerId = useId()
 
   return (
@@ -262,15 +270,6 @@ function ApiKeyStorageFields({
           </SelectContent>
         </Select>
       </label>
-      {draft.apiKeyStorage === 'local_file' ? (
-        <LabeledInput
-          label={t('settings.aiProviders.key')}
-          value={draft.apiKey}
-          onChange={(apiKey) => updateDraft({ apiKey })}
-          placeholder={t('settings.aiProviders.keyPlaceholder')}
-          type="password"
-        />
-      ) : null}
       {draft.apiKeyStorage === 'env' ? (
         <LabeledInput
           label={t('settings.aiProviders.keyEnv')}
@@ -338,7 +337,11 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
     updateDraft(patch)
   }
   const updateKind = (kind: AiModelProviderKind) => updateForm(providerPresetPatch(kind))
-  const canSave = draft.name.trim() && draft.modelId.trim() && (draft.apiKeyStorage !== 'local_file' || draft.apiKey.trim())
+  // v0.6 PR 35: name is OPTIONAL (it defaults to the catalog name and
+  // can be overridden in Advanced). baseUrl is OPTIONAL (catalog default
+  // is fine for most providers). modelId is REQUIRED. apiKey is REQUIRED
+  // when storage mode is `local_file` (the simplified default).
+  const canSave = draft.modelId.trim() && (draft.apiKeyStorage !== 'local_file' || draft.apiKey.trim())
 
   // Poll Keychain status for each configured provider on mount + whenever
   // the providers list changes. Status is a bool only — the KEY VALUE
@@ -428,13 +431,34 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
         keyConfiguredByProviderId={keyConfiguredByProviderId}
         onRemove={removeProvider}
       />
-      <div className="grid grid-cols-2 gap-3">
+      {/* v0.6 PR 35: simplified 4-step main flow. The 4 fields most
+          users need (provider / base URL / model / API key) are
+          always visible. Custom name + storage mode + env var
+          collapse into <Advanced>, hidden by default to reduce
+          cognitive load. */}
+      <div className="space-y-3">
         <ProviderKindSelect mode={mode} t={t} value={draft.kind} onChange={updateKind} />
-        <LabeledInput label={t('settings.aiProviders.name')} value={draft.name} onChange={(name) => updateForm({ name })} />
         <LabeledInput label={t('settings.aiProviders.baseUrl')} value={draft.baseUrl} onChange={(baseUrl) => updateForm({ baseUrl })} />
         <LabeledInput label={t('settings.aiProviders.model')} value={draft.modelId} onChange={(modelId) => updateForm({ modelId })} placeholder={aiModelProviderCatalogEntry(draft.kind).default_model_id} />
-        {mode === 'api' ? <ApiKeyStorageFields t={t} draft={draft} updateDraft={updateForm} /> : null}
+        {mode === 'api' ? (
+          <LabeledInput
+            label={t('settings.aiProviders.key')}
+            value={draft.apiKey}
+            onChange={(apiKey) => updateForm({ apiKey })}
+            placeholder={t('settings.aiProviders.keyPlaceholder')}
+            type="password"
+          />
+        ) : null}
       </div>
+      <details className="rounded-md border border-border bg-background/40">
+        <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-foreground">
+          {t('settings.aiProviders.advanced')}
+        </summary>
+        <div className="space-y-3 px-3 pb-3">
+          <LabeledInput label={t('settings.aiProviders.name')} value={draft.name} onChange={(name) => updateForm({ name })} />
+          {mode === 'api' ? <ApiKeyStorageFields t={t} draft={draft} updateDraft={updateForm} /> : null}
+        </div>
+      </details>
       <div className="text-xs leading-5 text-muted-foreground">
         {mode === 'api' ? t('settings.aiProviders.keySafetyLocal') : t('settings.aiProviders.localSafety')}
       </div>
