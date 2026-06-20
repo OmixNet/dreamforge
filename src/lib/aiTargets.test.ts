@@ -136,4 +136,36 @@ describe('ai target provider contract', () => {
     expect(isLocalAiProvider(provider('lm_studio'))).toBe(true)
     expect(isLocalAiProvider(provider('open_router'))).toBe(false)
   })
+
+  // v0.6 PR 37a (copy polish): lock the catalog rename for the
+  // open_ai_compatible kind. The dropdown label_key changed from
+  // settings.aiProviders.kind.compatible to kind.custom, and the
+  // catalog `name` shortened from "Custom provider" to "Custom".
+  // This guards against a regression where the catalog name drifts
+  // back to "Custom provider" (English-y, redundant "provider" word).
+  it('PR 37a: open_ai_compatible catalog entry uses "Custom" name + kind.custom label_key', () => {
+    const entry = aiModelProviderCatalogEntry('open_ai_compatible')
+    expect(entry.name).toBe('Custom')
+    expect(entry.name).not.toContain('Custom provider')
+    expect(entry.label_key).toBe('settings.aiProviders.kind.custom')
+    // The old key is gone — guard against a regression that re-adds it.
+    expect(entry.label_key).not.toBe('settings.aiProviders.kind.compatible')
+  })
+
+  it('PR 37a: 3 cloud provider base URLs are unambiguous (OpenRouter, Anthropic, Gemini)', () => {
+    // Lock the per-provider defaults so users see a clear starting
+    // point when they pick a kind. The OpenRouter / Anthropic / Gemini
+    // defaults should be the canonical public endpoint for each.
+    const openrouter = aiModelProviderCatalogEntry('open_router')
+    expect(openrouter.base_url).toBe('https://openrouter.ai/api/v1')
+    expect(openrouter.default_model_id).toMatch(/^openai\//)
+
+    const anthropic = aiModelProviderCatalogEntry('anthropic')
+    expect(anthropic.base_url).toBe('https://api.anthropic.com/v1')
+    expect(anthropic.default_model_id).toMatch(/claude/)
+
+    const gemini = aiModelProviderCatalogEntry('gemini')
+    expect(gemini.base_url).toContain('generativelanguage.googleapis.com')
+    expect(gemini.default_model_id).toMatch(/gemini/)
+  })
 })

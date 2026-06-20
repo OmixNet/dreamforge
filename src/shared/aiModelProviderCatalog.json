@@ -67,8 +67,8 @@
   },
   {
     "kind": "open_ai_compatible",
-    "name": "Custom provider",
-    "label_key": "settings.aiProviders.kind.compatible",
+    "name": "Custom",
+    "label_key": "settings.aiProviders.kind.custom",
     "base_url": "https://api.example.com/v1",
     "runtime_base_url": null,
     "default_model_id": "gpt-4.1-mini",
