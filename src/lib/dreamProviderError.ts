@@ -1,23 +1,42 @@
 // src/lib/dreamProviderError.ts
 //
-// v0.6 PR 34: parse the dream CLI's stderr for the stable `[OPENAI_*]`
-// error tag that OpenAICompatibleProvider (DreamVault Swift) writes, and
-// surface a short actionable message + fix action to the DreamPanel UI.
+// v0.6 PR 34 + PR 36: parse the dream CLI's stderr for the stable
+// provider-prefixed error tag that the DreamVault Swift providers
+// write, and surface a short actionable message + fix action to the
+// DreamPanel UI.
 //
 // CRITICAL SECURITY INVARIANT: the original stderr may contain the API
 // key value if a misconfigured server echoed it back. This module must
 // NEVER propagate the body portion of the error string to the UI. We
-// only consume the [OPENAI_*] tag prefix and a short category label.
+// only consume the tag prefix and a short category label.
 //
-// Cross-language contract (locked with DreamVault OpenAICompatibleProvider
-// Swift code, see /Users/biomatrix/Desktop/APP/DreamVault/Sources/DreamEngine/
-// OpenAICompatibleProvider.swift):
-//   [OPENAI_MISSING_KEY]     — env var unset, no HTTP request issued
-//   [OPENAI_AUTH_FAILED]     — HTTP 401 / 403
-//   [OPENAI_MODEL_NOT_FOUND] — HTTP 404
-//   [OPENAI_TIMEOUT]         — URLError.timedOut
-//   [OPENAI_MALFORMED]       — 2xx but shape doesn't match OpenAI-compat
-//   [OPENAI_NETWORK_FAILED]  — 5xx / other 4xx / DNS / TCP / TLS / other URLError
+// Cross-language contract (locked with DreamVault Swift providers, see
+// /Users/biomatrix/Desktop/APP/DreamVault/Sources/DreamEngine/):
+//   [OPENAI_MISSING_KEY]     — OpenAI-compat: env var unset, no HTTP
+//   [OPENAI_AUTH_FAILED]     — OpenAI-compat: HTTP 401 / 403
+//   [OPENAI_MODEL_NOT_FOUND] — OpenAI-compat: HTTP 404
+//   [OPENAI_TIMEOUT]         — OpenAI-compat: URLError.timedOut
+//   [OPENAI_MALFORMED]       — OpenAI-compat: 2xx but bad shape
+//   [OPENAI_NETWORK_FAILED]  — OpenAI-compat: 5xx / 4xx / transport
+//
+//   [ANTHROPIC_MISSING_KEY]     — Anthropic: same 6-category shape
+//   [ANTHROPIC_AUTH_FAILED]     — Anthropic: HTTP 401 / 403
+//   [ANTHROPIC_MODEL_NOT_FOUND] — Anthropic: HTTP 404
+//   [ANTHROPIC_TIMEOUT]         — Anthropic: URLError.timedOut
+//   [ANTHROPIC_MALFORMED]       — Anthropic: 2xx but no text block
+//   [ANTHROPIC_NETWORK_FAILED]  — Anthropic: 5xx / 4xx / transport
+//
+//   [GEMINI_MISSING_KEY]     — Gemini: same 6-category shape
+//   [GEMINI_AUTH_FAILED]     — Gemini: HTTP 401 / 403
+//   [GEMINI_MODEL_NOT_FOUND] — Gemini: HTTP 404
+//   [GEMINI_TIMEOUT]         — Gemini: URLError.timedOut
+//   [GEMINI_MALFORMED]       — Gemini: 2xx but no text part
+//   [GEMINI_NETWORK_FAILED]  — Gemini: 5xx / 4xx / transport
+//
+// All 3 providers share the same 6 categories; the prefix only
+// identifies which provider threw. DreamX UI maps all 3 to the same
+// short actionable copy because the user-facing fix is the same:
+// re-check API key in Settings → AI, or retry.
 
 export type ProviderErrorCategory =
   | 'missing-key'
@@ -45,17 +64,43 @@ export interface ProviderErrorInfo {
 
 /**
  * The 6 stable tags from DreamVault Swift OpenAICompatibleProvider.
- * The order matters for parseProviderError: we scan for the first
- * matching tag in stderr. Tags are kept unique, so order is purely
- * for deterministic test output.
+ * v0.6 PR 36: 18 total tags (6 categories × 3 providers). The order
+ * matters for parseProviderError: we scan for the first matching tag
+ * in stderr. Tags are kept unique, so order is purely for deterministic
+ * test output.
+ *
+ * Provider prefixes:
+ *   - [OPENAI_*]    — OpenAI-compatible (SiliconFlow / DeepSeek / OpenRouter / vLLM)
+ *   - [ANTHROPIC_*] — Anthropic Messages API (Claude)
+ *   - [GEMINI_*]    — Google Gemini generateContent API
+ *
+ * All 3 providers share the same 6 categories. The category → UI copy
+ * mapping is provider-agnostic (no need for separate "Anthropic auth
+ * failed" vs "OpenAI auth failed" copy — both surface the same
+ * actionable fix: re-check API key in Settings → AI).
  */
 const TAG_TO_CATEGORY: ReadonlyArray<readonly [string, ProviderErrorCategory]> = [
+  // OpenAI-compatible (v0.5 PR 28 + v0.6 PR 34)
   ['[OPENAI_MISSING_KEY]', 'missing-key'],
   ['[OPENAI_AUTH_FAILED]', 'auth-failed'],
   ['[OPENAI_MODEL_NOT_FOUND]', 'model-not-found'],
   ['[OPENAI_TIMEOUT]', 'timeout'],
   ['[OPENAI_MALFORMED]', 'malformed'],
   ['[OPENAI_NETWORK_FAILED]', 'network-failed'],
+  // Anthropic (v0.6 PR 36)
+  ['[ANTHROPIC_MISSING_KEY]', 'missing-key'],
+  ['[ANTHROPIC_AUTH_FAILED]', 'auth-failed'],
+  ['[ANTHROPIC_MODEL_NOT_FOUND]', 'model-not-found'],
+  ['[ANTHROPIC_TIMEOUT]', 'timeout'],
+  ['[ANTHROPIC_MALFORMED]', 'malformed'],
+  ['[ANTHROPIC_NETWORK_FAILED]', 'network-failed'],
+  // Gemini (v0.6 PR 36)
+  ['[GEMINI_MISSING_KEY]', 'missing-key'],
+  ['[GEMINI_AUTH_FAILED]', 'auth-failed'],
+  ['[GEMINI_MODEL_NOT_FOUND]', 'model-not-found'],
+  ['[GEMINI_TIMEOUT]', 'timeout'],
+  ['[GEMINI_MALFORMED]', 'malformed'],
+  ['[GEMINI_NETWORK_FAILED]', 'network-failed'],
 ]
 
 /**

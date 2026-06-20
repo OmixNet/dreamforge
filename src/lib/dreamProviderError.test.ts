@@ -98,6 +98,73 @@ describe('parseProviderError', () => {
     })
   })
 
+  // v0.6 PR 36: Anthropic + Gemini providers throw the same 6-category
+  // shape with their own tag prefix. The parser must recognize all 18
+  // tags (6 categories × 3 providers) and map them to the same UI copy.
+  describe('Anthropic tags (v0.6 PR 36)', () => {
+    it.each([
+      ['[ANTHROPIC_MISSING_KEY]', 'missing-key', 'open-settings-ai'],
+      ['[ANTHROPIC_AUTH_FAILED]', 'auth-failed', 'open-settings-ai'],
+      ['[ANTHROPIC_MODEL_NOT_FOUND]', 'model-not-found', 'open-settings-ai'],
+      ['[ANTHROPIC_TIMEOUT]', 'timeout', 'retry'],
+      ['[ANTHROPIC_MALFORMED]', 'malformed', 'retry'],
+      ['[ANTHROPIC_NETWORK_FAILED]', 'network-failed', 'retry'],
+    ] as const)('maps %s to %s (%s)', (tag, expectedCategory, expectedFixAction) => {
+      const info = parseProviderError(`${tag} Anthropic body text`)
+      expect(info.category).toBe(expectedCategory)
+      expect(info.fixAction).toBe(expectedFixAction)
+    })
+  })
+
+  describe('Gemini tags (v0.6 PR 36)', () => {
+    it.each([
+      ['[GEMINI_MISSING_KEY]', 'missing-key', 'open-settings-ai'],
+      ['[GEMINI_AUTH_FAILED]', 'auth-failed', 'open-settings-ai'],
+      ['[GEMINI_MODEL_NOT_FOUND]', 'model-not-found', 'open-settings-ai'],
+      ['[GEMINI_TIMEOUT]', 'timeout', 'retry'],
+      ['[GEMINI_MALFORMED]', 'malformed', 'retry'],
+      ['[GEMINI_NETWORK_FAILED]', 'network-failed', 'retry'],
+    ] as const)('maps %s to %s (%s)', (tag, expectedCategory, expectedFixAction) => {
+      const info = parseProviderError(`${tag} Gemini body text`)
+      expect(info.category).toBe(expectedCategory)
+      expect(info.fixAction).toBe(expectedFixAction)
+    })
+  })
+
+  describe('cross-provider invariant (v0.6 PR 36)', () => {
+    // All 3 providers share the same 6 categories, so the same
+    // shortMessage / fixActionLabel must be returned regardless of
+    // which provider threw. This pins the cross-language contract:
+    // the user sees the same actionable UI for all 3 providers.
+    it('same category across providers → same shortMessage', () => {
+      const openaiInfo = parseProviderError('[OPENAI_AUTH_FAILED] body')
+      const anthropicInfo = parseProviderError('[ANTHROPIC_AUTH_FAILED] body')
+      const geminiInfo = parseProviderError('[GEMINI_AUTH_FAILED] body')
+      expect(anthropicInfo.shortMessage).toBe(openaiInfo.shortMessage)
+      expect(geminiInfo.shortMessage).toBe(openaiInfo.shortMessage)
+      expect(anthropicInfo.fixActionLabel).toBe(openaiInfo.fixActionLabel)
+      expect(geminiInfo.fixActionLabel).toBe(openaiInfo.fixActionLabel)
+    })
+
+    it('no provider name leaks into shortMessage (provider-agnostic UI copy)', () => {
+      // The shortMessage and fixActionLabel are constants from
+      // PROVIDER_ERROR_MAP. They must NOT mention "Anthropic" or
+      // "Gemini" or "OpenAI" — the user sees the same fix for all 3.
+      const openrouterInfo = parseProviderError('[OPENAI_AUTH_FAILED] body')
+      expect(openrouterInfo.shortMessage.toLowerCase()).not.toContain('openai')
+      expect(openrouterInfo.shortMessage.toLowerCase()).not.toContain('anthropic')
+      expect(openrouterInfo.shortMessage.toLowerCase()).not.toContain('gemini')
+      expect(openrouterInfo.fixActionLabel.toLowerCase()).not.toContain('openai')
+      expect(openrouterInfo.fixActionLabel.toLowerCase()).not.toContain('anthropic')
+      expect(openrouterInfo.fixActionLabel.toLowerCase()).not.toContain('gemini')
+
+      const anthropicInfo = parseProviderError('[ANTHROPIC_AUTH_FAILED] body')
+      expect(anthropicInfo.shortMessage.toLowerCase()).not.toContain('openai')
+      expect(anthropicInfo.shortMessage.toLowerCase()).not.toContain('anthropic')
+      expect(anthropicInfo.shortMessage.toLowerCase()).not.toContain('gemini')
+    })
+  })
+
   describe('security invariant: no key leak in UI copy', () => {
     // PR 34 CRITICAL: the parsed shortMessage / fixActionLabel MUST NOT
     // contain the API key value, even if the body echoes it back. This
