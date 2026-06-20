@@ -291,12 +291,26 @@ pub fn build_dreamvault_command(
     dream_cli_path: Option<&str>,
     llm_base_url: Option<&str>, // PR 10
     llm_model: Option<&str>,     // PR 10
+    llm_api_key_provider_id: Option<&str>, // v0.5 PR 30
 ) -> DreamVaultCommandSpec {
     let mut args = vec![
         action.subcommand().to_string(),
         "--vault".to_string(),
         vault_path.to_string(),
     ];
+
+    // v0.5 PR 30: Selecting a provider in DreamX means the dream CLI must
+    // enter DreamVault's OpenAI-compatible route. Status remains provider-free
+    // because it should never hit cloud config or Keychain on mount.
+    if action != DreamVaultAction::Status
+        && llm_api_key_provider_id
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .is_some()
+    {
+        args.push("--llm".to_string());
+        args.push("openai".to_string());
+    }
 
     // PR 10: --base-url flag (after stripping trailing /v1)
     if let Some(url) = llm_base_url.map(str::trim).filter(|value| !value.is_empty()) {
@@ -332,6 +346,7 @@ fn run_dreamvault_action(
         dream_cli_path,
         llm_base_url,
         llm_model,
+        llm_api_key_provider_id,
     );
 
     let mut command = Command::new(&spec.program);
@@ -463,6 +478,7 @@ mod tests {
             Some("/opt/dream/bin/dream"),
             None,
             None,
+            None,
         );
 
         assert_eq!(spec.program, "/opt/dream/bin/dream");
@@ -477,6 +493,7 @@ mod tests {
             Some("/opt/dream/bin/dream"),
             None,
             None,
+            None,
         );
 
         assert_eq!(spec.args, vec!["run", "--vault", "/tmp/vault"]);
@@ -488,6 +505,7 @@ mod tests {
             DreamVaultAction::Report,
             "/tmp/vault",
             Some("/opt/dream/bin/dream"),
+            None,
             None,
             None,
         );
@@ -504,6 +522,7 @@ mod tests {
             None,
             Some("https://api.siliconflow.cn"),
             Some("deepseek-ai/DeepSeek-V4-Pro"),
+            None,
         );
 
         assert_eq!(
@@ -558,6 +577,7 @@ mod tests {
             None,
             Some("https://api.siliconflow.cn/v1"),
             Some("deepseek-ai/DeepSeek-V4-Pro"),
+            None,
         );
 
         assert_eq!(
@@ -582,6 +602,7 @@ mod tests {
             None,
             Some(""),
             Some(""),
+            None,
         );
 
         // Empty / whitespace-only base-url and model are omitted (no flag, no value)
@@ -596,11 +617,43 @@ mod tests {
             None,
             None,
             Some("llama3.1"),
+            None,
         );
 
         assert_eq!(
             spec.args,
             vec!["run", "--vault", "/tmp/vault", "--model", "llama3.1"]
+        );
+    }
+
+    #[test]
+    fn run_command_uses_openai_compatible_llm_when_provider_id_is_set() {
+        // v0.5 PR 30: selecting a cloud provider in DreamX must route
+        // DreamVault into its OpenAI-compatible provider path. Base URL and
+        // model alone are not enough; without `--llm openai`, the dream CLI
+        // stays on its default provider path and the cloud call can idle/no-op.
+        let spec = build_dreamvault_command(
+            DreamVaultAction::Run,
+            "/tmp/vault",
+            None,
+            Some("https://openrouter.ai/api/v1"),
+            Some("anthropic/claude-sonnet-4.5"),
+            Some("openrouter-abc123"),
+        );
+
+        assert_eq!(
+            spec.args,
+            vec![
+                "run",
+                "--vault",
+                "/tmp/vault",
+                "--llm",
+                "openai",
+                "--base-url",
+                "https://openrouter.ai/api",
+                "--model",
+                "anthropic/claude-sonnet-4.5",
+            ]
         );
     }
 

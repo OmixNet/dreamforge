@@ -96,6 +96,30 @@ describe('DreamPanel', () => {
     })
   })
 
+  it('sends OpenRouter routing config on explicit Run Dream', async () => {
+    window.localStorage.setItem('dreamforge.llmBaseUrl', 'https://openrouter.ai/api/v1')
+    window.localStorage.setItem('dreamforge.llmModel', 'anthropic/claude-sonnet-4.5')
+    window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'OPENROUTER_API_KEY')
+    window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter-abc123')
+    vi.mocked(mockInvoke)
+      .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+      .mockResolvedValueOnce({ stdout: 'dream ok', stderr: '', success: true })
+
+    render(<DreamPanel vaultPath="/tmp/vault" />)
+    await screen.findByText(/status ok/)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('dreamvault_run', {
+        vaultPath: '/tmp/vault',
+        llmBaseUrl: 'https://openrouter.ai/api/v1',
+        llmModel: 'anthropic/claude-sonnet-4.5',
+        llmApiKeyEnv: 'OPENROUTER_API_KEY',
+        llmApiKeyProviderId: 'openrouter-abc123',
+      })
+    })
+  })
+
   it('runs the Dream cycle on Run Dream click and surfaces the output', async () => {
     vi.mocked(mockInvoke)
       // mount-time status
@@ -116,24 +140,30 @@ describe('DreamPanel', () => {
     expect(mockInvoke).toHaveBeenCalledWith('dreamvault_run', { vaultPath: '/tmp/vault' })
   })
 
-  it('invokes the Open MEMORY.md callback when the button is clicked', () => {
+  it('invokes the Open MEMORY.md callback when the button is clicked', async () => {
     const onOpenMemory = vi.fn()
+    vi.mocked(mockInvoke).mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
     render(<DreamPanel vaultPath="/tmp/vault" onOpenMemory={onOpenMemory} />)
+    await screen.findByText(/status ok/)
 
     fireEvent.click(screen.getByRole('button', { name: 'MEMORY.md' }))
     expect(onOpenMemory).toHaveBeenCalledTimes(1)
   })
 
-  it('invokes the Open wiki callback when the wiki button is clicked', () => {
+  it('invokes the Open wiki callback when the wiki button is clicked', async () => {
     const onOpenWiki = vi.fn()
+    vi.mocked(mockInvoke).mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
     render(<DreamPanel vaultPath="/tmp/vault" onOpenWiki={onOpenWiki} />)
+    await screen.findByText(/status ok/)
 
     fireEvent.click(screen.getByRole('button', { name: 'wiki/' }))
     expect(onOpenWiki).toHaveBeenCalledTimes(1)
   })
 
-  it('disables the open buttons when no callback is provided', () => {
+  it('disables the open buttons when no callback is provided', async () => {
+    vi.mocked(mockInvoke).mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
     render(<DreamPanel vaultPath="/tmp/vault" />)
+    await screen.findByText(/status ok/)
 
     const memoryButton = screen.getByRole('button', { name: 'MEMORY.md' })
     const wikiButton = screen.getByRole('button', { name: 'wiki/' })
