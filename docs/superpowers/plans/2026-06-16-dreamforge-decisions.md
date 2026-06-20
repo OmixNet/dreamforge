@@ -892,3 +892,24 @@
 - **PR 31 gate regex bug 现场发现 + 现场修**: pattern 0 太严,`\bbudget\s+(\d+)\s+call\(s\)` 拒绝 "budget: today 1 call(s)"; 修成 `\bbudget\b[^]*?(\d+)\s+call\(s\)` + 加 bare `N call(s)` pattern; 5/5 test pass
 - **v0.5.0 tag 锁定**: DreamX v0.5.0 = Settings → Keychain → Rust inject → dream CLI → Swift OpenAICompatibleProvider → cloud API 完整闭环
 - **v0.6 backlog**: Provider Error UX (PR 34) / Settings AI 简化 (PR 35) / Anthropic + Gemini adapter (PR 36)
+
+### §41 v0.6.0 — Anthropic + Gemini adapters (API-complete and test-verified) (2026-06-21)
+
+- **ship strategy = Option A** (user 拍板 2026-06-21): "v0.6 的核心是 Anthropic + Gemini adapter 能力上线, 不是'你已经把两个真实账号都跑通'". v0.6.0 ships with **API-complete + unit-test-verified** wiring, NOT with real Anthropic/Gemini E2E. Real E2E is deferred to v0.6.x pending user-provided keys (PR 37 Anthropic / PR 38 Gemini). "Don't conflate test verification with real provider call" 是 v0.6.0 区别于 v0.5.0 的关键判断。
+- **scope discipline 持续守住** (per user 2026-06-19 拍板 + §40): provider 切分按协议相似度, OpenAI-compat (PR 28) / Anthropic (PR 36) / Gemini (PR 36) 3 个独立 type 3 个独立 file, NO `[LLM_*]` 通用 supertype; per-provider tag prefix (`[OPENAI_*]` / `[ANTHROPIC_*]` / `[GEMINI_*]`) 让 error attribution 在 log 清晰; Anthropic 跟 Gemini 是不同 protocol + 不同 response format, 不能塞进同一 PR adapter (回归成本太高)
+- **6-category error contract reuse** (PR 34 + PR 36 跨 3 provider 一致): `missing-key` / `auth-failed` / `model-not-found` / `timeout` / `malformed-response` / `network-failed`. PR 36 给 Anthropic + Gemini 各加一份 enum, `category` property 值 provider-agnostic (不带 "anthropic" / "gemini" 名字), DreamX UI 跨 3 provider 同一份 actionable copy (因为 fix 一样: re-check API key in Settings → AI, 或 retry)
+- **dreamforge parser 跨 18 tag 扩展** (PR 36 Phase B): `TAG_TO_CATEGORY` 数组 6 → 18 (6 categories × 3 providers); `PROVIDER_ERROR_MAP` 不变 (provider-neutral); 跨 provider invariant test 锁 "same category → same shortMessage / fixActionLabel" 防止未来 provider 加进来时 UI copy 漂移
+- **cloud-consent gate 统一 helper** (PR 36 Phase A): 新 private `requiresCloudConsent(_:)` 把 cloud provider 集合放在一个 switch, 加第 4 个 cloud provider 未来是一行 change; `providerName(_:)` 同理; 这俩 helper 是 §40 提到的 "scope discipline: 1 helper = 1 surface" 的延续
+- **Anthropic / Gemini URL 协议细节踩坑** (现场写, locked in code comment):
+  - Anthropic: `system` 是顶层 string, NOT `messages[0]` entry; `max_tokens` 必填 (Anthropic 强制, default 1024); `x-api-key` header, NOT `Authorization: Bearer`
+  - Gemini: `:generateContent` 是 path suffix literal colon, NOT directory; URLComponents 会 percent-encode 到 `%3A` 被 API 拒绝, 改用 manual string concat 保留 colon; `x-goog-api-key` header (query param `?key=` 被 Google deprecate)
+- **PR 35 Settings 简化 design choice** (user 拍板): 4 main fields 永远可见 (Provider / Base URL / Model / API key), Advanced `<details>` 折叠 (Name + storage mode + env var); `canSave` 放松 (name + baseUrl 改 optional, 走 catalog default); 用户进 Settings 第一眼就看到 4 步主流程, 不再被 5-field grid 吓到
+- **PR 34 error UI 关键 invariant**: shortMessage + fixActionLabel 是 `PROVIDER_ERROR_MAP` 里的固定 string 常量, NEVER 从 stderr 派生。 Test "shortMessage is provider-controlled constant, not body-derived" 锁这个 invariant — body content 怎么变 shortMessage 都不变, 这样如果 body 真的含 API key value (server echo), 也不会泄漏到 UI
+- **PR 34 i18n scope decision** (user 拍板): error UX copy English-only v0.6, 跟现有 DreamPanel 行为一致 (原代码也是 `err.message` 英文显示); i18n parity for error strings deferred。 Locked 在 constant-not-derived test 里 (因为不是从 i18n catalog 读, 跨 locale 行为稳定)。 未来如果要 i18n, 把 6 个 shortMessage 移到 en.json + 19 locales, UI 用 `t('dream.errors.missingKey')` 即可
+- **v0.6.0 ship gate = "API-complete, NOT E2E verified"** (Option A): 4612 tests pass, strict-concurrency clean, tauri build 18M, dream CLI `--llm anthropic` / `--llm gemini` smoke 不 crash。 Honest ship doc (docs/reports/v0.6.0-ship-2026-06-21.md) explicit 写 "Real Anthropic / Gemini end-to-end with user-provided keys is NOT verified for v0.6.0 ship" 而不是模糊 "E2E verified"
+- **v0.6.0 tag 锁定**: DreamX v0.6.0 = 3 cloud LLM provider API complete (OpenAI-compat / Anthropic / Gemini), 6-category error contract 跨 3 provider 一致, dreamforge error UI 跨 3 provider 同一份 actionable copy, Settings AI 4 步主流程简化。 Real provider E2E pending user keys (v0.6.x PR 37/38)
+- **v0.6.x backlog per user 拍板**:
+  - **PR 37**: Anthropic real E2E gate (user 提供 Anthropic key, run `dream run --llm anthropic` + 真实 raw note, 跑通 `pnpm verify:dream-e2e-output`, ship v0.6.1)
+  - **PR 38**: Gemini real E2E gate (user 提供 Gemini key, ship v0.6.2)
+  - **PR 39**: provider setup UX polish (only if E2E from PR 37/38 exposes confusing copy, e.g. "What URL do I use for Anthropic?" — locked as maybe, don't pre-emptively polish)
+  - 跨 PR 跨 3 cloud provider 的 E2E 验证 pattern: 跟 v0.5.0 PR 32 (SiliconFlow) 一样, 跑通 + gate script pass + budget 真实 call count > 0 + dream-report 写出来, 锁 "real call happened" invariant
