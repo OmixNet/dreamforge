@@ -877,3 +877,18 @@
 - **v0.5.x**: BlockNote 0.5+ upgrade (risky) / Settings UX polish
 - **未来**: Apple Developer Program → 真 codesign + notarization
 - **更未来**: namespace migration 第二轮 (compat layer 也改),需 user sign-off 命名 final 后
+
+### §40 v0.5.0 — Cloud LLM multi-provider path (OpenAI-compat) (2026-06-21)
+
+- **scope discipline 继续**: Anthropic + Gemini 推 v0.6 (不同协议);HTTP smoke 不进 unit test;multi-provider adapter 不塞同一 PR
+- **closed-loop trace 4 个断点** (PR 24/25/26 → 27/30):
+  - PR 24 wrote env var wiring,但 PR 25 (Keychain) 还没写 → 跨 PR data flow 隐藏依赖
+  - PR 27 fixed: Rust 读 Keychain by provider id, fallback shell env
+  - PR 30 fixed (user): `--llm openai` flag — dream CLI 默认 mock,没有这个 flag 永远走不到 OpenAICompatibleProvider
+  - lesson: "security boundary test ≠ end-to-end test" — 每个 PR 单测都过,组合不跑通;data flow contract 跨 PR 验证
+- **P2b P2c P2c-1.5 拆法** (user 拍板): Keychain + error formatting (P2b) → OpenRouter UI (P2c-1) → Keychain-first closed-loop (P2c-1.5) → DreamVault Swift provider (P2c-2) → real E2E (P2c-3 = PR 32)
+- **OpenAICompatibleProvider 边界 lock** (DreamVault PR 28, user 拍板): DreamVault 不读 Keychain,只读 `DREAMFORGE_LLM_API_KEY` env var;Keychain → env 翻译是 DreamX Rust (PR 27) 的事;`.openaiCompat` + env empty → 抛 `.missingAPIKey`,NO fallback 到 Ollama 或 Keychain
+- **PR 32 真实 E2E** (ship gate): SiliconFlow + DeepSeek-V4-Flash 跑通,budget 1 call(s) 真到 provider,gate script 通过。用户 key 是 SiliconFlow 的不是 OpenRouter,这是为什么 OpenRouter 返回 "Missing Authentication header" (key 形状 `sk-` 不被 OpenRouter 认)
+- **PR 31 gate regex bug 现场发现 + 现场修**: pattern 0 太严,`\bbudget\s+(\d+)\s+call\(s\)` 拒绝 "budget: today 1 call(s)"; 修成 `\bbudget\b[^]*?(\d+)\s+call\(s\)` + 加 bare `N call(s)` pattern; 5/5 test pass
+- **v0.5.0 tag 锁定**: DreamX v0.5.0 = Settings → Keychain → Rust inject → dream CLI → Swift OpenAICompatibleProvider → cloud API 完整闭环
+- **v0.6 backlog**: Provider Error UX (PR 34) / Settings AI 简化 (PR 35) / Anthropic + Gemini adapter (PR 36)

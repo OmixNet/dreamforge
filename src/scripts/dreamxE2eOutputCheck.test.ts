@@ -28,6 +28,30 @@ budget 2 call(s)
     expect(result.stdout).toContain('provider call count > 0')
   })
 
+  it('passes when output uses real dream CLI format (budget: today N call(s))', () => {
+    // v0.5 P2c-3: real dream CLI output is `budget: today N call(s), $X used`
+    // — not `budget N call(s)`. The gate regex must accept the real shape
+    // or every valid E2E run gets rejected.
+    const result = runCheck(`
+dream 完成:
+  - 收集 raw: 1
+  - 已 git commit
+budget: today 1 call(s), $0.0000 used
+`)
+
+    expect(result.status).toBe(0)
+    expect(result.stdout).toContain('provider call count > 0 (1)')
+  })
+
+  it('passes for bare N call(s) without budget/provider prefix', () => {
+    // Defensive: if BudgetManager ever drops the "budget:" prefix, the
+    // bare "N call(s)" pattern still passes.
+    const result = runCheck('1 call(s) made this run')
+
+    expect(result.status).toBe(0)
+    expect(result.stdout).toContain('provider call count > 0 (1)')
+  })
+
   it('fails when output is the idle no-op path', () => {
     const result = runCheck(`
 一无事事

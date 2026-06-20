@@ -25,9 +25,19 @@ if (idleNoOpPattern.test(output)) {
 }
 
 const callCountPatterns = [
-  /\bbudget\s+(\d+)\s+call\(s\)/i,
+  // v0.5 P2c-3: actual dream CLI output shape is `budget: today N call(s)`
+  // (BudgetManager prefix + a date label + the count + cost). The first
+  // pattern accepts any whitespace OR `:` + free-form "today/yesterday" label
+  // between "budget" and the digit. We previously required direct whitespace
+  // which falsely rejected valid outputs that did report a real call.
+  /\bbudget\b[^]*?(\d+)\s+call\(s\)/i,
   /\bprovider\s+call\s+count\s*[:=]\s*(\d+)\b/i,
   /\bcall\s+count\s*[:=]\s*(\d+)\b/i,
+  // Catch any bare `N call(s)` phrase too, in case the label changes again.
+  // Anchored with at least one non-digit boundary so we don't match
+  // unrelated numbers like "v0.5" or "1.4s" (the leading (?:^|\s) handles
+  // the start-of-string or whitespace boundary before the digit).
+  /(?:^|\s)(\d+)\s+call\(s\)/i,
   /\b(\d+)\s+provider\s+call(?:s)?\b/i,
 ]
 
