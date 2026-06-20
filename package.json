@@ -15,6 +15,7 @@
     "test:coverage": "node scripts/run-vitest-coverage.mjs",
     "test:coverage:cargo": "cargo llvm-cov --manifest-path src-tauri/Cargo.toml --lib --summary-only",
     "test:coverage:all": "pnpm test:coverage && pnpm test:coverage:cargo",
+    "verify:dream-e2e-output": "node scripts/dreamx-e2e-output-check.mjs",
     "prepare": "husky"
   },
   "dependencies": {
