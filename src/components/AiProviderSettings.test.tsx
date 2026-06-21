@@ -594,4 +594,205 @@ describe('AiProviderSettings', () => {
       screen.getByText(/settings\.aiProviders\.keySafetyLocal/),
     ).toBeInTheDocument()
   })
+
+  // -- PR 43: active provider indicator + Use this switcher --
+
+  it('PR 43: shows "Active" badge on the provider whose id matches the active pointer in localStorage', () => {
+    // Pre-seed localStorage so anthropic-1 is the active provider.
+    window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'anthropic-1')
+    window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'ANTHROPIC_API_KEY')
+
+    const providers: AiModelProvider[] = [
+      {
+        id: 'anthropic-1',
+        kind: 'anthropic',
+        name: 'Claude Work',
+        base_url: 'https://api.anthropic.com/v1',
+        api_key_storage: 'env',
+        api_key_env_var: 'ANTHROPIC_API_KEY',
+        headers: null,
+        models: [{ id: 'claude-3-5-sonnet-latest', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+      {
+        id: 'custom-1',
+        kind: 'open_ai_compatible',
+        name: 'My Work OpenAI',
+        base_url: 'https://api.example.com/v1',
+        api_key_storage: 'env',
+        api_key_env_var: 'OPENAI_API_KEY',
+        headers: null,
+        models: [{ id: 'gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+    ]
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={providers}
+        onChange={() => {}}
+      />,
+    )
+
+    // Both providers render. The list label is `${provider.name} · ${model.id}`
+    // (configuredModelTargets in aiTargets.ts) so use a flexible matcher.
+    expect(screen.getByText(/Claude Work/)).toBeInTheDocument()
+    expect(screen.getByText(/My Work OpenAI/)).toBeInTheDocument()
+    // Exactly one provider carries the Active badge. role="status" with
+    // aria-label=i18n key makes the badge findable without depending on
+    // position/layout.
+    const activeBadges = screen.getAllByRole('status', { name: /settings\.aiProviders\.active/ })
+    expect(activeBadges).toHaveLength(1)
+  })
+
+  it('PR 43: "Use this" button is NOT rendered on the active provider row', () => {
+    window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'anthropic-1')
+    window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'ANTHROPIC_API_KEY')
+
+    const providers: AiModelProvider[] = [
+      {
+        id: 'anthropic-1',
+        kind: 'anthropic',
+        name: 'Claude Work',
+        base_url: 'https://api.anthropic.com/v1',
+        api_key_storage: 'env',
+        api_key_env_var: 'ANTHROPIC_API_KEY',
+        headers: null,
+        models: [{ id: 'claude-3-5-sonnet-latest', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+      {
+        id: 'custom-1',
+        kind: 'open_ai_compatible',
+        name: 'My Work OpenAI',
+        base_url: 'https://api.example.com/v1',
+        api_key_storage: 'env',
+        api_key_env_var: 'OPENAI_API_KEY',
+        headers: null,
+        models: [{ id: 'gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+    ]
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={providers}
+        onChange={() => {}}
+      />,
+    )
+
+    // Exactly ONE "Use this" button (only on the non-active provider).
+    const useThisButtons = screen.getAllByRole('button', { name: /settings\.aiProviders\.useThis/ })
+    expect(useThisButtons).toHaveLength(1)
+  })
+
+  it('PR 43: clicking "Use this" writes the SAVED provider id + env var to localStorage (NOT the form draft)', () => {
+    // Pre-seed: anthropic-1 is the active one. Only ONE Use this
+    // button renders (on the non-active provider).
+    vi.mocked(invoke).mockResolvedValue(null)
+    window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'anthropic-1')
+    window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'ANTHROPIC_API_KEY')
+
+    const providers: AiModelProvider[] = [
+      {
+        id: 'anthropic-1',
+        kind: 'anthropic',
+        name: 'Claude Work',
+        base_url: 'https://api.anthropic.com/v1',
+        api_key_storage: 'env',
+        api_key_env_var: 'ANTHROPIC_API_KEY',
+        headers: null,
+        models: [{ id: 'claude-3-5-sonnet-latest', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+      {
+        id: 'custom-1',
+        kind: 'open_ai_compatible',
+        name: 'My Work OpenAI',
+        base_url: 'https://api.example.com/v1',
+        api_key_storage: 'env',
+        api_key_env_var: 'OPENAI_API_KEY',
+        headers: null,
+        models: [{ id: 'gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+    ]
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={providers}
+        onChange={() => {}}
+      />,
+    )
+
+    // The single "Use this" button lives on the non-active provider.
+    // Click it → localStorage pointer + env var must point at custom-1.
+    const useThisButtons = screen.getAllByRole('button', { name: /settings\.aiProviders\.useThis/ })
+    expect(useThisButtons).toHaveLength(1)
+    fireEvent.click(useThisButtons[0])
+
+    expect(window.localStorage.getItem('dreamforge.llmApiKeyProviderId')).toBe('custom-1')
+    // Saved env var for custom-1, NOT the active one (ANTHROPIC_API_KEY).
+    expect(window.localStorage.getItem('dreamforge.llmApiKeyEnv')).toBe('OPENAI_API_KEY')
+  })
+
+  it('PR 43: "Use this" is DISABLED for local_file providers when Keychain reports not configured (helper text: "Add API key first")', () => {
+    vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+      if (cmd === 'has_ai_model_provider_api_key') {
+        // Keychain returns NOT configured for the local_file provider.
+        return { provider_id: 'openrouter-pending', configured: false }
+      }
+      return null
+    })
+
+    const providers: AiModelProvider[] = [
+      {
+        id: 'openrouter-active',
+        kind: 'open_router',
+        name: 'OpenRouter',
+        base_url: 'https://openrouter.ai/api/v1',
+        api_key_storage: 'env',
+        api_key_env_var: 'OPENROUTER_API_KEY',
+        headers: null,
+        models: [{ id: 'anthropic/claude-sonnet-4.5', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+      {
+        id: 'openrouter-pending',
+        kind: 'open_router',
+        name: 'OpenRouter pending',
+        base_url: 'https://openrouter.ai/api/v1',
+        api_key_storage: 'local_file',
+        api_key_env_var: 'OPENROUTER_API_KEY',
+        headers: null,
+        models: [{ id: 'anthropic/claude-sonnet-4.5', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+    ]
+    window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter-active')
+    window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'OPENROUTER_API_KEY')
+
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={providers}
+        onChange={() => {}}
+      />,
+    )
+
+    // The Use this button on the second (local_file, no key) provider
+    // must exist but be disabled.
+    const useThisButtons = screen.getAllByRole('button', { name: /settings\.aiProviders\.useThis/ })
+    expect(useThisButtons).toHaveLength(1)
+    expect(useThisButtons[0]).toBeDisabled()
+    // Helper text appears next to the disabled button.
+    expect(screen.getByText(/settings\.aiProviders\.addKeyFirst/)).toBeInTheDocument()
+  })
+
+  it('PR 43: i18n keys active / useThis / addKeyFirst exist in en.json', async () => {
+    // Parity test for the 3 new keys. The wider i18n parity test in
+    // src/lib/i18n.test.ts enforces this for all 20 locales, but a
+    // dedicated test gives clearer failure when PR 43 ships without
+    // adding the keys to all locales.
+    const en = (await import('../lib/locales/en.json')).default as Record<string, string>
+    expect(en['settings.aiProviders.active']).toBeTypeOf('string')
+    expect(en['settings.aiProviders.useThis']).toBeTypeOf('string')
+    expect(en['settings.aiProviders.addKeyFirst']).toBeTypeOf('string')
+  })
 })

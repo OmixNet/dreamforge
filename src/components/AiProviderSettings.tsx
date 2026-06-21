@@ -301,12 +301,16 @@ function ProviderList({
   mode,
   providers,
   keyConfiguredByProviderId,
+  activeProviderId,
+  onUseThis,
   onRemove,
 }: {
   t: Translate
   mode: ProviderMode
   providers: AiModelProvider[]
   keyConfiguredByProviderId: ReadonlyMap<string, boolean>
+  activeProviderId: string | null
+  onUseThis: (providerId: string) => void
   onRemove: (providerId: string) => void
 }) {
   const visible = visibleProviders(providers, mode)
@@ -324,6 +328,18 @@ function ProviderList({
         // label_key resolves to the localized kind label per the
         // user's UI language.
         const kindLabel = t(aiModelProviderCatalogEntry(target.provider.kind).label_key)
+        // PR 43: is this row the provider DreamPanel will actually use?
+        // The active pointer lives in localStorage
+        // (dreamforge.llmApiKeyProviderId, set by addProvider /
+        // useThisProvider / cleared by removeProvider). Surface it
+        // here so users know which entry DreamPanel reads from.
+        const isActive = target.provider.id === activeProviderId
+        // PR 43: Use this button is disabled for local_file providers
+        // whose Keychain status hasn't been reported as configured
+        // (poll result). Switching to a provider without a usable
+        // key would break the next dream run, so block the action
+        // and surface a hint.
+        const useThisBlocked = target.provider.api_key_storage === 'local_file' && !configured
         return (
           <div key={target.id} className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm">
             <div className="min-w-0 flex-1">
@@ -332,14 +348,52 @@ function ProviderList({
                   {kindLabel}
                 </span>
                 <span className="truncate font-medium text-foreground">{target.label}</span>
+                {/* PR 43: "Active" badge for the provider matching the
+                    active pointer in localStorage. role="status" +
+                    aria-label=i18n key makes it findable in tests
+                    without depending on layout. */}
+                {isActive ? (
+                  <span
+                    role="status"
+                    aria-label={t('settings.aiProviders.active')}
+                    className="shrink-0 rounded-md border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary"
+                  >
+                    {t('settings.aiProviders.active')}
+                  </span>
+                ) : null}
               </div>
               <div className="mt-1 truncate text-xs text-muted-foreground">
                 {target.provider.base_url || t('settings.aiProviders.defaultEndpoint')} · {providerStorageLabel(target.provider, configured, t)}
               </div>
+              {/* PR 43: "Add API key first" hint under the row when
+                  the Use this button is disabled. Sits next to the
+                  base URL / storage label so the user sees it in the
+                  same scan line as the missing-key indicator. */}
+              {useThisBlocked ? (
+                <div className="mt-1 text-[11px] text-muted-foreground">
+                  {t('settings.aiProviders.addKeyFirst')}
+                </div>
+              ) : null}
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={() => onRemove(target.provider.id)}>
-              {t('common.remove')}
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* PR 43: Use this button only on non-active rows. The
+                  click handler reads from the SAVED providers list,
+                  not the form draft (see useThisProvider below). */}
+              {!isActive ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onUseThis(target.provider.id)}
+                  disabled={useThisBlocked}
+                >
+                  {t('settings.aiProviders.useThis')}
+                </Button>
+              ) : null}
+              <Button type="button" variant="ghost" size="sm" onClick={() => onRemove(target.provider.id)}>
+                {t('common.remove')}
+              </Button>
+            </div>
           </div>
         )
       })}
@@ -350,6 +404,16 @@ function ProviderList({
 export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderSettingsProps) {
   const [draft, setDraft] = useState<ProviderDraft>(() => initialDraft(mode))
   const [error, setError] = useState<string | null>(null)
+  // PR 43: track which provider is "active" — i.e. the one
+  // DreamPanel currently reads from localStorage (paired with
+  // dreamforge.llmApiKeyEnv at dream CLI invocation time). Init
+  // from localStorage so the badge renders correctly on mount.
+  // Updated by addProvider / useThisProvider / removeProvider so
+  // the badge refreshes synchronously after a click without waiting
+  // for a remount.
+  const [activeProviderId, setActiveProviderId] = useState<string | null>(
+    () => readActiveLlmApiKeyProviderId() || null,
+  )
   // v0.5 PR 26 P2c-1: per-provider Keychain status map. Populated by polling
   // `has_ai_model_provider_api_key` for each configured provider so the UI
   // can show "configured" vs "not set" without ever receiving the KEY VALUE.
@@ -418,11 +482,33 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
       writeLlmBaseUrl(provider.base_url ?? '')
       writeLlmModel(provider.models[0]?.id ?? '')
       onChange(normalizeAiModelProviders([...providers, provider]))
+      // PR 43: a freshly added provider becomes the active one — the
+      // user just configured it, that's what they'll run next.
+      setActiveProviderId(providerId)
       setDraft((current) => ({ ...draftFromProviderKind(current.kind), name: current.name, baseUrl: current.baseUrl }))
       // useEffect re-polls status when `providers` updates above
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error))
     }
+  }
+
+  // PR 43: switch the active pointer to an already-saved provider.
+  // INVARIANT: this handler reads from the `providers` prop (the
+  // SAVED list), NEVER from `draft` (the form state). The user might
+  // be mid-edit on the form when they click Use this — picking up
+  // the draft's env var / kind would mix unsaved edits into runtime
+  // config and silently override settings the user hadn't committed.
+  const useThisProvider = (providerId: string) => {
+    const target = providers.find((provider) => provider.id === providerId)
+    if (!target) return
+    writeActiveLlmApiKeyProviderId(providerId)
+    // Provider's env var is the source of truth for `llmApiKeyEnv`.
+    // Empty string clears the pointer. env-mode without an env var
+    // name on the provider is a config error in the saved list, but
+    // we fall through to clearing rather than throwing so a stale
+    // pointer can't block the click.
+    writeActiveLlmApiKeyEnv(target.api_key_env_var || null)
+    setActiveProviderId(providerId)
   }
 
   const removeProvider = async (providerId: string) => {
@@ -437,6 +523,9 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
         // The removed provider WAS the active one — clear both pointers
         // so DreamPanel doesn't pass a dangling provider id to dreamvault_run.
         clearActiveLlmApiKey()
+        // PR 43: also drop our local badge state so the badge moves
+        // off the removed row immediately.
+        setActiveProviderId(null)
       }
       // useEffect re-polls status when `providers` updates above
     } catch (error) {
@@ -455,6 +544,8 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
         mode={mode}
         providers={providers}
         keyConfiguredByProviderId={keyConfiguredByProviderId}
+        activeProviderId={activeProviderId}
+        onUseThis={useThisProvider}
         onRemove={removeProvider}
       />
       {/* v0.6 PR 35: simplified 4-step main flow. The 4 fields most
