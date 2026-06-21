@@ -6,6 +6,7 @@ import {
   resolveLlmConfigForInvoke,
   resolveLlmApiKeyEnvForInvoke,
   resolveLlmApiKeyProviderIdForInvoke,
+  resolveLlmProviderKindForInvoke,
 } from '../lib/dreamCliPath'
 import {
   parseProviderError,
@@ -46,6 +47,7 @@ async function runDreamCommand(
   llmModel: string | null,
   llmApiKeyEnv: string | null,
   llmApiKeyProviderId: string | null,
+  llmProviderKind: string | null,
 ): Promise<DreamVaultCommandOutput> {
   // PR 10: pass llmBaseUrl + llmModel to Rust (Tauri auto-converts camelCase → snake_case)
   // v0.5 PR 24 P2a: pass llmApiKeyEnv — the NAME (not value) of the user's shell
@@ -63,6 +65,7 @@ async function runDreamCommand(
     llmModel?: string
     llmApiKeyEnv?: string
     llmApiKeyProviderId?: string
+    llmProviderKind?: string
   } = { vaultPath }
   if (dreamCliPath) args.dreamCliPath = dreamCliPath
   const commandNeedsLlm = command !== 'dreamvault_status'
@@ -70,6 +73,7 @@ async function runDreamCommand(
   if (commandNeedsLlm && llmModel) args.llmModel = llmModel
   if (commandNeedsLlm && llmApiKeyEnv) args.llmApiKeyEnv = llmApiKeyEnv
   if (commandNeedsLlm && llmApiKeyProviderId) args.llmApiKeyProviderId = llmApiKeyProviderId
+  if (commandNeedsLlm && llmProviderKind) args.llmProviderKind = llmProviderKind
   return isTauri()
     ? invoke<DreamVaultCommandOutput>(command, args)
     : mockInvoke<DreamVaultCommandOutput>(command, args)
@@ -90,6 +94,7 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettings
         const { llmBaseUrl, llmModel } = resolveLlmConfigForInvoke()
         const llmApiKeyEnv = resolveLlmApiKeyEnvForInvoke()
         const llmApiKeyProviderId = resolveLlmApiKeyProviderIdForInvoke()
+        const llmProviderKind = resolveLlmProviderKindForInvoke()
         const result = await runDreamCommand(
           command,
           vaultPath,
@@ -98,6 +103,7 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettings
           llmModel,
           llmApiKeyEnv,
           llmApiKeyProviderId,
+          llmProviderKind,
         )
         const next = [result.stdout, result.stderr].filter(Boolean).join('\n\n') || 'Command completed.'
         setOutput(next)

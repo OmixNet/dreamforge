@@ -694,6 +694,7 @@ export const mockHandlers: Record<string, (args: any) => any> = {
     llmModel?: string | null
     llmApiKeyEnv?: string | null
     llmApiKeyProviderId?: string | null
+    llmProviderKind?: string | null
   }) => ({
     stdout: `Vault: ${args?.vaultPath ?? '/mock/vault'}\nRaw candidates: 1\nNotes: 3\nWiki: 1\nMemory: present\nLast dream: 2026-06-15T10:30:00Z`,
     stderr: '',
@@ -705,6 +706,7 @@ export const mockHandlers: Record<string, (args: any) => any> = {
     llmModel?: string | null
     llmApiKeyEnv?: string | null
     llmApiKeyProviderId?: string | null
+    llmProviderKind?: string | null
   }) => ({
     stdout: `vault: ${args?.vaultPath ?? '/mock/vault'}\ndream cycle complete\n  - 收集 raw: 1\n  - 通过整合: 3\n  - 已 git commit\n  - dream-report: ${args?.vaultPath ?? '/mock/vault'}/.dream/reports/latest.md`,
     stderr: '',
@@ -716,6 +718,7 @@ export const mockHandlers: Record<string, (args: any) => any> = {
     llmModel?: string | null
     llmApiKeyEnv?: string | null
     llmApiKeyProviderId?: string | null
+    llmProviderKind?: string | null
   }) => ({
     stdout: `${args?.vaultPath ?? '/mock/vault'}/.dream/reports/2026-06-15T10-30-00Z.md\n${args?.vaultPath ?? '/mock/vault'}/.dream/reports/2026-06-14T08-15-00Z.md`,
     stderr: '',

@@ -8,6 +8,9 @@ import {
   readLlmModel,
   writeLlmModel,
   resolveLlmConfigForInvoke,
+  readLlmProviderKindPublic,
+  resolveLlmProviderKindForInvoke,
+  writeLlmProviderKind,
 } from './dreamCliPath'
 
 /**
@@ -107,6 +110,21 @@ describe('dreamCliPath', () => {
         llmBaseUrl: 'https://api.openai.com/v1',
         llmModel: null,
       })
+    })
+  })
+
+  describe('readLlmProviderKind / writeLlmProviderKind', () => {
+    it('roundtrips the active provider kind through localStorage', () => {
+      writeLlmProviderKind('anthropic')
+      expect(readLlmProviderKindPublic()).toBe('anthropic')
+      expect(resolveLlmProviderKindForInvoke()).toBe('anthropic')
+    })
+
+    it('clears the active provider kind when written with an empty value', () => {
+      writeLlmProviderKind('gemini')
+      writeLlmProviderKind('')
+      expect(window.localStorage.getItem('dreamforge.llmProviderKind')).toBeNull()
+      expect(resolveLlmProviderKindForInvoke()).toBeNull()
     })
   })
 })

@@ -29,6 +29,10 @@ const STORAGE_KEY_LLM_API_KEY_ENV = 'dreamforge.llmApiKeyEnv'
 // with `llmApiKeyEnv` so DreamPanel can pass BOTH to `dreamvault_run` and
 // the Rust side can look up the API key in macOS Keychain by provider id.
 const STORAGE_KEY_LLM_API_KEY_PROVIDER_ID = 'dreamforge.llmApiKeyProviderId'
+// v0.6 PR 37b: provider kind for the active provider. Rust maps this metadata
+// to the DreamVault CLI provider flag (`--llm openai|anthropic|gemini`).
+// This is safe metadata; the API key VALUE still lives only in Keychain/env.
+const STORAGE_KEY_LLM_PROVIDER_KIND = 'dreamforge.llmProviderKind'
 
 export function readDreamCliPath(): string {
   return readStringFromStorage(STORAGE_KEY)
@@ -112,6 +116,11 @@ export function resolveLlmApiKeyProviderIdForInvoke(): string | null {
   return providerId.length > 0 ? providerId : null
 }
 
+export function resolveLlmProviderKindForInvoke(): string | null {
+  const providerKind = readLlmProviderKindPublic()
+  return providerKind.length > 0 ? providerKind : null
+}
+
 // Internal helpers
 
 function readLlmApiKeyEnv(): string {
@@ -139,6 +148,14 @@ export function writeLlmApiKeyProviderId(value: string): void {
 
 export function readLlmApiKeyProviderIdPublic(): string {
   return readStringFromStorage(STORAGE_KEY_LLM_API_KEY_PROVIDER_ID)
+}
+
+export function writeLlmProviderKind(value: string): void {
+  writeStringToStorage(STORAGE_KEY_LLM_PROVIDER_KIND, value)
+}
+
+export function readLlmProviderKindPublic(): string {
+  return readStringFromStorage(STORAGE_KEY_LLM_PROVIDER_KIND)
 }
 
 function readStringFromStorage(key: string): string {

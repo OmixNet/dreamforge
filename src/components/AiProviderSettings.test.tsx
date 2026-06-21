@@ -177,6 +177,33 @@ describe('AiProviderSettings', () => {
     })
   })
 
+  it('save: writes provider kind to localStorage dreamforge.llmProviderKind', async () => {
+    vi.mocked(invoke).mockResolvedValue(null)
+
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={[]}
+        onChange={() => {}}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText(/settings\.aiProviders\.model/), {
+      target: { value: 'claude-sonnet-4-5' },
+    })
+    const keyInputs = screen.getAllByLabelText(/settings\.aiProviders\.key$/)
+    fireEvent.change(keyInputs[keyInputs.length - 1], {
+      target: { value: 'sk-test' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /settings\.aiProviders\.addApi/ }))
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem('dreamforge.llmProviderKind')).toBe('open_ai')
+    })
+  })
+
   it('save: writes the provider base URL and model to DreamPanel runtime config', async () => {
     vi.mocked(invoke).mockResolvedValue(null)
 
@@ -293,6 +320,7 @@ describe('AiProviderSettings', () => {
     // (PR 27 P2c-1.5: both env var NAME and provider id are paired)
     window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'OPENROUTER_API_KEY')
     window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter-active')
+    window.localStorage.setItem('dreamforge.llmProviderKind', 'open_router')
 
     const providers: AiModelProvider[] = [
       {
@@ -321,6 +349,7 @@ describe('AiProviderSettings', () => {
       expect(window.localStorage.getItem('dreamforge.llmApiKeyEnv')).toBeNull()
     })
     expect(window.localStorage.getItem('dreamforge.llmApiKeyProviderId')).toBeNull()
+    expect(window.localStorage.getItem('dreamforge.llmProviderKind')).toBeNull()
   })
 
   // -- Test button hidden (no HTTP smoke in v0.5) --

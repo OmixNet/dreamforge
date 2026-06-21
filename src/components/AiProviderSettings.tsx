@@ -22,6 +22,7 @@ import {
   writeLlmApiKeyEnv,
   writeLlmApiKeyProviderId,
   writeLlmModel,
+  writeLlmProviderKind,
 } from '../lib/dreamCliPath'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -64,6 +65,7 @@ function writeActiveLlmApiKeyProviderId(providerId: string | null): void {
 function clearActiveLlmApiKey(): void {
   writeActiveLlmApiKeyEnv(null)
   writeActiveLlmApiKeyProviderId(null)
+  writeLlmProviderKind('')
 }
 
 type Translate = ReturnType<typeof createTranslator>
@@ -389,6 +391,7 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
       } else {
         clearActiveLlmApiKey()
       }
+      writeLlmProviderKind(provider.kind)
       writeLlmBaseUrl(provider.base_url ?? '')
       writeLlmModel(provider.models[0]?.id ?? '')
       onChange(normalizeAiModelProviders([...providers, provider]))

@@ -285,6 +285,29 @@ pub fn strip_v1_suffix(url: &str) -> String {
     }
 }
 
+fn has_provider_id(provider_id: Option<&str>) -> bool {
+    provider_id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .is_some()
+}
+
+fn dream_llm_flag_for_provider_kind(llm_provider_kind: Option<&str>) -> &'static str {
+    let Some(kind) = llm_provider_kind
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return "openai";
+    };
+
+    let normalized = kind.replace('-', "_").to_ascii_lowercase();
+    match normalized.as_str() {
+        "anthropic" | "claude" => "anthropic",
+        "gemini" | "google" | "google_gemini" => "gemini",
+        _ => "openai",
+    }
+}
+
 pub fn build_dreamvault_command(
     action: DreamVaultAction,
     vault_path: &str,
@@ -292,6 +315,7 @@ pub fn build_dreamvault_command(
     llm_base_url: Option<&str>, // PR 10
     llm_model: Option<&str>,     // PR 10
     llm_api_key_provider_id: Option<&str>, // v0.5 PR 30
+    llm_provider_kind: Option<&str>,       // v0.6 PR 37b
 ) -> DreamVaultCommandSpec {
     let mut args = vec![
         action.subcommand().to_string(),
@@ -302,14 +326,9 @@ pub fn build_dreamvault_command(
     // v0.5 PR 30: Selecting a provider in DreamX means the dream CLI must
     // enter DreamVault's OpenAI-compatible route. Status remains provider-free
     // because it should never hit cloud config or Keychain on mount.
-    if action != DreamVaultAction::Status
-        && llm_api_key_provider_id
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .is_some()
-    {
+    if action != DreamVaultAction::Status && has_provider_id(llm_api_key_provider_id) {
         args.push("--llm".to_string());
-        args.push("openai".to_string());
+        args.push(dream_llm_flag_for_provider_kind(llm_provider_kind).to_string());
     }
 
     // PR 10: --base-url flag (after stripping trailing /v1)
@@ -339,6 +358,7 @@ fn run_dreamvault_action(
     llm_model: Option<&str>,
     llm_api_key_env: Option<&str>,
     llm_api_key_provider_id: Option<&str>, // v0.5 PR 27 P2c-1.5
+    llm_provider_kind: Option<&str>,       // v0.6 PR 37b
 ) -> Result<DreamVaultCommandOutput, String> {
     let spec = build_dreamvault_command(
         action,
@@ -347,6 +367,7 @@ fn run_dreamvault_action(
         llm_base_url,
         llm_model,
         llm_api_key_provider_id,
+        llm_provider_kind,
     );
 
     let mut command = Command::new(&spec.program);
@@ -402,6 +423,7 @@ pub async fn dreamvault_status(
     llm_model: Option<String>,                // PR 10
     llm_api_key_env: Option<String>,          // v0.5 P2a
     llm_api_key_provider_id: Option<String>,  // v0.5 PR 27 P2c-1.5
+    llm_provider_kind: Option<String>,        // v0.6 PR 37b
 ) -> Result<DreamVaultCommandOutput, String> {
     tauri::async_runtime::spawn_blocking(move || {
         run_dreamvault_action(
@@ -412,6 +434,7 @@ pub async fn dreamvault_status(
             llm_model.as_deref(),
             llm_api_key_env.as_deref(),
             llm_api_key_provider_id.as_deref(),
+            llm_provider_kind.as_deref(),
         )
     })
     .await
@@ -426,6 +449,7 @@ pub async fn dreamvault_run(
     llm_model: Option<String>,                // PR 10
     llm_api_key_env: Option<String>,          // v0.5 P2a
     llm_api_key_provider_id: Option<String>,  // v0.5 PR 27 P2c-1.5
+    llm_provider_kind: Option<String>,        // v0.6 PR 37b
 ) -> Result<DreamVaultCommandOutput, String> {
     tauri::async_runtime::spawn_blocking(move || {
         run_dreamvault_action(
@@ -436,6 +460,7 @@ pub async fn dreamvault_run(
             llm_model.as_deref(),
             llm_api_key_env.as_deref(),
             llm_api_key_provider_id.as_deref(),
+            llm_provider_kind.as_deref(),
         )
     })
     .await
@@ -450,6 +475,7 @@ pub async fn dreamvault_report(
     llm_model: Option<String>,                // PR 10
     llm_api_key_env: Option<String>,          // v0.5 P2a
     llm_api_key_provider_id: Option<String>,  // v0.5 PR 27 P2c-1.5
+    llm_provider_kind: Option<String>,        // v0.6 PR 37b
 ) -> Result<DreamVaultCommandOutput, String> {
     tauri::async_runtime::spawn_blocking(move || {
         run_dreamvault_action(
@@ -460,6 +486,7 @@ pub async fn dreamvault_report(
             llm_model.as_deref(),
             llm_api_key_env.as_deref(),
             llm_api_key_provider_id.as_deref(),
+            llm_provider_kind.as_deref(),
         )
     })
     .await
@@ -479,6 +506,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
 
         assert_eq!(spec.program, "/opt/dream/bin/dream");
@@ -491,6 +519,7 @@ mod tests {
             DreamVaultAction::Run,
             "/tmp/vault",
             Some("/opt/dream/bin/dream"),
+            None,
             None,
             None,
             None,
@@ -508,6 +537,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
 
         assert_eq!(spec.args, vec!["report", "--vault", "/tmp/vault"]);
@@ -522,6 +552,7 @@ mod tests {
             None,
             Some("https://api.siliconflow.cn"),
             Some("deepseek-ai/DeepSeek-V4-Pro"),
+            None,
             None,
         );
 
@@ -578,6 +609,7 @@ mod tests {
             Some("https://api.siliconflow.cn/v1"),
             Some("deepseek-ai/DeepSeek-V4-Pro"),
             None,
+            None,
         );
 
         assert_eq!(
@@ -603,6 +635,7 @@ mod tests {
             Some(""),
             Some(""),
             None,
+            None,
         );
 
         // Empty / whitespace-only base-url and model are omitted (no flag, no value)
@@ -617,6 +650,7 @@ mod tests {
             None,
             None,
             Some("llama3.1"),
+            None,
             None,
         );
 
@@ -639,6 +673,7 @@ mod tests {
             Some("https://openrouter.ai/api/v1"),
             Some("anthropic/claude-sonnet-4.5"),
             Some("openrouter-abc123"),
+            Some("open_router"),
         );
 
         assert_eq!(
@@ -653,6 +688,62 @@ mod tests {
                 "https://openrouter.ai/api",
                 "--model",
                 "anthropic/claude-sonnet-4.5",
+            ]
+        );
+    }
+
+    #[test]
+    fn run_command_uses_anthropic_llm_when_provider_kind_is_anthropic() {
+        let spec = build_dreamvault_command(
+            DreamVaultAction::Run,
+            "/tmp/vault",
+            None,
+            Some("https://api.anthropic.com"),
+            Some("claude-sonnet-4-5"),
+            Some("anthropic-abc123"),
+            Some("anthropic"),
+        );
+
+        assert_eq!(
+            spec.args,
+            vec![
+                "run",
+                "--vault",
+                "/tmp/vault",
+                "--llm",
+                "anthropic",
+                "--base-url",
+                "https://api.anthropic.com",
+                "--model",
+                "claude-sonnet-4-5",
+            ]
+        );
+    }
+
+    #[test]
+    fn run_command_uses_gemini_llm_when_provider_kind_is_gemini() {
+        let spec = build_dreamvault_command(
+            DreamVaultAction::Run,
+            "/tmp/vault",
+            None,
+            Some("https://generativelanguage.googleapis.com"),
+            Some("gemini-2.5-flash"),
+            Some("gemini-abc123"),
+            Some("gemini"),
+        );
+
+        assert_eq!(
+            spec.args,
+            vec![
+                "run",
+                "--vault",
+                "/tmp/vault",
+                "--llm",
+                "gemini",
+                "--base-url",
+                "https://generativelanguage.googleapis.com",
+                "--model",
+                "gemini-2.5-flash",
             ]
         );
     }

@@ -62,6 +62,7 @@ describe('DreamPanel', () => {
     // uses provider id to look up the key in macOS Keychain.
     window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'OPENROUTER_API_KEY')
     window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter-abc123')
+    window.localStorage.setItem('dreamforge.llmProviderKind', 'open_router')
     vi.mocked(mockInvoke).mockResolvedValueOnce({
       stdout: 'status ok',
       stderr: '',
@@ -101,6 +102,7 @@ describe('DreamPanel', () => {
     window.localStorage.setItem('dreamforge.llmModel', 'anthropic/claude-sonnet-4.5')
     window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'OPENROUTER_API_KEY')
     window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter-abc123')
+    window.localStorage.setItem('dreamforge.llmProviderKind', 'open_router')
     vi.mocked(mockInvoke)
       .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
       .mockResolvedValueOnce({ stdout: 'dream ok', stderr: '', success: true })
@@ -116,6 +118,33 @@ describe('DreamPanel', () => {
         llmModel: 'anthropic/claude-sonnet-4.5',
         llmApiKeyEnv: 'OPENROUTER_API_KEY',
         llmApiKeyProviderId: 'openrouter-abc123',
+        llmProviderKind: 'open_router',
+      })
+    })
+  })
+
+  it('sends Anthropic provider kind on explicit Run Dream', async () => {
+    window.localStorage.setItem('dreamforge.llmBaseUrl', 'https://api.anthropic.com')
+    window.localStorage.setItem('dreamforge.llmModel', 'claude-sonnet-4-5')
+    window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'ANTHROPIC_API_KEY')
+    window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'anthropic-abc123')
+    window.localStorage.setItem('dreamforge.llmProviderKind', 'anthropic')
+    vi.mocked(mockInvoke)
+      .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+      .mockResolvedValueOnce({ stdout: 'dream ok', stderr: '', success: true })
+
+    render(<DreamPanel vaultPath="/tmp/vault" />)
+    await screen.findByText(/status ok/)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('dreamvault_run', {
+        vaultPath: '/tmp/vault',
+        llmBaseUrl: 'https://api.anthropic.com',
+        llmModel: 'claude-sonnet-4-5',
+        llmApiKeyEnv: 'ANTHROPIC_API_KEY',
+        llmApiKeyProviderId: 'anthropic-abc123',
+        llmProviderKind: 'anthropic',
       })
     })
   })
