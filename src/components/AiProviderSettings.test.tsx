@@ -476,4 +476,122 @@ describe('AiProviderSettings', () => {
     const addButton = screen.getByRole('button', { name: /settings\.aiProviders\.addApi/ })
     expect(addButton).toBeDisabled()
   })
+
+  // -- v0.6 PR 40: provider-aware auto-fill + clearer provider list --
+
+  it('PR 40: modelId is pre-filled with the catalog default for the current provider kind', () => {
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={[]}
+        onChange={() => {}}
+      />,
+    )
+    // The first API-mode provider kind from the catalog (per
+    // aiModelProviderCatalog order) is `open_ai`. Its default model
+    // is `gpt-4.1-mini`. The Model ID input value should match.
+    const modelInput = screen.getByLabelText(/settings\.aiProviders\.model/) as HTMLInputElement
+    expect(modelInput.value).toBe('gpt-4.1-mini')
+  })
+
+  it('PR 40: switching provider auto-fills baseUrl + env var + modelId with the new provider defaults', () => {
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={[]}
+        onChange={() => {}}
+      />,
+    )
+
+    // Switch the kind to Anthropic via the kind select.
+    // Radix Select uses a button trigger + click → click option pattern.
+    const kindButton = screen.getByRole('combobox', { name: /settings\.aiProviders\.kind/ })
+    fireEvent.click(kindButton)
+    // Click the Anthropic option in the dropdown
+    fireEvent.click(screen.getByRole('option', { name: /settings\.aiProviders\.kind\.anthropic/ }))
+
+    // After picking Anthropic, the form should auto-fill:
+    const baseUrlInput = screen.getByLabelText(/settings\.aiProviders\.baseUrl/) as HTMLInputElement
+    const modelInput = screen.getByLabelText(/settings\.aiProviders\.model/) as HTMLInputElement
+    expect(baseUrlInput.value).toBe('https://api.anthropic.com/v1')
+    expect(modelInput.value).toBe('claude-3-5-sonnet-latest')
+  })
+
+  it('PR 40: switching provider preserves user-typed modelId (does not blow it away)', () => {
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={[]}
+        onChange={() => {}}
+      />,
+    )
+
+    // User types a custom model — they know what they want.
+    fireEvent.change(screen.getByLabelText(/settings\.aiProviders\.model/), {
+      target: { value: 'gpt-4.1-mini-fine-tune-2025' },
+    })
+
+    // Switch to Anthropic — modelId should NOT be reset to claude-... default
+    const kindButton = screen.getByRole('combobox', { name: /settings\.aiProviders\.kind/ })
+    fireEvent.click(kindButton)
+    fireEvent.click(screen.getByRole('option', { name: /settings\.aiProviders\.kind\.anthropic/ }))
+
+    const modelInput = screen.getByLabelText(/settings\.aiProviders\.model/) as HTMLInputElement
+    expect(modelInput.value).toBe('gpt-4.1-mini-fine-tune-2025')
+  })
+
+  it('PR 40: ProviderList renders the kind label as a badge (not just user-provided name)', () => {
+    const providers: AiModelProvider[] = [
+      {
+        id: 'anthropic-1',
+        kind: 'anthropic',
+        name: 'Claude Work',
+        base_url: 'https://api.anthropic.com/v1',
+        api_key_storage: 'local_file',
+        api_key_env_var: 'ANTHROPIC_API_KEY',
+        headers: null,
+        models: [{ id: 'claude-3-5-sonnet-latest', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+      {
+        id: 'custom-1',
+        kind: 'open_ai_compatible',
+        name: 'My Work OpenAI',
+        base_url: 'https://api.example.com/v1',
+        api_key_storage: 'local_file',
+        api_key_env_var: 'OPENAI_API_KEY',
+        headers: null,
+        models: [{ id: 'gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+    ]
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={providers}
+        onChange={() => {}}
+      />,
+    )
+
+    // Both kinds render as localized labels in a kind-badge element.
+    expect(screen.getByText(/settings\.aiProviders\.kind\.anthropic/)).toBeInTheDocument()
+    expect(screen.getByText(/settings\.aiProviders\.kind\.custom/)).toBeInTheDocument()
+  })
+
+  it('PR 40: inline API key helper text renders right under the API key input', () => {
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={[]}
+        onChange={() => {}}
+      />,
+    )
+    // The helper text is the keySafetyLocal string (already in all locales).
+    expect(
+      screen.getByText(/settings\.aiProviders\.keySafetyLocal/),
+    ).toBeInTheDocument()
+  })
 })

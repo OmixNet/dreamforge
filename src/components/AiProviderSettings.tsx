@@ -106,7 +106,10 @@ function draftFromProviderKind(kind: AiModelProviderKind): ProviderDraft {
     kind,
     name: defaults.name,
     baseUrl: defaults.base_url,
-    modelId: '',
+    // PR 40: pre-fill modelId with the catalog's recommended default so the
+    // 4-step main flow has all 4 fields sensible without typing. User can
+    // still override by editing.
+    modelId: defaults.default_model_id,
     apiKeyStorage: defaults.api_key_storage,
     apiKey: '',
     apiKeyEnvVar: defaults.api_key_env_var ?? '',
@@ -120,14 +123,23 @@ function providerKindOptions(mode: ProviderMode, t: Translate): Array<{ value: A
   })
 }
 
-function providerPresetPatch(kind: AiModelProviderKind): Pick<ProviderDraft, 'kind' | 'name' | 'baseUrl' | 'apiKeyStorage' | 'apiKeyEnvVar'> {
+function providerPresetPatch(kind: AiModelProviderKind, currentDraft: ProviderDraft): Pick<ProviderDraft, 'kind' | 'name' | 'baseUrl' | 'apiKeyStorage' | 'apiKeyEnvVar' | 'modelId'> {
   const defaults = draftFromProviderKind(kind)
+  // PR 40: auto-fill modelId when user picks a new provider, BUT preserve
+  // the user's typed value if they already customized it. The "untouched"
+  // signal is: current modelId is empty OR matches the OLD provider's
+  // catalog default. If the user typed something different, we keep it.
+  const previousDefaults = aiModelProviderCatalogEntry(currentDraft.kind)
+  const modelWasUnchanged =
+    currentDraft.modelId.trim() === '' ||
+    currentDraft.modelId === previousDefaults.default_model_id
   return {
     kind,
     name: defaults.name,
     baseUrl: defaults.baseUrl,
     apiKeyStorage: defaults.apiKeyStorage,
     apiKeyEnvVar: defaults.apiKeyEnvVar,
+    modelId: modelWasUnchanged ? defaults.modelId : currentDraft.modelId,
   }
 }
 
@@ -306,11 +318,22 @@ function ProviderList({
     <div className="space-y-2">
       {configuredModelTargets(visible).map((target) => {
         const configured = keyConfiguredByProviderId.get(target.provider.id) ?? false
+        // PR 40: show the provider kind label (e.g. "Anthropic" /
+        // "Custom") so users can tell which protocol each saved provider
+        // uses, not just the user-provided name. The catalog's
+        // label_key resolves to the localized kind label per the
+        // user's UI language.
+        const kindLabel = t(aiModelProviderCatalogEntry(target.provider.kind).label_key)
         return (
           <div key={target.id} className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm">
-            <div className="min-w-0">
-              <div className="truncate font-medium text-foreground">{target.label}</div>
-              <div className="truncate text-xs text-muted-foreground">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="shrink-0 rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  {kindLabel}
+                </span>
+                <span className="truncate font-medium text-foreground">{target.label}</span>
+              </div>
+              <div className="mt-1 truncate text-xs text-muted-foreground">
                 {target.provider.base_url || t('settings.aiProviders.defaultEndpoint')} · {providerStorageLabel(target.provider, configured, t)}
               </div>
             </div>
@@ -338,7 +361,7 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
     setError(null)
     updateDraft(patch)
   }
-  const updateKind = (kind: AiModelProviderKind) => updateForm(providerPresetPatch(kind))
+  const updateKind = (kind: AiModelProviderKind) => updateForm(providerPresetPatch(kind, draft))
   // v0.6 PR 35: name is OPTIONAL (it defaults to the catalog name and
   // can be overridden in Advanced). baseUrl is OPTIONAL (catalog default
   // is fine for most providers). modelId is REQUIRED. apiKey is REQUIRED
@@ -444,13 +467,23 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
         <LabeledInput label={t('settings.aiProviders.baseUrl')} value={draft.baseUrl} onChange={(baseUrl) => updateForm({ baseUrl })} />
         <LabeledInput label={t('settings.aiProviders.model')} value={draft.modelId} onChange={(modelId) => updateForm({ modelId })} placeholder={aiModelProviderCatalogEntry(draft.kind).default_model_id} />
         {mode === 'api' ? (
-          <LabeledInput
-            label={t('settings.aiProviders.key')}
-            value={draft.apiKey}
-            onChange={(apiKey) => updateForm({ apiKey })}
-            placeholder={t('settings.aiProviders.keyPlaceholder')}
-            type="password"
-          />
+          <>
+            <LabeledInput
+              label={t('settings.aiProviders.key')}
+              value={draft.apiKey}
+              onChange={(apiKey) => updateForm({ apiKey })}
+              placeholder={t('settings.aiProviders.keyPlaceholder')}
+              type="password"
+            />
+            {/* PR 40: inline helper directly under the API key input so
+                users see the security guarantee right where they're
+                typing the secret. Previously this was a small grey
+                block at the bottom of the form (keySafetyLocal text)
+                that was easy to miss. */}
+            <p className="text-xs leading-5 text-muted-foreground -mt-1 pl-1">
+              {t('settings.aiProviders.keySafetyLocal')}
+            </p>
+          </>
         ) : null}
       </div>
       <details className="rounded-md border border-border bg-background/40">
@@ -462,9 +495,11 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
           {mode === 'api' ? <ApiKeyStorageFields t={t} draft={draft} updateDraft={updateForm} /> : null}
         </div>
       </details>
-      <div className="text-xs leading-5 text-muted-foreground">
-        {mode === 'api' ? t('settings.aiProviders.keySafetyLocal') : t('settings.aiProviders.localSafety')}
-      </div>
+      {mode === 'local' ? (
+        <div className="text-xs leading-5 text-muted-foreground">
+          {t('settings.aiProviders.localSafety')}
+        </div>
+      ) : null}
       {error ? <div className="text-xs text-destructive">{error}</div> : null}
       <div className="flex items-center gap-3">
         <Button type="button" size="sm" onClick={() => void addProvider()} disabled={!canSave}>
