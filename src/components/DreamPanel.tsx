@@ -238,12 +238,32 @@ interface ProviderErrorViewProps {
 
 function ProviderErrorView({ message, onOpenSettingsAi, onRetry }: ProviderErrorViewProps) {
   const info: ProviderErrorInfo = parseProviderError(message)
-
-  // The body (after tag strip) is only shown for the 'unknown'
-  // category, where the user genuinely needs more context to debug.
-  // For all 6 known categories, the body is intentionally discarded.
-  const showBody = info.category === 'unknown'
-  const body = showBody ? stripOpenAITag(message) : ''
+  // PR 41: collapsible raw details (default closed) for ALL 6 known
+  // categories + unknown. The body is the tag-stripped stderr — useful
+  // for debugging (paste into GitHub issue, share with support), and
+  // the user explicitly opts in by clicking. SECURITY: this is the
+  // same stderr the user already saw if they ran dream CLI in their
+  // terminal — no new surface.
+  const body = stripOpenAITag(message)
+  // Local state for the Copy details feedback ("Copied!" → resets).
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
+  useEffect(() => {
+    if (copyState === 'idle') return
+    const timer = window.setTimeout(() => setCopyState('idle'), 1500)
+    return () => window.clearTimeout(timer)
+  }, [copyState])
+  const handleCopy = useCallback(async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(message)
+        setCopyState('copied')
+      } else {
+        setCopyState('failed')
+      }
+    } catch {
+      setCopyState('failed')
+    }
+  }, [message])
 
   return (
     <div
@@ -254,36 +274,68 @@ function ProviderErrorView({ message, onOpenSettingsAi, onRetry }: ProviderError
     >
       <p className="dreamx-panel-error-message">{info.shortMessage}</p>
 
-      {info.fixAction === 'open-settings-ai' ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={onOpenSettingsAi}
-          disabled={!onOpenSettingsAi}
-          className="w-full"
-        >
-          {info.fixActionLabel}
-        </Button>
-      ) : null}
+      <div className="flex flex-col gap-2">
+        {info.fixAction === 'open-settings-ai' ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onOpenSettingsAi}
+            disabled={!onOpenSettingsAi}
+            className="w-full"
+          >
+            {info.fixActionLabel}
+          </Button>
+        ) : null}
 
-      {info.fixAction === 'retry' ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={onRetry}
-          disabled={!onRetry}
-          className="w-full"
-        >
-          {info.fixActionLabel}
-        </Button>
-      ) : null}
+        {info.fixAction === 'retry' ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onRetry}
+            disabled={!onRetry}
+            className="w-full"
+          >
+            {info.fixActionLabel}
+          </Button>
+        ) : null}
 
-      {showBody && body ? (
-        <pre className="dreamx-panel-output" aria-label="Error details">
-          {body}
-        </pre>
+        {body ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => void handleCopy()}
+            aria-label="Copy error details to clipboard"
+            className="w-full text-muted-foreground"
+          >
+            {copyState === 'copied'
+              ? 'Copied'
+              : copyState === 'failed'
+                ? "Couldn't copy — select & copy manually"
+                : 'Copy details'}
+          </Button>
+        ) : null}
+      </div>
+
+      {body ? (
+        // PR 41: <details> with default closed keeps the long stderr
+        // out of sight until the user opts in. 6 known categories now
+        // also expose the body (was unknown-only in PR 34) — the
+        // security invariant (apiKey never in shortMessage) still
+        // holds; the body is the user's own stderr to debug.
+        <details className="dreamx-panel-error-details text-xs">
+          <summary className="cursor-pointer select-none py-1 text-muted-foreground hover:text-foreground">
+            Raw error details
+          </summary>
+          <pre
+            className="dreamx-panel-output mt-1 max-h-40 overflow-auto"
+            aria-label="Raw error details"
+          >
+            {body}
+          </pre>
+        </details>
       ) : null}
     </div>
   )
