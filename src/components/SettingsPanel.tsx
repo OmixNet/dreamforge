@@ -400,6 +400,12 @@ function SettingsPanelInner({
     [],
   )
 
+  const handleAiModelProvidersChange = useCallback((value: AiModelProvider[]) => {
+    const nextDraft = { ...draft, aiModelProviders: value }
+    setDraft(nextDraft)
+    onSave(buildSettingsFromDraft(settings, nextDraft))
+  }, [draft, onSave, settings])
+
   const handleGitignoredVisibilityChange = useCallback((value: boolean) => {
     updateDraft('hideGitignoredFiles', value)
     onSave({ ...settings, hide_gitignored_files: value })
@@ -478,6 +484,7 @@ function SettingsPanelInner({
           locale={draftLocale}
           systemLocale={systemLocale}
           updateDraft={updateDraft}
+          setAiModelProviders={handleAiModelProvidersChange}
           isGitVault={isGitVault}
           aiAgentsStatus={aiAgentsStatus}
           onCopyMcpConfig={onCopyMcpConfig}
@@ -531,6 +538,7 @@ interface SettingsBodyFromDraftProps {
   locale: AppLocale
   systemLocale: AppLocale
   updateDraft: <Key extends keyof SettingsDraft>(key: Key, value: SettingsDraft[Key]) => void
+  setAiModelProviders: (value: AiModelProvider[]) => void
   isGitVault: boolean
   aiAgentsStatus: AiAgentsStatus
   onCopyMcpConfig?: () => void
@@ -552,6 +560,7 @@ function SettingsBodyFromDraft({
   locale,
   systemLocale,
   updateDraft,
+  setAiModelProviders,
   isGitVault,
   aiAgentsStatus,
   onCopyMcpConfig,
@@ -590,7 +599,7 @@ function SettingsBodyFromDraft({
       defaultAiTarget={draft.defaultAiTarget}
       setDefaultAiTarget={(value) => updateDraft('defaultAiTarget', value)}
       aiModelProviders={draft.aiModelProviders}
-      setAiModelProviders={(value) => updateDraft('aiModelProviders', value)}
+      setAiModelProviders={setAiModelProviders}
       onCopyMcpConfig={onCopyMcpConfig}
       releaseChannel={draft.releaseChannel}
       setReleaseChannel={(value) => updateDraft('releaseChannel', value)}

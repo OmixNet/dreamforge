@@ -191,6 +191,44 @@ describe('SettingsPanel', () => {
     expect(screen.getByPlaceholderText('gemini-2.5-flash')).toBeInTheDocument()
   })
 
+  it('auto-saves added API model providers so closing settings does not lose them', async () => {
+    render(
+      <SettingsPanel
+        open={true}
+        settings={emptySettings}
+        onSave={onSave}
+        onClose={onClose}
+      />
+    )
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'API model' }), { button: 0, ctrlKey: false })
+    fireEvent.change(screen.getByLabelText('Base URL'), {
+      target: { value: 'https://api.siliconflow.cn/v1' },
+    })
+    fireEvent.change(screen.getByLabelText('Model ID'), {
+      target: { value: 'deepseek-ai/DeepSeek-V4-Flash' },
+    })
+    fireEvent.change(screen.getByLabelText('API key'), {
+      target: { value: 'sk-test-should-not-persist-in-settings' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add API model' }))
+
+    await vi.waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        ai_model_providers: [
+          expect.objectContaining({
+            base_url: 'https://api.siliconflow.cn/v1',
+            models: [expect.objectContaining({ id: 'deepseek-ai/DeepSeek-V4-Flash' })],
+          }),
+        ],
+      }))
+    })
+
+    const savedSettings = onSave.mock.calls.at(-1)?.[0] as Settings
+    expect(JSON.stringify(savedSettings)).not.toContain('sk-test-should-not-persist-in-settings')
+  })
+
   it('lets users disable AI surfaces without showing missing-agent setup', () => {
     render(
       <SettingsPanel
