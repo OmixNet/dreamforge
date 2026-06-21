@@ -234,17 +234,17 @@ function EditorEmptyState({
         </div>
         <div className="flex flex-wrap items-center justify-center gap-2">
           {onCreateNote ? (
-            <Button type="button" size="sm" variant="default" onClick={onCreateNote}>
+            <Button type="button" size="sm" variant="default" onClick={() => onCreateNote()}>
               {translate(locale, 'editor.workspace.action.newNote')}
             </Button>
           ) : null}
           {onOpenMemory ? (
-            <Button type="button" size="sm" variant="outline" onClick={onOpenMemory}>
+            <Button type="button" size="sm" variant="outline" onClick={() => onOpenMemory()}>
               {translate(locale, 'editor.workspace.action.openMemory')}
             </Button>
           ) : null}
           {onRunDream ? (
-            <Button type="button" size="sm" variant="outline" onClick={onRunDream}>
+            <Button type="button" size="sm" variant="outline" onClick={() => onRunDream()}>
               {translate(locale, 'editor.workspace.action.runDream')}
             </Button>
           ) : null}

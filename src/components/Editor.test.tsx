@@ -327,11 +327,11 @@ describe('Editor', () => {
 
     // Buttons wire to the callbacks passed in.
     fireEvent.click(screen.getByRole('button', { name: 'New note' }))
-    expect(onCreateNote).toHaveBeenCalledTimes(1)
+    expect(onCreateNote).toHaveBeenCalledWith()
     fireEvent.click(screen.getByRole('button', { name: 'Open MEMORY.md' }))
-    expect(onOpenMemory).toHaveBeenCalledTimes(1)
+    expect(onOpenMemory).toHaveBeenCalledWith()
     fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
-    expect(onRunDream).toHaveBeenCalledTimes(1)
+    expect(onRunDream).toHaveBeenCalledWith()
   })
 
   it('renders an invisible drag region in the empty state', () => {
