@@ -694,6 +694,48 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
     activeTabPath: notes.activeTabPath,
     getActiveTabPath: () => notes.activeTabPathRef.current,
   })
+
+  // PR 42: workspace counts for the empty editor summary card.
+  // Counts by vault subfolder: notes/, wiki/, raw/, plus MEMORY.md.
+  // We compute from `vault.entries` (the full set, not visibleEntries
+  // which is filtered) so the summary reflects what's actually in the
+  // vault, not what's currently visible (filter pills etc.).
+  const workspaceCounts = useMemo(() => {
+    const counts = { notes: 0, wiki: 0, memory: 0, raw: 0 }
+    const vaultRoot = resolvedPath.replace(/\/+$/, '')
+    const notesPrefix = `${vaultRoot}/notes/`
+    const wikiPrefix = `${vaultRoot}/wiki/`
+    const rawPrefix = `${vaultRoot}/raw/`
+    const memoryPath = `${vaultRoot}/MEMORY.md`
+    for (const entry of vault.entries ?? []) {
+      if (entry.path === memoryPath || entry.path.endsWith('/MEMORY.md')) {
+        counts.memory += 1
+      } else if (entry.path.startsWith(notesPrefix)) {
+        counts.notes += 1
+      } else if (entry.path.startsWith(wikiPrefix)) {
+        counts.wiki += 1
+      } else if (entry.path.startsWith(rawPrefix)) {
+        counts.raw += 1
+      }
+    }
+    return counts
+  }, [vault.entries, resolvedPath])
+
+  // PR 42: Run Dream from empty workspace — focus the DreamPanel's
+  // Run Dream button + scroll into view. We don't directly call
+  // dreamvault_run because the DreamPanel owns the run state
+  // (output display, error UI from PR 34/41). The empty editor's
+  // button is an "affordance jump" — clicking it lands the user in
+  // DreamPanel ready to click Run Dream for real.
+  const handleFocusDreamPanel = useCallback(() => {
+    if (typeof document === 'undefined') return
+    const runButton = document.querySelector<HTMLButtonElement>(
+      'button[data-testid="run-dream-button"]',
+    )
+    if (!runButton) return
+    runButton.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    runButton.focus()
+  }, [])
   const handleAiWorkspaceWindowOpenNote = notes.handleNavigateWikilink
   const {
     handleAgentFileCreated: handleAiWorkspaceWindowFileCreated,
@@ -1682,6 +1724,10 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
               aiWorkspaceSurface={DREAMFORGE_SLIM_MODE ? undefined : aiWorkspaceSurface}
               vaultPath={activeEditorVaultPath}
               vaultPaths={writableVaultPaths}
+              // PR 42: empty workspace summary — show user where they are
+              workspaceCounts={workspaceCounts}
+              onOpenMemory={handleOpenMemory}
+              onRunDream={handleFocusDreamPanel}
               noteList={aiNoteList}
               noteListFilter={aiNoteListFilter}
               onToggleFavorite={activeDeletedFile ? undefined : entryActions.handleToggleFavorite}

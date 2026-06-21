@@ -15,9 +15,9 @@ import { ResizeHandle } from './ResizeHandle'
 import { useDiffMode, type CommitDiffRequest } from '../hooks/useDiffMode'
 import { useEditorFocus } from '../hooks/useEditorFocus'
 import { useDragRegion } from '../hooks/useDragRegion'
-import { formatShortcutDisplay } from '../hooks/appCommandCatalog'
 import { EditorRightPanel } from './EditorRightPanel'
 import { EditorContent } from './EditorContent'
+import { Button } from './ui/button'
 import { EditorMemoryProbe } from './EditorMemoryProbe'
 import { FilePreview } from './FilePreview'
 import { schema } from './editorSchema'
@@ -83,6 +83,12 @@ interface EditorProps {
   aiWorkspaceSurface?: ReactNode
   vaultPath?: string
   vaultPaths?: string[]
+  /** PR 42: counts for the empty workspace summary (Notes / Wiki / Memory / Raw). */
+  workspaceCounts?: { notes: number; wiki: number; memory: number; raw: number }
+  /** PR 42: jump to MEMORY.md from the empty workspace. */
+  onOpenMemory?: () => void
+  /** PR 42: focus + scroll the DreamPanel's Run Dream button. */
+  onRunDream?: () => void
   noteList?: NoteListItem[]
   noteListFilter?: { type: string | null; query: string }
   onToggleFavorite?: (path: string) => void
@@ -167,11 +173,23 @@ function useEditorModeExclusion({
   return { handleToggleDiffExclusive, handleToggleRawExclusive }
 }
 
-function EditorEmptyState({ locale = 'en' }: { locale?: AppLocale }) {
+function EditorEmptyState({
+  locale = 'en',
+  vaultPath,
+  workspaceCounts,
+  onCreateNote,
+  onOpenMemory,
+  onRunDream,
+}: {
+  locale?: AppLocale
+  vaultPath?: string
+  workspaceCounts?: { notes: number; wiki: number; memory: number; raw: number }
+  onCreateNote?: () => void
+  onOpenMemory?: () => void
+  onRunDream?: () => void
+}) {
   const breadcrumbBarHeight = 52
   const { onMouseDown } = useDragRegion()
-  const quickOpenShortcut = formatShortcutDisplay({ display: '⌘P / ⌘O' })
-  const newNoteShortcut = formatShortcutDisplay({ display: '⌘N' })
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -183,9 +201,54 @@ function EditorEmptyState({ locale = 'en' }: { locale?: AppLocale }) {
         onMouseDown={onMouseDown}
         style={{ height: breadcrumbBarHeight }}
       />
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
-        <p className="m-0 text-[15px]">{translate(locale, 'editor.empty.selectNote')}</p>
-        <span className="text-xs text-muted-foreground">{translate(locale, 'editor.empty.shortcuts', { quickOpen: quickOpenShortcut, newNote: newNoteShortcut })}</span>
+      {/* PR 42: empty workspace summary card — replaces the v0.5
+          "Select a note" hint with a more actionable view that
+          (a) shows the user where they are (vault path), (b) gives
+          them a sense of the vault's contents (Notes / Wiki / Memory /
+          Raw counts), and (c) offers 3 executable entry points so the
+          first-run experience is "what do I click" instead of "where
+          do I start". NOT a landing page or tutorial — just 3 buttons. */}
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+        <div className="space-y-2">
+          <h2 className="m-0 text-base font-medium text-foreground">
+            {translate(locale, 'editor.workspace.title')}
+          </h2>
+          {vaultPath ? (
+            <p className="m-0 text-xs text-muted-foreground">
+              {translate(locale, 'editor.workspace.vaultPath', { path: vaultPath })}
+            </p>
+          ) : null}
+          {workspaceCounts ? (
+            <p className="m-0 text-xs text-muted-foreground">
+              {translate(locale, 'editor.workspace.counts', {
+                notes: workspaceCounts.notes,
+                wiki: workspaceCounts.wiki,
+                memory: workspaceCounts.memory,
+                raw: workspaceCounts.raw,
+              })}
+            </p>
+          ) : null}
+          <p className="m-0 pt-1 text-xs text-muted-foreground">
+            {translate(locale, 'editor.workspace.hint')}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {onCreateNote ? (
+            <Button type="button" size="sm" variant="default" onClick={onCreateNote}>
+              {translate(locale, 'editor.workspace.action.newNote')}
+            </Button>
+          ) : null}
+          {onOpenMemory ? (
+            <Button type="button" size="sm" variant="outline" onClick={onOpenMemory}>
+              {translate(locale, 'editor.workspace.action.openMemory')}
+            </Button>
+          ) : null}
+          {onRunDream ? (
+            <Button type="button" size="sm" variant="outline" onClick={onRunDream}>
+              {translate(locale, 'editor.workspace.action.runDream')}
+            </Button>
+          ) : null}
+        </div>
       </div>
     </div>
   )
@@ -344,6 +407,14 @@ function EditorLayout({
   rawMode,
   handleToggleRawExclusive,
   onContentChange,
+  // PR 42: empty workspace summary props (passed through from
+  // buildEditorLayoutProps via ...props spread, then destructured
+  // here so the JSX can reference them directly). vaultPath is
+  // already destructured further down in this same list.
+  workspaceCounts,
+  onCreateNote,
+  onOpenMemory,
+  onRunDream,
   onSave,
   activeStatus,
   showDiffToggle,
@@ -442,6 +513,11 @@ function EditorLayout({
   vaultPaths?: string[]
   rawModeContent: string | null
   findRequest?: RawEditorFindRequest | null
+  // PR 42: empty workspace summary props
+  workspaceCounts?: { notes: number; wiki: number; memory: number; raw: number }
+  onCreateNote?: () => void
+  onOpenMemory?: () => void
+  onRunDream?: () => void
   rawLatestContentRef: React.MutableRefObject<string | null>
   onRenameFilename?: (path: string, newFilenameStem: string) => void
   noteWidth?: NoteWidthMode
@@ -480,7 +556,14 @@ function EditorLayout({
     <div className="editor flex flex-col min-h-0 overflow-hidden bg-background text-foreground">
       <div className="relative flex flex-1 min-h-0">
         {showEmptyState
-          ? <EditorEmptyState locale={locale} />
+          ? <EditorEmptyState
+              locale={locale}
+              vaultPath={vaultPath}
+              workspaceCounts={workspaceCounts}
+              onCreateNote={onCreateNote}
+              onOpenMemory={onOpenMemory}
+              onRunDream={onRunDream}
+            />
           : activeBinaryTab
             ? (
                 <FilePreview
@@ -587,7 +670,12 @@ function EditorLayout({
 }
 
 type EditorRuntime = ReturnType<typeof useEditorSetup>
-type EditorLayoutProps = Parameters<typeof EditorLayout>[0]
+// PR 42: EditorLayoutProps = EditorProps (the full props shape) +
+// runtime fields, plus findRequest (which buildEditorLayoutProps
+// passes explicitly but is not in EditorProps).
+type EditorLayoutProps = EditorProps & EditorRuntime & {
+  findRequest: RawEditorFindRequest | null
+}
 
 function buildEditorLayoutProps(
   props: EditorProps,

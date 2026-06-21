@@ -153,6 +153,10 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettings
             size="sm"
             onClick={() => runCommand('dreamvault_run')}
             disabled={isBusy}
+            // PR 42: empty workspace's "Run Dream" action button focuses
+            // this button via the testid. Do not rename without updating
+            // App.tsx's handleFocusDreamPanel selector.
+            data-testid="run-dream-button"
             className="w-full"
           >
             Run Dream

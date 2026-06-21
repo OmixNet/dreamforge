@@ -1,7 +1,6 @@
 import { render as rtlRender, screen, fireEvent, act, within } from '@testing-library/react'
 import type { ComponentProps, PropsWithChildren, ReactElement } from 'react'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
-import { formatShortcutDisplay } from '../hooks/appCommandCatalog'
 import { RUNTIME_STYLE_NONCE } from '../lib/runtimeStyleNonce'
 
 Object.defineProperty(window, 'matchMedia', {
@@ -304,14 +303,35 @@ describe('Editor', () => {
   })
 
   it('shows empty state when no tabs are open', () => {
-    const quickOpenHint = formatShortcutDisplay({ display: '⌘P / ⌘O' })
-    const newNoteHint = formatShortcutDisplay({ display: '⌘N' })
-    const { container } = renderEditor()
-    expect(screen.getByText('Select a note to start editing')).toBeInTheDocument()
-    const shortcutHint = Array.from(container.querySelectorAll('span.text-xs.text-muted-foreground'))
-      .find((element) => element.textContent === `${quickOpenHint} to search · ${newNoteHint} to create`)
+    const onCreateNote = vi.fn()
+    const onOpenMemory = vi.fn()
+    const onRunDream = vi.fn()
+    const { container } = renderEditor({
+      onCreateNote,
+      onOpenMemory,
+      onRunDream,
+      workspaceCounts: { notes: 3, wiki: 2, memory: 1, raw: 4 },
+      vaultPath: '/tmp/test-vault',
+    })
+    // PR 42: empty state now shows a workspace summary card with
+    // vault path + counts + 3 action buttons (New note / Open MEMORY.md
+    // / Run Dream) instead of the old "Select a note" hint.
+    expect(screen.getByText('Workspace')).toBeInTheDocument()
+    expect(screen.getByText('Vault: /tmp/test-vault')).toBeInTheDocument()
+    expect(screen.getByText('3 notes · 2 wiki pages · 1 memory · 4 raw')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'New note' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open MEMORY.md' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Run Dream' })).toBeInTheDocument()
+    // The drag region test below still applies.
+    expect(container.querySelector('[data-testid="editor-empty-state-drag-region"]')).not.toBeNull()
 
-    expect(shortcutHint).toBeInTheDocument()
+    // Buttons wire to the callbacks passed in.
+    fireEvent.click(screen.getByRole('button', { name: 'New note' }))
+    expect(onCreateNote).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Open MEMORY.md' }))
+    expect(onOpenMemory).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+    expect(onRunDream).toHaveBeenCalledTimes(1)
   })
 
   it('renders an invisible drag region in the empty state', () => {
