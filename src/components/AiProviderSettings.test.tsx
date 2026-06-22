@@ -795,4 +795,114 @@ describe('AiProviderSettings', () => {
     expect(en['settings.aiProviders.useThis']).toBeTypeOf('string')
     expect(en['settings.aiProviders.addKeyFirst']).toBeTypeOf('string')
   })
+
+  // -- PR 44: dev/test-only escape hatch for the Keychain-missing UX --
+
+  it('PR 44: dreamforge.dev.forceKeychainMissing flag overrides Keychain poll — Use this is disabled + addKeyFirst hint appears', async () => {
+    // Set the dev/test-only flag. This is the same flag a Playwright
+    // setup or DevTools session would set to trigger the disabled UX
+    // without deleting a real Keychain item. Mock the IPC to return
+    // configured:true so we can prove the FLAG wins, not the mock.
+    window.localStorage.setItem('dreamforge.dev.forceKeychainMissing', '1')
+    vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+      if (cmd === 'has_ai_model_provider_api_key') {
+        // Real Keychain would say "configured"; the flag must override.
+        return { provider_id: 'openrouter-pending', configured: true }
+      }
+      return null
+    })
+
+    const providers: AiModelProvider[] = [
+      {
+        id: 'openrouter-active',
+        kind: 'open_router',
+        name: 'OpenRouter active',
+        base_url: 'https://openrouter.ai/api/v1',
+        api_key_storage: 'env',
+        api_key_env_var: 'OPENROUTER_API_KEY',
+        headers: null,
+        models: [{ id: 'anthropic/claude-sonnet-4.5', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+      {
+        id: 'openrouter-pending',
+        kind: 'open_router',
+        name: 'OpenRouter pending',
+        base_url: 'https://openrouter.ai/api/v1',
+        api_key_storage: 'local_file',
+        api_key_env_var: 'OPENROUTER_API_KEY',
+        headers: null,
+        models: [{ id: 'anthropic/claude-sonnet-4.5', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+    ]
+    window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter-active')
+    window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'OPENROUTER_API_KEY')
+
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={providers}
+        onChange={() => {}}
+      />,
+    )
+
+    // The flag forces the local_file row to "not configured", so
+    // Use this on the pending row must be disabled + addKeyFirst hint
+    // must appear — DESPITE the IPC mock saying configured:true.
+    const useThisButtons = await screen.findAllByRole('button', { name: /settings\.aiProviders\.useThis/ })
+    expect(useThisButtons).toHaveLength(1)
+    expect(useThisButtons[0]).toBeDisabled()
+    expect(screen.getByText(/settings\.aiProviders\.addKeyFirst/)).toBeInTheDocument()
+  })
+
+  it('PR 44: when the flag is unset, the IPC mock result is the source of truth (configured:true → Use this enabled)', async () => {
+    // Flag is NOT set (cleared in afterEach). Mock returns configured:true.
+    // Without the override, the row should treat itself as configured and
+    // the Use this button should be enabled.
+    vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+      if (cmd === 'has_ai_model_provider_api_key') {
+        return { provider_id: 'openrouter-pending', configured: true }
+      }
+      return null
+    })
+
+    const providers: AiModelProvider[] = [
+      {
+        id: 'openrouter-active',
+        kind: 'open_router',
+        name: 'OpenRouter active',
+        base_url: 'https://openrouter.ai/api/v1',
+        api_key_storage: 'env',
+        api_key_env_var: 'OPENROUTER_API_KEY',
+        headers: null,
+        models: [{ id: 'anthropic/claude-sonnet-4.5', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+      {
+        id: 'openrouter-pending',
+        kind: 'open_router',
+        name: 'OpenRouter pending',
+        base_url: 'https://openrouter.ai/api/v1',
+        api_key_storage: 'local_file',
+        api_key_env_var: 'OPENROUTER_API_KEY',
+        headers: null,
+        models: [{ id: 'anthropic/claude-sonnet-4.5', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+    ]
+    window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter-active')
+    window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'OPENROUTER_API_KEY')
+
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={providers}
+        onChange={() => {}}
+      />,
+    )
+
+    const useThisButtons = await screen.findAllByRole('button', { name: /settings\.aiProviders\.useThis/ })
+    expect(useThisButtons).toHaveLength(1)
+    expect(useThisButtons[0]).toBeEnabled()
+    expect(screen.queryByText(/settings\.aiProviders\.addKeyFirst/)).not.toBeInTheDocument()
+  })
 })

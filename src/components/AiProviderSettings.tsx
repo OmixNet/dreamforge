@@ -68,6 +68,21 @@ function clearActiveLlmApiKey(): void {
   writeLlmProviderKind('')
 }
 
+// PR 44: dev/test-only escape hatch for the "local_file + key
+// missing" UX. Setting this localStorage flag (e.g. via DevTools or
+// a Playwright setup) makes AiProviderSettings treat all local_file
+// providers as Keychain-not-configured, so the "Use this disabled +
+// Add API key first" UX is testable without deleting a real
+// Keychain item (which is high risk on production systems).
+//
+// Product code never writes this flag — it is a pure test fixture.
+// The "dreamforge.dev." prefix is the convention for dev-only
+// localStorage entries; product code can grep for that prefix to
+// audit. The flag is checked once per useEffect run, no
+// subscription / no listener, so toggling it at runtime requires a
+// remount of the Settings panel (acceptable for the dev workflow).
+const DEV_FORCE_KEYCHAIN_MISSING_STORAGE_KEY = 'dreamforge.dev.forceKeychainMissing'
+
 type Translate = ReturnType<typeof createTranslator>
 type ProviderMode = 'local' | 'api'
 
@@ -451,9 +466,18 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
           .filter((provider) => provider.api_key_storage === 'local_file')
           .map(async (provider) => [provider.id, await hasAiModelProviderApiKey(provider.id)] as const),
       )
-      if (!cancelled) {
-        setKeyConfiguredByProviderId(new Map(entries))
-      }
+      if (cancelled) return
+      // PR 44: dev/test-only override. If the flag is set, treat all
+      // local_file providers as not configured — independent of what
+      // the real Keychain reports. The flag is a pure test fixture;
+      // product code never writes it. Reading the flag at effect
+      // time (not in a subscription) is fine because the dev workflow
+      // is "set flag → reload Settings", not "toggle flag live".
+      const forceMissing = window.localStorage.getItem(DEV_FORCE_KEYCHAIN_MISSING_STORAGE_KEY) === '1'
+      const finalEntries = forceMissing
+        ? entries.map(([id]) => [id, false] as const)
+        : entries
+      setKeyConfiguredByProviderId(new Map(finalEntries))
     })()
     return () => {
       cancelled = true
