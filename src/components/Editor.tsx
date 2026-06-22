@@ -89,6 +89,12 @@ interface EditorProps {
   onOpenMemory?: () => void
   /** PR 42: focus + scroll the DreamPanel's Run Dream button. */
   onRunDream?: () => void
+  /** PR 47: up to 3 quick-pick entries to surface in the empty state
+   *  (latest note + latest raw + MEMORY.md). Parent computes this
+   *  from the vault entries so the editor stays a pure renderer. */
+  recentEntries?: VaultEntry[]
+  /** PR 47: open an entry from the empty-state Recent quick-pick. */
+  onOpenEntry?: (entry: VaultEntry) => void
   noteList?: NoteListItem[]
   noteListFilter?: { type: string | null; query: string }
   onToggleFavorite?: (path: string) => void
@@ -177,6 +183,8 @@ function EditorEmptyState({
   locale = 'en',
   vaultPath,
   workspaceCounts,
+  recentEntries,
+  onOpenEntry,
   onCreateNote,
   onOpenMemory,
   onRunDream,
@@ -184,6 +192,8 @@ function EditorEmptyState({
   locale?: AppLocale
   vaultPath?: string
   workspaceCounts?: { notes: number; wiki: number; memory: number; raw: number }
+  recentEntries?: VaultEntry[]
+  onOpenEntry?: (entry: VaultEntry) => void
   onCreateNote?: () => void
   onOpenMemory?: () => void
   onRunDream?: () => void
@@ -207,7 +217,15 @@ function EditorEmptyState({
           them a sense of the vault's contents (Notes / Wiki / Memory /
           Raw counts), and (c) offers 3 executable entry points so the
           first-run experience is "what do I click" instead of "where
-          do I start". NOT a landing page or tutorial — just 3 buttons. */}
+          do I start". NOT a landing page or tutorial — just 3 buttons.
+
+          PR 47: extend the "what do I click" affordance with up to
+          3 recent quick-pick entries (latest note + latest raw +
+          MEMORY.md). Computed and filtered by the parent (App.tsx)
+          so this component stays a pure renderer. The Recent section
+          hides itself when there's nothing to show — fresh install
+          never displays a placeholder, preserving the no-landing-
+          page invariant. */}
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
         <div className="space-y-2">
           <h2 className="m-0 text-base font-medium text-foreground">
@@ -232,6 +250,37 @@ function EditorEmptyState({
             {translate(locale, 'editor.workspace.hint')}
           </p>
         </div>
+        {/* PR 47: Recent quick-pick rows. Up to 3 entries, each
+            clickable. The kind label (notes/raw/memory) renders
+            before the filename to mirror the ProviderList PR 40
+            pattern so the user can tell at a glance which section
+            the entry belongs to. */}
+        {recentEntries && recentEntries.length > 0 ? (
+          <div
+            className="w-full max-w-sm space-y-1"
+            data-testid="editor-empty-state-recent"
+          >
+            <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              {translate(locale, 'editor.workspace.recent')}
+            </div>
+                {recentEntries.map((entry) => {
+                  const kind = recentEntryKind(entry)
+                  return (
+                    <button
+                      type="button"
+                      key={entry.path}
+                      onClick={() => onOpenEntry?.(entry)}
+                      className="flex w-full items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 text-left text-xs hover:bg-muted/40"
+                    >
+                      <span className="shrink-0 rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {kind}
+                      </span>
+                      <span className="truncate text-foreground">{entry.filename}</span>
+                    </button>
+                  )
+                })}
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center justify-center gap-2">
           {onCreateNote ? (
             <Button type="button" size="sm" variant="default" onClick={() => onCreateNote()}>
@@ -252,6 +301,17 @@ function EditorEmptyState({
       </div>
     </div>
   )
+}
+
+// PR 47: classify a recent entry for the empty-state quick-pick badge.
+// Returns "MEMORY" / "RAW" / "NOTE" based on which subfolder the entry
+// lives in. Filename check catches MEMORY.md (root file); the raw/ vs
+// notes/ subfolder check disambiguates the two. Anything else is NOTE
+// (a user-created root file) so the badge still has a label.
+function recentEntryKind(entry: VaultEntry): 'MEMORY' | 'RAW' | 'NOTE' {
+  if (entry.filename === 'MEMORY.md') return 'MEMORY'
+  if (entry.path.includes('/raw/')) return 'RAW'
+  return 'NOTE'
 }
 
 interface EditorSetupParams {
@@ -415,6 +475,8 @@ function EditorLayout({
   onCreateNote,
   onOpenMemory,
   onRunDream,
+  recentEntries,
+  onOpenEntry,
   onSave,
   activeStatus,
   showDiffToggle,
@@ -518,6 +580,9 @@ function EditorLayout({
   onCreateNote?: () => void
   onOpenMemory?: () => void
   onRunDream?: () => void
+  // PR 47: Recent quick-pick entries + click handler
+  recentEntries?: VaultEntry[]
+  onOpenEntry?: (entry: VaultEntry) => void
   rawLatestContentRef: React.MutableRefObject<string | null>
   onRenameFilename?: (path: string, newFilenameStem: string) => void
   noteWidth?: NoteWidthMode
@@ -560,6 +625,8 @@ function EditorLayout({
               locale={locale}
               vaultPath={vaultPath}
               workspaceCounts={workspaceCounts}
+              recentEntries={recentEntries}
+              onOpenEntry={onOpenEntry}
               onCreateNote={onCreateNote}
               onOpenMemory={onOpenMemory}
               onRunDream={onRunDream}

@@ -318,7 +318,10 @@ describe('Editor', () => {
     // / Run Dream) instead of the old "Select a note" hint.
     expect(screen.getByText('Workspace')).toBeInTheDocument()
     expect(screen.getByText('Vault: /tmp/test-vault')).toBeInTheDocument()
-    expect(screen.getByText('3 notes · 2 wiki pages · 1 memory · 4 raw')).toBeInTheDocument()
+    // PR 47: raw count is now labeled "candidates" (matches the
+    // dream CLI term for unprocessed raw entries that Run Dream
+    // would pick up). Wiki is the "wiki pages" count from PR 42.
+    expect(screen.getByText('3 notes · 2 wiki pages · 1 memory · 4 candidates')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'New note' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Open MEMORY.md' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Run Dream' })).toBeInTheDocument()
@@ -332,6 +335,132 @@ describe('Editor', () => {
     expect(onOpenMemory).toHaveBeenCalledWith()
     fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
     expect(onRunDream).toHaveBeenCalledWith()
+  })
+
+  // -- PR 47: empty editor productization — recent quick-pick entries --
+
+  it('PR 47: empty state hides the Recent section when no entries are passed', () => {
+    renderEditor({
+      workspaceCounts: { notes: 0, wiki: 0, memory: 0, raw: 0 },
+      vaultPath: '/tmp/empty-vault',
+    })
+    // The Recent section header is only rendered when recentEntries
+    // has at least 1 entry. A fresh vault (no notes / no raw / no
+    // MEMORY.md) should not show "Recent" because there's nothing to
+    // open — landing-page-avoidance invariant.
+    expect(screen.queryByText(/editor\.workspace\.recent/)).not.toBeInTheDocument()
+  })
+
+  it('PR 47: empty state renders up to 3 Recent quick-pick entries with kind labels', () => {
+    const onOpenEntry = vi.fn()
+    const recentEntries: VaultEntry[] = [
+      {
+        path: '/tmp/vault/notes/latest.md',
+        filename: 'latest.md',
+        title: 'Latest note',
+        isA: null,
+        aliases: [],
+        belongsTo: [],
+        relatedTo: [],
+        status: null,
+        archived: false,
+        modifiedAt: 1700000000000,
+        createdAt: 1690000000000,
+        fileSize: 100,
+        snippet: '',
+        wordCount: 10,
+        relationships: {},
+        icon: null,
+        color: null,
+      },
+      {
+        path: '/tmp/vault/raw/2026-06-22-foo.md',
+        filename: '2026-06-22-foo.md',
+        title: 'Raw entry',
+        isA: null,
+        aliases: [],
+        belongsTo: [],
+        relatedTo: [],
+        status: null,
+        archived: false,
+        modifiedAt: 1699999999000,
+        createdAt: 1699999999000,
+        fileSize: 50,
+        snippet: '',
+        wordCount: 5,
+        relationships: {},
+        icon: null,
+        color: null,
+      },
+      {
+        path: '/tmp/vault/MEMORY.md',
+        filename: 'MEMORY.md',
+        title: 'MEMORY.md',
+        isA: null,
+        aliases: [],
+        belongsTo: [],
+        relatedTo: [],
+        status: null,
+        archived: false,
+        modifiedAt: 1690000000000,
+        createdAt: 1690000000000,
+        fileSize: 200,
+        snippet: '',
+        wordCount: 50,
+        relationships: {},
+        icon: null,
+        color: null,
+      },
+    ]
+    renderEditor({
+      recentEntries,
+      onOpenEntry,
+      workspaceCounts: { notes: 5, wiki: 1, memory: 1, raw: 2 },
+      vaultPath: '/tmp/vault',
+    })
+
+    // The Recent section header is rendered (en.json value "Recent"
+    // because the test uses the default en locale).
+    expect(screen.getByText(/^Recent$/)).toBeInTheDocument()
+    // All 3 entries render with their filenames.
+    expect(screen.getByText('latest.md')).toBeInTheDocument()
+    expect(screen.getByText('2026-06-22-foo.md')).toBeInTheDocument()
+    expect(screen.getByText('MEMORY.md')).toBeInTheDocument()
+
+    // Clicking an entry fires onOpenEntry with the entry's path.
+    fireEvent.click(screen.getByText('latest.md'))
+    expect(onOpenEntry).toHaveBeenCalledWith(recentEntries[0])
+    expect(onOpenEntry).toHaveBeenCalledTimes(1)
+  })
+
+  it('PR 47: clicking a Recent entry fires onOpenEntry with that entry (one click = one open)', () => {
+    const onOpenEntry = vi.fn()
+    const recentEntries: VaultEntry[] = [
+      {
+        path: '/tmp/vault/MEMORY.md',
+        filename: 'MEMORY.md',
+        title: 'MEMORY.md',
+        isA: null,
+        aliases: [],
+        belongsTo: [],
+        relatedTo: [],
+        status: null,
+        archived: false,
+        modifiedAt: 1,
+        createdAt: 1,
+        fileSize: 1,
+        snippet: '',
+        wordCount: 1,
+        relationships: {},
+        icon: null,
+        color: null,
+      },
+    ]
+    renderEditor({ recentEntries, onOpenEntry, vaultPath: '/tmp/vault' })
+
+    fireEvent.click(screen.getByText('MEMORY.md'))
+    expect(onOpenEntry).toHaveBeenCalledTimes(1)
+    expect(onOpenEntry).toHaveBeenCalledWith(recentEntries[0])
   })
 
   it('renders an invisible drag region in the empty state', () => {

@@ -736,6 +736,32 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
     runButton.scrollIntoView({ behavior: 'smooth', block: 'center' })
     runButton.focus()
   }, [])
+  // PR 47: up to 3 quick-pick entries for the empty workspace card.
+  // Order: latest note → latest raw → MEMORY.md (so the user sees
+  // their most recent work first, then the engine's source feed,
+  // then the engine's output). All three are read from `vault.entries`
+  // (the full set) so archived / filtered-out entries don't sneak
+  // into the launcher. The Recent section hides itself when the
+  // result is empty (preserves the no-landing-page invariant).
+  const recentEntries = useMemo<VaultEntry[]>(() => {
+    if (!vault.entries) return []
+    const vaultRoot = resolvedPath.replace(/\/+$/, '')
+    const notesPrefix = `${vaultRoot}/notes/`
+    const rawPrefix = `${vaultRoot}/raw/`
+    const memoryPath = `${vaultRoot}/MEMORY.md`
+    const notesLatest = vault.entries
+      .filter((entry) => entry.path.startsWith(notesPrefix) && !entry.archived)
+      .sort((a, b) => (b.modifiedAt ?? 0) - (a.modifiedAt ?? 0))[0]
+    const rawLatest = vault.entries
+      .filter((entry) => entry.path.startsWith(rawPrefix) && !entry.archived)
+      .sort((a, b) => (b.modifiedAt ?? 0) - (a.modifiedAt ?? 0))[0]
+    const memoryEntry = vault.entries.find((entry) => entry.path === memoryPath)
+    const result: VaultEntry[] = []
+    if (notesLatest) result.push(notesLatest)
+    if (rawLatest) result.push(rawLatest)
+    if (memoryEntry) result.push(memoryEntry)
+    return result.slice(0, 3)
+  }, [vault.entries, resolvedPath])
   const handleAiWorkspaceWindowOpenNote = notes.handleNavigateWikilink
   const {
     handleAgentFileCreated: handleAiWorkspaceWindowFileCreated,
@@ -1728,6 +1754,12 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
               workspaceCounts={workspaceCounts}
               onOpenMemory={handleOpenMemory}
               onRunDream={handleFocusDreamPanel}
+              // PR 47: recent quick-pick entries + click-to-open.
+              // handleSelectNote is the same callback Sidebar + QuickOpen
+              // use, so clicking a recent entry behaves identically to
+              // picking it from the sidebar (no new code path).
+              recentEntries={recentEntries}
+              onOpenEntry={notes.handleSelectNote}
               noteList={aiNoteList}
               noteListFilter={aiNoteListFilter}
               onToggleFavorite={activeDeletedFile ? undefined : entryActions.handleToggleFavorite}
