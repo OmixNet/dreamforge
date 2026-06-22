@@ -231,17 +231,18 @@ describe('DreamPanel', () => {
     await screen.findByText(/status ok/)
     fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
 
-    // PR 34 + PR 41: short message is the user-facing summary; raw
+    // PR 34 + PR 41 + PR 46: short message is the user-facing summary; raw
     // stderr (which mentions the env var hint) is inside a
     // collapsed <details> block. The short message is what the user
     // sees by default; the raw body requires an explicit click.
-    expect(await screen.findByText(/No API key configured/)).toBeInTheDocument()
+    expect(await screen.findByText(/API key missing or not saved/)).toBeInTheDocument()
     // Raw details are wrapped in <details>, default closed.
     const details = document.querySelector('details')
     expect(details).not.toBeNull()
     expect(details?.hasAttribute('open')).toBe(false)
-    // Fix action button is rendered
-    const button = screen.getByRole('button', { name: /Open Settings → AI/ })
+    // Fix action button is rendered (PR 46: label changed from
+    // "Open Settings → AI" to "Open Settings → API models")
+    const button = screen.getByRole('button', { name: /Open Settings \u2192 API models/ })
     fireEvent.click(button)
     expect(onOpenSettingsAi).toHaveBeenCalledTimes(1)
   })
@@ -258,10 +259,10 @@ describe('DreamPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
 
     // PR 41: query the <p> short message specifically (not the raw
-    // body inside <details>). Use the user-facing copy ("The request
-    // timed out") which is the constant shortMessage for the timeout
-    // category, distinct from the raw stderr wording.
-    expect(await screen.findByText(/^The request timed out/i)).toBeInTheDocument()
+    // body inside <details>). PR 46: copy is now "Request timed out"
+    // (was "The request timed out. Try again." — shorter for less
+    // visual weight; the Retry button is the action).
+    expect(await screen.findByText(/^Request timed out/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
   })
 
@@ -280,13 +281,13 @@ describe('DreamPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
 
     // Wait for the error view to render
-    await screen.findByText(/Could not reach the provider/)
+    await screen.findByText(/Network or proxy unreachable/)
 
     // The short message (the user-facing copy that the user sees by
     // default) must NEVER contain the apiKey value. The apiKey value
     // is in the raw body, but the raw body is wrapped in a collapsed
     // <details> element that the user has to explicitly expand.
-    const shortMessage = screen.getByText(/Could not reach the provider/)
+    const shortMessage = screen.getByText(/Network or proxy unreachable/)
     expect(shortMessage.textContent).not.toContain(SECRET)
 
     // The <details> element is closed by default — the user does NOT
@@ -379,11 +380,13 @@ describe('DreamPanel', () => {
     await screen.findByText(/status ok/)
     fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
 
-    // The same shortMessage ("The API key was rejected.") appears
-    // regardless of provider prefix — the UI copy is provider-neutral.
-    expect(await screen.findByText(/API key was rejected/)).toBeInTheDocument()
-    // Same fix action button label.
-    expect(screen.getByRole('button', { name: /Open Settings → AI/ })).toBeInTheDocument()
+    // PR 46: the refreshed shortMessage ("API key missing or not saved")
+    // appears regardless of provider prefix — the UI copy is
+    // provider-neutral. missing-key and auth-failed share the same
+    // copy because the user-facing fix is identical.
+    expect(await screen.findByText(/API key missing or not saved/)).toBeInTheDocument()
+    // PR 46: button label refreshed to "Open Settings → API models"
+    expect(screen.getByRole('button', { name: /Open Settings \u2192 API models/ })).toBeInTheDocument()
   })
 
   it('PR 41: same error card for Gemini tag (cross-provider UI)', async () => {
@@ -397,7 +400,157 @@ describe('DreamPanel', () => {
     await screen.findByText(/status ok/)
     fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
 
-    expect(await screen.findByText(/model does not exist/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Open Settings → AI/ })).toBeInTheDocument()
+    // PR 46: copy refreshed to "Model ID not available"
+    expect(await screen.findByText(/Model ID not available/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Open Settings \u2192 API models/ })).toBeInTheDocument()
+  })
+
+  // -- PR 46: actionable error copy + base URL hint in network-failed --
+
+  it('PR 46: [OPENAI_MISSING_KEY] shortMessage is the new actionable "API key missing or not saved" copy', async () => {
+    vi.mocked(mockInvoke)
+      .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+      .mockRejectedValueOnce(
+        new Error('[OPENAI_MISSING_KEY] OpenAI-compatible missing API key'),
+      )
+    const onOpenSettingsAi = vi.fn()
+    render(<DreamPanel vaultPath="/tmp/vault" onOpenSettingsAi={onOpenSettingsAi} />)
+    await screen.findByText(/status ok/)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+    // PR 46: short message is the user-facing actionable copy, NOT
+    // a literal restatement of the Swift provider stderr.
+    expect(await screen.findByText(/API key missing or not saved/i)).toBeInTheDocument()
+    // Button label is now "Open Settings → API models" (more specific
+    // than "Open Settings → AI" — user lands on the API section).
+    const button = screen.getByRole('button', { name: /Open Settings \u2192 API models/ })
+    fireEvent.click(button)
+    expect(onOpenSettingsAi).toHaveBeenCalledTimes(1)
+  })
+
+  it('PR 46: [OPENAI_AUTH_FAILED] shares the same shortMessage as missing-key (user-facing fix is identical)', async () => {
+    vi.mocked(mockInvoke)
+      .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+      .mockRejectedValueOnce(
+        new Error('[OPENAI_AUTH_FAILED] OpenAI-compatible HTTP 401: invalid api key'),
+      )
+    const onOpenSettingsAi = vi.fn()
+    render(<DreamPanel vaultPath="/tmp/vault" onOpenSettingsAi={onOpenSettingsAi} />)
+    await screen.findByText(/status ok/)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+    // Same copy as missing-key — both route the user to Settings to
+    // check the API key. Avoiding two near-identical shortMessages
+    // (one per HTTP code) makes the UI consistent and predictable.
+    expect(await screen.findByText(/API key missing or not saved/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Open Settings \u2192 API models/ })).toBeInTheDocument()
+  })
+
+  it('PR 46: [OPENAI_MODEL_NOT_FOUND] shortMessage is "Model ID not available"', async () => {
+    vi.mocked(mockInvoke)
+      .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+      .mockRejectedValueOnce(
+        new Error('[OPENAI_MODEL_NOT_FOUND] OpenAI-compatible HTTP 404: model not found'),
+      )
+    const onOpenSettingsAi = vi.fn()
+    render(<DreamPanel vaultPath="/tmp/vault" onOpenSettingsAi={onOpenSettingsAi} />)
+    await screen.findByText(/status ok/)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+    expect(await screen.findByText(/Model ID not available/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Open Settings \u2192 API models/ })).toBeInTheDocument()
+  })
+
+  it('PR 46: [OPENAI_NETWORK_FAILED] shortMessage includes the base URL hint (most common cause of network errors)', async () => {
+    vi.mocked(mockInvoke)
+      .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+      .mockRejectedValueOnce(
+        new Error('[OPENAI_NETWORK_FAILED] OpenAI-compatible network failed: connection refused'),
+      )
+    render(<DreamPanel vaultPath="/tmp/vault" />)
+    await screen.findByText(/status ok/)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+    // PR 46: fold the base URL hint into the network-failed shortMessage
+    // because a wrong base URL is the #1 cause of network errors in
+    // practice (user types the full chat-completions URL or doubles the
+    // /v1 suffix). DreamVault Swift provider can't tell the difference
+    // from the error shape alone, so the hint lives in UI copy where
+    // the user actually reads it.
+    const shortMessage = await screen.findByText(/Network or proxy unreachable/i)
+    expect(shortMessage.textContent).toMatch(/Base URL/i)
+    expect(shortMessage.textContent).toMatch(/\/v1/i)
+    // Network errors get Retry, not "Open Settings" (most are transient
+    // or self-inflicted; the user retries after fixing the URL).
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+  })
+
+  it('PR 46: [OPENAI_TIMEOUT] shortMessage is "Request timed out"', async () => {
+    vi.mocked(mockInvoke)
+      .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+      .mockRejectedValueOnce(
+        new Error('[OPENAI_TIMEOUT] OpenAI-compatible URLError.timedOut'),
+      )
+    render(<DreamPanel vaultPath="/tmp/vault" />)
+    await screen.findByText(/status ok/)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+    expect(await screen.findByText(/^Request timed out/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+  })
+
+  it('PR 46: [OPENAI_MALFORMED] shortMessage is "Unexpected response from provider"', async () => {
+    vi.mocked(mockInvoke)
+      .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+      .mockRejectedValueOnce(
+        new Error('[OPENAI_MALFORMED] OpenAI-compatible bad response shape'),
+      )
+    render(<DreamPanel vaultPath="/tmp/vault" />)
+    await screen.findByText(/status ok/)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+    expect(await screen.findByText(/Unexpected response from provider/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+  })
+
+  it('PR 46: refresh of error copy preserves the security invariant (shortMessage never contains API key value)', async () => {
+    const SECRET = 'sk-or-v1-SECRET-LEAK-12345'
+    vi.mocked(mockInvoke)
+      .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+      .mockRejectedValueOnce(
+        new Error(`[OPENAI_NETWORK_FAILED] OpenAI-compatible network failed: ${SECRET}`),
+      )
+    render(<DreamPanel vaultPath="/tmp/vault" />)
+    await screen.findByText(/status ok/)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+    // The new shortMessage must not contain the secret even when the
+    // server echoes it back. The body (containing the secret) lives
+    // in a collapsed <details> by default.
+    const shortMessage = await screen.findByText(/Network or proxy unreachable/i)
+    expect(shortMessage.textContent).not.toContain(SECRET)
+    const details = document.querySelector('details')
+    expect(details).not.toBeNull()
+    expect(details?.hasAttribute('open')).toBe(false)
+  })
+
+  it('PR 46: cross-provider parity — Anthropic + Gemini share the same refreshed shortMessage copy', async () => {
+    for (const tag of ['ANTHROPIC_MISSING_KEY', 'GEMINI_NETWORK_FAILED']) {
+      // Reset mock between iterations
+      vi.mocked(mockInvoke).mockReset()
+      vi.mocked(mockInvoke)
+        .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+        .mockRejectedValueOnce(new Error(`[${tag}] provider error`))
+      const { unmount } = render(<DreamPanel vaultPath="/tmp/vault" />)
+      await screen.findByText(/status ok/)
+      fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+      if (tag === 'ANTHROPIC_MISSING_KEY') {
+        expect(await screen.findByText(/API key missing or not saved/i)).toBeInTheDocument()
+      } else {
+        // GEMINI_NETWORK_FAILED → same network-failed shortMessage
+        expect(await screen.findByText(/Network or proxy unreachable/i)).toBeInTheDocument()
+      }
+      unmount()
+    }
   })
 })

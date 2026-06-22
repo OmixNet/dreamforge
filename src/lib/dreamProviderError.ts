@@ -115,39 +115,50 @@ const TAG_TO_CATEGORY: ReadonlyArray<readonly [string, ProviderErrorCategory]> =
  * is English-only for v0.6, i18n parity for error strings deferred.
  */
 const PROVIDER_ERROR_MAP: Readonly<Record<ProviderErrorCategory, ProviderErrorInfo>> = {
+  // PR 46: refresh shortMessage copy to be more actionable.
+  // missing-key and auth-failed share the same user-facing copy
+  // because the fix is the same (re-check the API key in Settings).
+  // The category → fixActionLabel mapping is unchanged.
   'missing-key': {
     category: 'missing-key',
-    shortMessage: 'No API key configured for this provider.',
-    fixActionLabel: 'Open Settings → AI',
+    shortMessage: 'API key missing or not saved.',
+    fixActionLabel: 'Open Settings → API models',
     fixAction: 'open-settings-ai',
   },
   'auth-failed': {
     category: 'auth-failed',
-    shortMessage: 'The API key was rejected. Check it in Settings → AI.',
-    fixActionLabel: 'Open Settings → AI',
+    shortMessage: 'API key missing or not saved.',
+    fixActionLabel: 'Open Settings → API models',
     fixAction: 'open-settings-ai',
   },
   'model-not-found': {
     category: 'model-not-found',
-    shortMessage: 'The model does not exist on this provider.',
-    fixActionLabel: 'Open Settings → AI',
+    shortMessage: 'Model ID not available.',
+    fixActionLabel: 'Open Settings → API models',
     fixAction: 'open-settings-ai',
   },
   timeout: {
     category: 'timeout',
-    shortMessage: 'The request timed out. Try again.',
+    shortMessage: 'Request timed out.',
     fixActionLabel: 'Retry',
     fixAction: 'retry',
   },
   malformed: {
     category: 'malformed',
-    shortMessage: 'The provider returned an unexpected response.',
+    shortMessage: 'Unexpected response from provider.',
     fixActionLabel: 'Retry',
     fixAction: 'retry',
   },
+  // PR 46: fold the base URL hint into the network-failed shortMessage.
+  // A wrong base URL is the most common cause of network errors in
+  // practice (user types the full chat-completions URL or appends /v1
+  // twice — the dream CLI URL gotcha we documented at §42
+  // 606df99). DreamVault Swift provider can't tell a bad URL from a
+  // bad network from the error shape alone, so the hint lives in UI
+  // copy where the user actually reads it.
   'network-failed': {
     category: 'network-failed',
-    shortMessage: 'Could not reach the provider. Check your connection.',
+    shortMessage: 'Network or proxy unreachable. Check Base URL — don\u2019t repeat /v1.',
     fixActionLabel: 'Retry',
     fixAction: 'retry',
   },
