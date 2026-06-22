@@ -905,4 +905,87 @@ describe('AiProviderSettings', () => {
     expect(useThisButtons[0]).toBeEnabled()
     expect(screen.queryByText(/settings\.aiProviders\.addKeyFirst/)).not.toBeInTheDocument()
   })
+
+  // -- PR 45: Settings AI product closure — in-use summary + clearer copy --
+
+  it('PR 45: top "In use" summary renders with provider name + model id when an active provider is set', () => {
+    window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter-1')
+    window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'OPENROUTER_API_KEY')
+
+    const providers: AiModelProvider[] = [
+      {
+        id: 'openrouter-1',
+        kind: 'open_router',
+        name: 'OpenRouter',
+        base_url: 'https://openrouter.ai/api/v1',
+        api_key_storage: 'env',
+        api_key_env_var: 'OPENROUTER_API_KEY',
+        headers: null,
+        models: [{ id: 'openai/gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+    ]
+    render(
+      <AiProviderSettings
+        t={(k: string, params?: Record<string, string | number>) => {
+          // Mock the formatWith pattern the real translator uses:
+          // "{provider} · {model}" placeholders get substituted.
+          if (k === 'settings.aiProviders.currentConfig' && params) {
+            return `${k}|${params.provider}|${params.model}`
+          }
+          return k
+        }}
+        mode="api"
+        providers={providers}
+        onChange={() => {}}
+      />,
+    )
+
+    // The summary line shows up at the top of the form, above the
+    // ProviderList, in a font-medium line that names the live
+    // provider + model. The exact i18n string carries the
+    // {provider} and {model} placeholders — we just assert the
+    // summary key was invoked with the right params, not the
+    // localized format, so the test stays locale-agnostic.
+    expect(
+      screen.getByText(/settings\.aiProviders\.currentConfig\|OpenRouter\|openai\/gpt-4\.1-mini/),
+    ).toBeInTheDocument()
+  })
+
+  it('PR 45: top "In use" summary is hidden when no provider is active', () => {
+    // No active pre-seed. activeProviderId state defaults to null
+    // and the summary should not render.
+    const providers: AiModelProvider[] = [
+      {
+        id: 'openrouter-1',
+        kind: 'open_router',
+        name: 'OpenRouter',
+        base_url: 'https://openrouter.ai/api/v1',
+        api_key_storage: 'env',
+        api_key_env_var: 'OPENROUTER_API_KEY',
+        headers: null,
+        models: [{ id: 'openai/gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+    ]
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={providers}
+        onChange={() => {}}
+      />,
+    )
+
+    // The currentConfig key is NOT in the rendered DOM because the
+    // activeProviderId is null.
+    expect(screen.queryByText(/settings\.aiProviders\.currentConfig/)).not.toBeInTheDocument()
+  })
+
+  it('PR 45: i18n key "currentConfig" exists in en.json', async () => {
+    const en = (await import('../lib/locales/en.json')).default as Record<string, string>
+    expect(en['settings.aiProviders.currentConfig']).toBeTypeOf('string')
+    // Must reference both placeholders so a future translator
+    // doesn't drop one.
+    expect(en['settings.aiProviders.currentConfig']).toContain('{provider}')
+    expect(en['settings.aiProviders.currentConfig']).toContain('{model}')
+  })
 })

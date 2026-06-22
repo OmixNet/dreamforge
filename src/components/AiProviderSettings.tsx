@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import {
   DEFAULT_MODEL_CAPABILITIES,
   aiModelProviderCatalog,
@@ -429,6 +429,20 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
   const [activeProviderId, setActiveProviderId] = useState<string | null>(
     () => readActiveLlmApiKeyProviderId() || null,
   )
+  // PR 45: lookup the active provider + first model for the top
+  // "In use" summary line. Recomputed whenever the active pointer
+  // OR the providers list changes (useProvider adds / removes,
+  // removeProvider filters). Returns null when nothing is active
+  // (fresh install, just deleted the active one) so the summary
+  // line hides itself instead of showing a stale name.
+  const activeProviderConfig = useMemo(() => {
+    if (!activeProviderId) return null
+    const provider = providers.find((entry) => entry.id === activeProviderId)
+    if (!provider) return null
+    const model = provider.models[0]
+    if (!model) return null
+    return { provider, model }
+  }, [activeProviderId, providers])
   // v0.5 PR 26 P2c-1: per-provider Keychain status map. Populated by polling
   // `has_ai_model_provider_api_key` for each configured provider so the UI
   // can show "configured" vs "not set" without ever receiving the KEY VALUE.
@@ -563,6 +577,23 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
         <div className="text-sm font-medium text-foreground">{providerModeTitle(mode, t)}</div>
         <div className="mt-1 text-xs leading-5 text-muted-foreground">{providerModeDescription(mode, t)}</div>
       </div>
+      {/* PR 45: top "In use" summary — the one-line current runtime
+          config snapshot (provider name · model id). Hides itself
+          when nothing is active (fresh install or just deleted the
+          active one) so we never show a stale name. Sits above the
+          ProviderList so the user sees the live config at a glance
+          without scanning for the Active badge in the row list. */}
+      {activeProviderConfig ? (
+        <div
+          className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs font-medium text-foreground"
+          data-testid="ai-providers-in-use-summary"
+        >
+          {t('settings.aiProviders.currentConfig', {
+            provider: activeProviderConfig.provider.name,
+            model: activeProviderConfig.model.id,
+          })}
+        </div>
+      ) : null}
       <ProviderList
         t={t}
         mode={mode}
