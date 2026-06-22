@@ -957,3 +957,30 @@ PR 44-47 顺序 + scope (user 拍板 2026-06-22):
 总 PR 44-47 都遵循 v0.6.0 namespace 兼容层 (产品名 DreamX, 但 localStorage / Keychain / Rust / git 仍 dreamforge). 跟 §33 §34 §35 一致.
 
 ship / push 顺序 (per user "push before stacking" rule): PR 43 完整 verify 完先 push, 不堆 4 个 PR 等 user 验收. 一个 PR verify 完 push 完, 等 user signal 再开下一个.
+
+### §44 PR 44-47 close-out + OpenAI-compat re-test (2026-06-22) — SiliconFlow round 2
+
+PR 44 (`d03a071`) + PR 45 (`90abf3c`) + PR 46 (`da2be64`) + PR 47 (`fcf1e2b`) 全部 ship-ready (本地 ahead of origin 6 commits 等 user 决定 push 时机). 跨 22+23+2+23 files, +355+175+190+270 / -3+41+26+22 lines, test 3890 → 3911 (+21). 跟 §43 列的 5-step plan 完全对齐.
+
+PR 44 锁了 dev/test-only Keychain-missing override flag (`dreamforge.dev.forceKeychainMissing`), 跨 2 test 锁 invariant, 不暴露给普通用户.
+PR 45 把 "Active" / "Use this" 改成 "Used for Run Dream" / "Set as active" (en) / "用于运行 Dream" / "设为当前" (zh-CN) 等 20 locales, 加 "In use: {provider} · {model}" 顶部 summary 一行.
+PR 46 改了 6-category error UI 的 shortMessage 跟 button label, network-failed shortMessage 把 base URL hint fold in 覆盖 `base URL 错` 跟 `网络错误` 两个 case, cross-provider parity test 锁.
+PR 47 加 "Recent" quick-pick section (latest note + latest raw + MEMORY.md), counts 字符串 `raw` 单位 label 改成 `candidates` (跟 dream CLI 术语一致), 20 locales 跨改.
+
+**PR 44-47 GUI verify** (user self-tested 2026-06-22): PR 47 报告 4/4 GUI verified (workspace summary, Run Dream focus, Open MEMORY.md, New note created). PR 46 还没单独 GUI verify, 但 unit test 锁了 8 个 invariant (含 cross-provider parity + security). PR 44 dev flag 通过 DevTools 验证 (PR 43 close-out 报告). 等 user 决定 push 时机.
+
+**SiliconFlow OpenAI-compat re-verify** (test vault `d2dcfd4`, 2026-06-22 18:21): user 给 SiliconFlow key (`sk-fkzdnleoazteekpimbgsbbqbrzchwxynfycoofkojhdhgfzh`) + base URL `https://api.siliconflow.cn/v1` + model `deepseek-ai/DeepSeek-V4-Flash` 想重跑 PR 37b wiring 验证. 分两轮:
+
+- **Round 1 (deepseek-ai/DeepSeek-V4-Flash + /v1)**: HTTP 404 from SiliconFlow server 'Not Found', dream CLI emit `[OPENAI_MODEL_NOT_FOUND]` (PR 36 6-category error contract working as designed). 直接 curl 用同样 key + 同样 model 走 `https://api.siliconflow.cn/v1/chat/completions` 返 HTTP 200 + real completion. **不是 dream CLI 错**, SiliconFlow server-side 把 `deepseek-ai/DeepSeek-V4-Flash` 这个 model ID 改/删了. §42 lesson #2 (避免特定 model) **STILL HOLDS**.
+
+- **Round 2 (Qwen/Qwen2.5-7B-Instruct + bare domain)**: 撞 §42 lesson #1 (URL shape) — 直接用 `https://api.siliconflow.cn/v1` 走 dream CLI 实际拼出 `https://api.siliconflow.cn/v1/v1/chat/completions` 404. 改用 `https://api.siliconflow.cn` (no /v1) — wire URL 变 `https://api.siliconflow.cn/v1/chat/completions` (correct) — 跑通. budget 7 call(s) today, $0.0000, gate script `DreamX E2E output check passed: provider call count > 0 (7)`. **§42 lesson #1 (URL shape) STILL HOLDS** for direct dream CLI invocation.
+
+- **v0.6.x OpenAI-compat path HEALTHY**: PR 37b wiring fix (`--llm openai` injection), PR 36 6-category error contract, PR 46 error UI changes 都没 regress 成功路径. Round 2 是新 raw entry (deepseek-v4-retest.md) 第一次被 dream CLI consolidate 进 candidate, git commit + dream-report 自动写出来.
+
+- **v0.6.1 / v0.6.2 gate 仍需真 Anthropic / Gemini key**: SiliconFlow re-verify 只能 confirm OpenAI-compat path. PR 37 (Anthropic real E2E) + PR 38 (Gemini real E2E) 是 ship gate, 没真 key 切不动 tag.
+
+**§42 lesson consolidated** (locked by re-test evidence 2026-06-22):
+- 任何时候直接调 dream CLI (bypass dreamforge GUI), `--base-url` 不带 `/v1` suffix
+- re-verify 优先 catalog 默认 model (Qwen2.5-7B-Instruct), 不用特定 model ID (server-side 可能改名/下架)
+- HTTP 404 + "Not Found" from server + dream CLI `[OPENAI_MODEL_NOT_FOUND]` tag 是 model 不存在信号, 不是 URL shape 信号; 先 curl 直打确认才能判断是哪一类. PR 36 6-category error contract 锁死这种区分.
+- **GUI path 不受以上 3 个 lesson 影响**: dreamforge Rust `strip_v1_suffix()` (PR 10) 自动剥 `/v1` suffix, 用户的 `https://api.siliconflow.cn/v1` 跟 `https://api.siliconflow.cn` 都 work. 这 3 个 lesson 只在 **direct dream CLI invocation** 适用 (例如 SiliconFlow re-verify 流程).
