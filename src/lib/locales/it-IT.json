@@ -555,6 +555,7 @@
   "editor.workspace.title": "Area di lavoro",
   "editor.workspace.vaultPath": "Vault: {path}",
   "editor.workspace.counts": "{notes} note · {wiki} pagine Wiki · {memory} memoria · {raw} candidati",
+  "editor.workspace.countsDetailed": "{candidates} candidati · {processed} elaborati · {archived} archiviati",
   "editor.workspace.hint": "Scegli una nota dalla barra laterale, oppure:",
   "editor.workspace.recent": "Recenti",
   "editor.workspace.lastDream": "Ultimo Dream: {time}",

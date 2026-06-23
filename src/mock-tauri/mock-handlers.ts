@@ -700,6 +700,23 @@ export const mockHandlers: Record<string, (args: any) => any> = {
     stderr: '',
     success: true,
   }),
+  // v0.6.x PR 50c: structured JSON variant of dreamvault_status. The
+  // mock returns a sample v1 report. Tests that need a different
+  // shape or version override via mockInvoke.mockResolvedValueOnce.
+  // The struct shape matches the Rust DreamVaultStatusReport exactly
+  // (camelCase, schemaVersion: 1, lastReportPath nullable) — the
+  // wire format is locked in
+  // docs/superpowers/plans/2026-06-23-pr50-vault-stats-json-contract.md.
+  dreamvault_status_json: (args?: {
+    vaultPath?: string | null
+  }) => ({
+    schemaVersion: 1,
+    vaultPath: args?.vaultPath ?? '/mock/vault',
+    rawCandidatesCount: 2,
+    processedCount: 7,
+    archivedCount: 1,
+    lastReportPath: '.dream/reports/dream-report-2026-06-22-182157.md',
+  }),
   dreamvault_run: (args?: {
     vaultPath?: string | null
     llmBaseUrl?: string | null

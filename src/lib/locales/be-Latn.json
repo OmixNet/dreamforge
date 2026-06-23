@@ -557,6 +557,7 @@
   "editor.workspace.title": "Prastora pracy",
   "editor.workspace.vaultPath": "Šchovišča: {path}",
   "editor.workspace.counts": "{notes} natatak · {wiki} Wiki staronak · {memory} pamiac · {raw} kandidaty",
+  "editor.workspace.countsDetailed": "{candidates} kandidataŭ · {processed} apracavana · {archived} u archіve",
   "editor.workspace.hint": "Abiarycie natatku na bakavoj panieli, abo:",
   "editor.workspace.recent": "Niadaŭna",
   "editor.workspace.lastDream": "Apošni Dream: {time}",

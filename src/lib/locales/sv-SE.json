@@ -555,6 +555,7 @@
   "editor.workspace.title": "Arbetsyta",
   "editor.workspace.vaultPath": "Valv: {path}",
   "editor.workspace.counts": "{notes} anteckningar · {wiki} Wiki-sidor · {memory} minne · {raw} kandidater",
+  "editor.workspace.countsDetailed": "{candidates} kandidater · {processed} bearbetade · {archived} arkiverade",
   "editor.workspace.hint": "Välj en anteckning i sidopanelen, eller:",
   "editor.workspace.recent": "Senaste",
   "editor.workspace.lastDream": "Senaste Dream: {time}",

@@ -555,6 +555,7 @@
   "editor.workspace.title": "ワークスペース",
   "editor.workspace.vaultPath": "ボールト: {path}",
   "editor.workspace.counts": "{notes} ノート · {wiki} Wiki ページ · {memory} メモリ · {raw} 候補",
+  "editor.workspace.countsDetailed": "候補 {candidates} · 処理済み {processed} · アーカイブ {archived}",
   "editor.workspace.hint": "サイドバーからノートを選ぶか、直接:",
   "editor.workspace.recent": "最近",
   "editor.workspace.lastDream": "前回の Dream: {time}",

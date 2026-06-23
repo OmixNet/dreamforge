@@ -555,6 +555,7 @@
   "editor.workspace.title": "작업 영역",
   "editor.workspace.vaultPath": "볼트: {path}",
   "editor.workspace.counts": "{notes} 노트 · {wiki} Wiki 페이지 · {memory} 메모리 · {raw} 후보",
+  "editor.workspace.countsDetailed": "후보 {candidates} · 처리됨 {processed} · 보관됨 {archived}",
   "editor.workspace.hint": "사이드바에서 노트를 선택하거나 바로:",
   "editor.workspace.recent": "최근",
   "editor.workspace.lastDream": "마지막 Dream: {time}",

@@ -4,13 +4,23 @@
 // line, surface the timestamp to the empty editor so the user can
 // see "Last dream: 2h ago" at a glance.
 //
-// Why parse on the frontend (not Rust): the dream CLI Swift code
-// already prints `Last dream: <ISO-8601-UTC>` as one of the status
-// lines (per §42 606df99 + §44 re-test), so the data is already on
-// the wire in the stdout. Adding a structured Rust field would
-// require changing `DreamVaultCommandOutput` and the Swift provider;
-// parsing on the frontend keeps PR 48 small and avoids a cross-
-// language contract change for a single timestamp.
+// v0.6.x PR 50c: typed mirror of the Rust `DreamVaultStatusReport`
+// struct (PR 50b) returned by the new `dreamvault_status_json`
+// Tauri command. The frontend consumes only this typed object
+// and never reads `.dream/ledger.json` directly — that's the
+// design note §1.4 rule 3 decoupling (paths are always
+// vault-relative, internal file layout is owned by DreamVault).
+//
+// Why parse on the frontend (not Rust) for the lastDreamAt field:
+// the dream CLI Swift code already prints `Last dream:
+// <ISO-8601-UTC>` as one of the status lines (per §42 606df99 +
+// §44 re-test), so the data is already on the wire in the stdout.
+// Adding a structured Rust field would require changing
+// `DreamVaultCommandOutput` and the Swift provider; parsing on the
+// frontend keeps PR 48 small and avoids a cross-language contract
+// change for a single timestamp. The full structured stats
+// (processed / archived / candidates) come from PR 50b's typed
+// struct, not from text parsing.
 //
 // Output format (from the dream CLI Swift `StatusCommand` + the mock
 // handler in mock-handlers.ts):
@@ -24,6 +34,33 @@
 // The format is documented at §42 606df99 ("doc-as-code" pattern)
 // so a future dream CLI change is the one place to update both
 // the parser and the docs.
+
+// v0.6.x PR 50c: typed mirror of the Rust `DreamVaultStatusReport`.
+// The field names match the Rust struct exactly (camelCase, per
+// serde rename_all). The wire format is locked at schemaVersion: 1
+// in docs/superpowers/plans/2026-06-23-pr50-vault-stats-json-contract.md.
+//
+// Strict acceptance rule (locked design note §1.4 rule 1, user
+// sign-off 2026-06-23): the Rust Tauri command accepts schemaVersion
+// === 1 ONLY. Any other version produces a typed Err that the
+// frontend catches and falls back to the existing text-parse path
+// (PR 48 parseDreamStatus). The frontend NEVER parses a report with
+// the wrong version, so this TS interface is only ever populated
+// with v1 data — the `schemaVersion` field is documented but not
+// used in UI logic.
+export interface DreamVaultStatusReport {
+  schemaVersion: 1
+  /** Absolute vault path the dream CLI ran against. */
+  vaultPath: string
+  /** Number of unprocessed raw/*.md entries (frontmatter processed:false AND not in processed.json). */
+  rawCandidatesCount: number
+  /** Number of ledger.memories with status == .durable. */
+  processedCount: number
+  /** Number of ledger.memories with status == .archived. */
+  archivedCount: number
+  /** Vault-relative path to the most recent dream-report, or null if no reports exist. */
+  lastReportPath: string | null
+}
 
 export interface ParsedDreamStatus {
   /** ISO-8601 UTC timestamp string of the last successful Dream run, or null if never run. */

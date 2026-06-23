@@ -105,6 +105,13 @@ interface EditorProps {
    *  Renders a small color-coded badge next to the counts line.
    *  'unknown' = no data → badge hides entirely. */
   vaultHealth?: 'healthy' | 'stale' | 'critical' | 'unknown'
+  /** PR 50c: typed stats from the new dreamvault_status_json
+   *  Tauri command. When both are present, the counts line shows
+   *  the detailed format (X candidates · Y processed · Z archived).
+   *  Absent either, falls back to the simple PR 47 format
+   *  (X candidates only). */
+  processedCount?: number
+  archivedCount?: number
   noteList?: NoteListItem[]
   noteListFilter?: { type: string | null; query: string }
   onToggleFavorite?: (path: string) => void
@@ -193,10 +200,12 @@ function EditorEmptyState({
   locale = 'en',
   vaultPath,
   workspaceCounts,
-  recentEntries,
+   recentEntries,
   onOpenEntry,
   lastDreamAt,
   vaultHealth,
+  processedCount,
+  archivedCount,
   onCreateNote,
   onOpenMemory,
   onRunDream,
@@ -208,6 +217,9 @@ function EditorEmptyState({
   onOpenEntry?: (entry: VaultEntry) => void
   lastDreamAt?: string | null
   vaultHealth?: 'healthy' | 'stale' | 'critical' | 'unknown'
+  // PR 50c: typed stats from dreamvault_status_json
+  processedCount?: number
+  archivedCount?: number
   onCreateNote?: () => void
   onOpenMemory?: () => void
   onRunDream?: () => void
@@ -251,14 +263,27 @@ function EditorEmptyState({
             </p>
           ) : null}
           {workspaceCounts ? (
-            <p className="m-0 flex items-center gap-2 text-xs text-muted-foreground">
+            <p className="m-0 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>
-                {translate(locale, 'editor.workspace.counts', {
-                  notes: workspaceCounts.notes,
-                  wiki: workspaceCounts.wiki,
-                  memory: workspaceCounts.memory,
-                  raw: workspaceCounts.raw,
-                })}
+                {/* PR 50c: when typed stats (processed + archived) are
+                    available, show the detailed format
+                    "{candidates} · {processed} · {archived}". When
+                    EITHER is missing (old dream binary, schemaVersion
+                    mismatch, etc.) fall back to the simple PR 47
+                    "notes · wiki · memory · candidates" format. The
+                    fallback is silent — no error UI, no banner. */}
+                {typeof processedCount === 'number' && typeof archivedCount === 'number'
+                  ? translate(locale, 'editor.workspace.countsDetailed', {
+                      candidates: workspaceCounts.raw,
+                      processed: processedCount,
+                      archived: archivedCount,
+                    })
+                  : translate(locale, 'editor.workspace.counts', {
+                      notes: workspaceCounts.notes,
+                      wiki: workspaceCounts.wiki,
+                      memory: workspaceCounts.memory,
+                      raw: workspaceCounts.raw,
+                    })}
               </span>
               {/* PR 49: small color-coded health badge next to counts.
                   3 actionable states (green/amber/red). 'unknown' = no
@@ -543,10 +568,12 @@ function EditorLayout({
   onCreateNote,
   onOpenMemory,
   onRunDream,
-  recentEntries,
+   recentEntries,
   onOpenEntry,
   lastDreamAt,
   vaultHealth,
+  processedCount,
+  archivedCount,
   onSave,
   activeStatus,
   showDiffToggle,
@@ -657,6 +684,9 @@ function EditorLayout({
   lastDreamAt?: string | null
   // PR 49: vault health (color-coded badge next to counts)
   vaultHealth?: 'healthy' | 'stale' | 'critical' | 'unknown'
+  // PR 50c: typed stats (processed + archived counts)
+  processedCount?: number
+  archivedCount?: number
   rawLatestContentRef: React.MutableRefObject<string | null>
   onRenameFilename?: (path: string, newFilenameStem: string) => void
   noteWidth?: NoteWidthMode
@@ -703,6 +733,8 @@ function EditorLayout({
               onOpenEntry={onOpenEntry}
               lastDreamAt={lastDreamAt}
               vaultHealth={vaultHealth}
+              processedCount={processedCount}
+              archivedCount={archivedCount}
               onCreateNote={onCreateNote}
               onOpenMemory={onOpenMemory}
               onRunDream={onRunDream}

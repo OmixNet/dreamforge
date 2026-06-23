@@ -555,6 +555,7 @@
   "editor.workspace.title": "Ruang kerja",
   "editor.workspace.vaultPath": "Brankas: {path}",
   "editor.workspace.counts": "{notes} catatan · {wiki} halaman Wiki · {memory} memori · {raw} kandidat",
+  "editor.workspace.countsDetailed": "{candidates} kandidat · {processed} diproses · {archived} diarsipkan",
   "editor.workspace.hint": "Pilih catatan dari bilah sisi, atau:",
   "editor.workspace.recent": "Terbaru",
   "editor.workspace.lastDream": "Dream terakhir: {time}",

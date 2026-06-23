@@ -555,6 +555,7 @@
   "editor.workspace.title": "Obszar roboczy",
   "editor.workspace.vaultPath": "Skarbiec: {path}",
   "editor.workspace.counts": "{notes} notatek · {wiki} stron Wiki · {memory} pamięć · {raw} kandydatów",
+  "editor.workspace.countsDetailed": "{candidates} kandydatów · {processed} przetworzonych · {archived} zarchiwizowanych",
   "editor.workspace.hint": "Wybierz notatkę z paska bocznego, lub:",
   "editor.workspace.recent": "Ostatnie",
   "editor.workspace.lastDream": "Ostatni Dream: {time}",

@@ -544,6 +544,49 @@ describe('Editor', () => {
     expect(en['editor.workspace.health.critical']).toBeTypeOf('string')
   })
 
+  // -- PR 50c: empty editor shows full stats when JSON is available --
+
+  it('PR 50c: empty state shows processed + archived counts when typed stats are provided', () => {
+    renderEditor({
+      workspaceCounts: { notes: 5, wiki: 2, memory: 1, raw: 3 },
+      processedCount: 23,
+      archivedCount: 2,
+      vaultPath: '/tmp/vault',
+    })
+    // When typed stats are available, the counts line shows the
+    // detailed format: "3 candidates · 23 processed · 2 archived"
+    expect(screen.getByText(/3 candidates/)).toBeInTheDocument()
+    expect(screen.getByText(/23 processed/)).toBeInTheDocument()
+    expect(screen.getByText(/2 archived/)).toBeInTheDocument()
+  })
+
+  it('PR 50c: empty state shows the basic counts when typed stats are not available (fallback)', () => {
+    renderEditor({
+      workspaceCounts: { notes: 5, wiki: 2, memory: 1, raw: 3 },
+      // No processedCount / archivedCount — fallback path (PR 47
+      // behavior, also used when the dream binary doesn't support
+      // --json or the schemaVersion mismatches).
+      vaultPath: '/tmp/vault',
+    })
+    // The detailed format requires both numbers; absent either,
+    // we fall back to the simple "raw" line.
+    expect(screen.getByText(/3 candidates/)).toBeInTheDocument()
+    expect(screen.queryByText(/processed/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/archived/)).not.toBeInTheDocument()
+  })
+
+  it('PR 50c: i18n key "editor.workspace.countsDetailed" exists in en.json with 3 placeholders', async () => {
+    // Parity test for the new key. The wider i18n parity test in
+    // src/lib/i18n.test.ts enforces this for all 20 locales, but
+    // a dedicated test gives clearer failure when PR 50c ships
+    // without adding the key to all locales.
+    const en = (await import('../lib/locales/en.json')).default as Record<string, string>
+    expect(en['editor.workspace.countsDetailed']).toBeTypeOf('string')
+    expect(en['editor.workspace.countsDetailed']).toContain('{candidates}')
+    expect(en['editor.workspace.countsDetailed']).toContain('{processed}')
+    expect(en['editor.workspace.countsDetailed']).toContain('{archived}')
+  })
+
   it('renders an invisible drag region in the empty state', () => {
     const { container } = renderEditor()
     const dragRegion = container.querySelector('[data-testid="editor-empty-state-drag-region"]')

@@ -556,6 +556,7 @@
   "editor.workspace.title": "工作区",
   "editor.workspace.vaultPath": "保管库: {path}",
   "editor.workspace.counts": "{notes} 笔记 · {wiki} Wiki 页 · {memory} 记忆 · {raw} 候选",
+  "editor.workspace.countsDetailed": "{candidates} 候选 · {processed} 已处理 · {archived} 已归档",
   "editor.workspace.hint": "从侧栏选一条笔记, 或直接:",
   "editor.workspace.recent": "最近",
   "editor.workspace.lastDream": "上次运行：{time}",

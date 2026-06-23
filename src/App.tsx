@@ -97,7 +97,7 @@ import { useAppCommandAiActions } from './hooks/useAppCommandAiActions'
 import {
   translate,
 } from './lib/i18n'
-import { parseDreamStatus } from './lib/dreamCliStatus'
+import { parseDreamStatus, type DreamVaultStatusReport } from './lib/dreamCliStatus'
 import { computeVaultHealth } from './lib/vaultHealth'
 import { normalizeReleaseChannel } from './lib/releaseChannel'
 import {
@@ -809,6 +809,36 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
     const candidates = workspaceCounts?.raw ?? 0
     return computeVaultHealth({ lastDreamAt, candidates })
   }, [lastDreamAt, workspaceCounts?.raw])
+
+  // PR 50c: poll the new dreamvault_status_json Tauri command (PR 50b)
+  // for the typed stats. We populate processedCount + archivedCount
+  // when the typed report is available. On any error (old binary
+  // without --json, schemaVersion mismatch, IPC failure) we silently
+  // fall back to the text-parse path — the empty-state counts line
+  // falls back to the simple "X candidates" format. No error UI per
+  // the no-landing-page invariant locked in PR 42/47/48.
+  const [vaultStatsJson, setVaultStatsJson] = useState<DreamVaultStatusReport | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const invoke = (await import('@tauri-apps/api/core')).invoke
+        const report = await invoke<DreamVaultStatusReport>('dreamvault_status_json', {
+          vaultPath: resolvedPath,
+        })
+        if (!cancelled) setVaultStatsJson(report)
+      } catch {
+        // Silent fallback: old binary, schemaVersion mismatch, or
+        // IPC failure → no typed stats → Editor falls back to the
+        // simple counts format. The text-parse path (PR 48) still
+        // works for lastDreamAt.
+        if (!cancelled) setVaultStatsJson(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [resolvedPath])
 
   const handleAiWorkspaceWindowOpenNote = notes.handleNavigateWikilink
   const {
@@ -1814,6 +1844,12 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
               lastDreamAt={lastDreamAt}
               // PR 49: vault health badge (color-coded: healthy / stale / critical)
               vaultHealth={vaultHealth}
+              // PR 50c: typed stats from dreamvault_status_json. Undefined
+              // when the typed path isn't available (old binary /
+              // schemaVersion mismatch) → Editor falls back to the
+              // simple "X candidates" format.
+              processedCount={vaultStatsJson?.processedCount}
+              archivedCount={vaultStatsJson?.archivedCount}
               noteList={aiNoteList}
               noteListFilter={aiNoteListFilter}
               onToggleFavorite={activeDeletedFile ? undefined : entryActions.handleToggleFavorite}
