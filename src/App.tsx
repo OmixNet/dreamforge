@@ -98,6 +98,7 @@ import {
   translate,
 } from './lib/i18n'
 import { parseDreamStatus } from './lib/dreamCliStatus'
+import { computeVaultHealth } from './lib/vaultHealth'
 import { normalizeReleaseChannel } from './lib/releaseChannel'
 import {
   buildVaultAiGuidanceRefreshKey,
@@ -796,6 +797,18 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
       cancelled = true
     }
   }, [resolvedPath])
+
+  // PR 49: derive vault health from lastDreamAt + candidate count.
+  // Recomputed whenever either input changes so the badge stays in
+  // sync. The candidate count is the same as workspaceCounts.raw from
+  // PR 47 (the "raw" folder IS the dream CLI candidate pool per the
+  // §42 606df99 doc-as-code contract). We re-derive here rather than
+  // reading from workspaceCounts so the health logic is self-contained
+  // and doesn't depend on Editor computing the count.
+  const vaultHealth = useMemo(() => {
+    const candidates = workspaceCounts?.raw ?? 0
+    return computeVaultHealth({ lastDreamAt, candidates })
+  }, [lastDreamAt, workspaceCounts?.raw])
 
   const handleAiWorkspaceWindowOpenNote = notes.handleNavigateWikilink
   const {
@@ -1799,6 +1812,8 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
               // Polled by App.tsx on mount + vault path change so the
               // timestamp refreshes when the user switches vaults.
               lastDreamAt={lastDreamAt}
+              // PR 49: vault health badge (color-coded: healthy / stale / critical)
+              vaultHealth={vaultHealth}
               noteList={aiNoteList}
               noteListFilter={aiNoteListFilter}
               onToggleFavorite={activeDeletedFile ? undefined : entryActions.handleToggleFavorite}

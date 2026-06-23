@@ -507,6 +507,43 @@ describe('Editor', () => {
     expect(en['editor.workspace.lastDream']).toContain('{time}')
   })
 
+  // -- PR 49: empty editor — vault health badge (color-coded) --
+
+  it('PR 49: empty state renders a health badge when vaultHealth is provided', () => {
+    renderEditor({
+      vaultHealth: 'healthy',
+      lastDreamAt: new Date(Date.now() - 2 * 60 * 60_000).toISOString(),
+      workspaceCounts: { notes: 5, wiki: 2, memory: 1, raw: 0 },
+      vaultPath: '/tmp/vault',
+    })
+    // The badge has a stable test id and an i18n-translated label.
+    // We assert the data-testid is present (the en.json value is
+    // "Healthy" / "Stale" / "Critical", looked up by the renderer).
+    const badge = screen.getByTestId('editor-empty-state-health-badge')
+    expect(badge).toBeInTheDocument()
+  })
+
+  it('PR 49: empty state hides the health badge when vaultHealth is "unknown" / undefined', () => {
+    renderEditor({
+      vaultHealth: 'unknown',
+      workspaceCounts: { notes: 0, wiki: 0, memory: 0, raw: 0 },
+      vaultPath: '/tmp/empty-vault',
+    })
+    // The badge is rendered only for the 3 actionable states
+    // (healthy / stale / critical). 'unknown' = no data → hide,
+    // preserving the no-landing-page invariant locked in PR 42/47/48.
+    expect(screen.queryByTestId('editor-empty-state-health-badge')).not.toBeInTheDocument()
+  })
+
+  it('PR 49: i18n keys healthy / stale / critical exist in en.json', async () => {
+    // Parity test for the 3 new health labels. Wider i18n parity
+    // test in src/lib/i18n.test.ts enforces this for all 20 locales.
+    const en = (await import('../lib/locales/en.json')).default as Record<string, string>
+    expect(en['editor.workspace.health.healthy']).toBeTypeOf('string')
+    expect(en['editor.workspace.health.stale']).toBeTypeOf('string')
+    expect(en['editor.workspace.health.critical']).toBeTypeOf('string')
+  })
+
   it('renders an invisible drag region in the empty state', () => {
     const { container } = renderEditor()
     const dragRegion = container.querySelector('[data-testid="editor-empty-state-drag-region"]')

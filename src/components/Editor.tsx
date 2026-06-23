@@ -99,8 +99,12 @@ interface EditorProps {
   /** PR 48: ISO-8601 UTC timestamp of the last successful Dream run,
    *  parsed from `dream status` stdout. Null = never run (line is
    *  hidden, not "Last dream: never", per the no-landing-page
-   *  invariant locked in PR 42/47). */
+    *  invariant locked in PR 42/47). */
   lastDreamAt?: string | null
+  /** PR 49: vault health derived from lastDreamAt + candidate count.
+   *  Renders a small color-coded badge next to the counts line.
+   *  'unknown' = no data → badge hides entirely. */
+  vaultHealth?: 'healthy' | 'stale' | 'critical' | 'unknown'
   noteList?: NoteListItem[]
   noteListFilter?: { type: string | null; query: string }
   onToggleFavorite?: (path: string) => void
@@ -192,6 +196,7 @@ function EditorEmptyState({
   recentEntries,
   onOpenEntry,
   lastDreamAt,
+  vaultHealth,
   onCreateNote,
   onOpenMemory,
   onRunDream,
@@ -202,6 +207,7 @@ function EditorEmptyState({
   recentEntries?: VaultEntry[]
   onOpenEntry?: (entry: VaultEntry) => void
   lastDreamAt?: string | null
+  vaultHealth?: 'healthy' | 'stale' | 'critical' | 'unknown'
   onCreateNote?: () => void
   onOpenMemory?: () => void
   onRunDream?: () => void
@@ -245,13 +251,23 @@ function EditorEmptyState({
             </p>
           ) : null}
           {workspaceCounts ? (
-            <p className="m-0 text-xs text-muted-foreground">
-              {translate(locale, 'editor.workspace.counts', {
-                notes: workspaceCounts.notes,
-                wiki: workspaceCounts.wiki,
-                memory: workspaceCounts.memory,
-                raw: workspaceCounts.raw,
-              })}
+            <p className="m-0 flex items-center gap-2 text-xs text-muted-foreground">
+              <span>
+                {translate(locale, 'editor.workspace.counts', {
+                  notes: workspaceCounts.notes,
+                  wiki: workspaceCounts.wiki,
+                  memory: workspaceCounts.memory,
+                  raw: workspaceCounts.raw,
+                })}
+              </span>
+              {/* PR 49: small color-coded health badge next to counts.
+                  3 actionable states (green/amber/red). 'unknown' = no
+                  data → badge hides, preserving the no-landing-page
+                  invariant. The color is the primary signal; the label
+                  is text-only (color-blind accessible). */}
+              {vaultHealth && vaultHealth !== 'unknown' ? (
+                <HealthBadge locale={locale} health={vaultHealth} />
+              ) : null}
             </p>
           ) : null}
           {/* PR 48: "Last dream: X ago" line. Hidden when lastDreamAt
@@ -324,6 +340,34 @@ function EditorEmptyState({
         </div>
       </div>
     </div>
+  )
+}
+
+// PR 49: vault health badge — small color-coded inline pill shown
+// next to the empty-state counts line. Color is the primary signal;
+// the label is text-only so it's accessible to color-blind users.
+//   healthy  → green   (recent dream + low candidates)
+//   stale    → amber   (one of the warning signals fired)
+//   critical → red     (severe: very old dream OR very high candidates)
+function HealthBadge({ locale, health }: { locale: AppLocale; health: 'healthy' | 'stale' | 'critical' }) {
+  const colorClasses = {
+    healthy: 'border-green-600/40 bg-green-600/10 text-green-700 dark:text-green-300',
+    stale: 'border-amber-600/40 bg-amber-600/10 text-amber-700 dark:text-amber-300',
+    critical: 'border-red-600/40 bg-red-600/10 text-red-700 dark:text-red-300',
+  } as const
+  return (
+    <span
+      role="status"
+      data-testid="editor-empty-state-health-badge"
+      data-health={health}
+      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${colorClasses[health]}`}
+    >
+      <span
+        aria-hidden="true"
+        className="inline-block h-1.5 w-1.5 rounded-full bg-current"
+      />
+      {translate(locale, `editor.workspace.health.${health}`)}
+    </span>
   )
 }
 
@@ -502,6 +546,7 @@ function EditorLayout({
   recentEntries,
   onOpenEntry,
   lastDreamAt,
+  vaultHealth,
   onSave,
   activeStatus,
   showDiffToggle,
@@ -610,6 +655,8 @@ function EditorLayout({
   onOpenEntry?: (entry: VaultEntry) => void
   // PR 48: ISO timestamp of last successful Dream run (or null)
   lastDreamAt?: string | null
+  // PR 49: vault health (color-coded badge next to counts)
+  vaultHealth?: 'healthy' | 'stale' | 'critical' | 'unknown'
   rawLatestContentRef: React.MutableRefObject<string | null>
   onRenameFilename?: (path: string, newFilenameStem: string) => void
   noteWidth?: NoteWidthMode
@@ -655,6 +702,7 @@ function EditorLayout({
               recentEntries={recentEntries}
               onOpenEntry={onOpenEntry}
               lastDreamAt={lastDreamAt}
+              vaultHealth={vaultHealth}
               onCreateNote={onCreateNote}
               onOpenMemory={onOpenMemory}
               onRunDream={onRunDream}
