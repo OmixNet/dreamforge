@@ -817,15 +817,23 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
   // fall back to the text-parse path — the empty-state counts line
   // falls back to the simple "X candidates" format. No error UI per
   // the no-landing-page invariant locked in PR 42/47/48.
+  //
+  // PR 50c.1 fix: use the project-standard `isTauri() ? invoke :
+  // mockInvoke` dispatch (cf. useSettings.ts:23-34, useVaultSwitcher
+  // .ts:146) instead of importing @tauri-apps/api/core directly. The
+  // direct import bypasses mock-tauri, so under `pnpm tauri dev`
+  // (Vite/Chrome) the call would always throw → typed JSON never
+  // reaches the empty state → detailed format is never visible in
+  // GUI verify. With the dispatch: real `.app` calls `invoke`,
+  // Vite dev returns the sample v1 report from mock-handlers.ts.
   const [vaultStatsJson, setVaultStatsJson] = useState<DreamVaultStatusReport | null>(null)
   useEffect(() => {
     let cancelled = false
     void (async () => {
       try {
-        const invoke = (await import('@tauri-apps/api/core')).invoke
-        const report = await invoke<DreamVaultStatusReport>('dreamvault_status_json', {
-          vaultPath: resolvedPath,
-        })
+        const report = await (isTauri()
+          ? invoke<DreamVaultStatusReport>('dreamvault_status_json', { vaultPath: resolvedPath })
+          : mockInvoke<DreamVaultStatusReport>('dreamvault_status_json', { vaultPath: resolvedPath }))
         if (!cancelled) setVaultStatsJson(report)
       } catch {
         // Silent fallback: old binary, schemaVersion mismatch, or

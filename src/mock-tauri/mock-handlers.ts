@@ -707,12 +707,17 @@ export const mockHandlers: Record<string, (args: any) => any> = {
   // (camelCase, schemaVersion: 1, lastReportPath nullable) — the
   // wire format is locked in
   // docs/superpowers/plans/2026-06-23-pr50-vault-stats-json-contract.md.
+  //
+  // PR 50c.1: default counts bumped to 5 / 7 / 1 so the GUI verify
+  // check ("5 candidates · 7 processed · 1 archived") is reproducible
+  // out of the box under `pnpm tauri dev` (Vite/Chrome). The empty-
+  // state count line uses these values when the typed path is live.
   dreamvault_status_json: (args?: {
     vaultPath?: string | null
   }) => ({
     schemaVersion: 1,
     vaultPath: args?.vaultPath ?? '/mock/vault',
-    rawCandidatesCount: 2,
+    rawCandidatesCount: 5,
     processedCount: 7,
     archivedCount: 1,
     lastReportPath: '.dream/reports/dream-report-2026-06-22-182157.md',
