@@ -572,6 +572,7 @@
   "editor.workspace.counts": "{notes} notes · {wiki} wiki pages · {memory} memory · {raw} candidates",
   "editor.workspace.hint": "Pick a note from the sidebar, or jump in:",
   "editor.workspace.recent": "Recent",
+  "editor.workspace.lastDream": "Last dream: {time}",
   "editor.workspace.action.newNote": "New note",
   "editor.workspace.action.openMemory": "Open MEMORY.md",
   "editor.workspace.action.runDream": "Run Dream",

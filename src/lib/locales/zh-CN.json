@@ -558,6 +558,7 @@
   "editor.workspace.counts": "{notes} 笔记 · {wiki} Wiki 页 · {memory} 记忆 · {raw} 候选",
   "editor.workspace.hint": "从侧栏选一条笔记, 或直接:",
   "editor.workspace.recent": "最近",
+  "editor.workspace.lastDream": "上次运行：{time}",
   "editor.workspace.action.newNote": "新建笔记",
   "editor.workspace.action.openMemory": "打开 MEMORY.md",
   "editor.workspace.action.runDream": "运行 Dream",

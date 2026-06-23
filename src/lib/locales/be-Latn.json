@@ -559,6 +559,7 @@
   "editor.workspace.counts": "{notes} natatak · {wiki} Wiki staronak · {memory} pamiac · {raw} kandidaty",
   "editor.workspace.hint": "Abiarycie natatku na bakavoj panieli, abo:",
   "editor.workspace.recent": "Niadaŭna",
+  "editor.workspace.lastDream": "Apošni Dream: {time}",
   "editor.workspace.action.newNote": "Novaja natatka",
   "editor.workspace.action.openMemory": "Adkryc MEMORY.md",
   "editor.workspace.action.runDream": "Zapuscic Dream",

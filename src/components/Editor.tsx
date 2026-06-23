@@ -6,6 +6,7 @@ import '@blocknote/mantine/style.css'
 import { uploadImageFile } from '../hooks/useImageDrop'
 // DREAMFORGE_SLIM: DEFAULT_AI_AGENT + AiAgentId + AiAgentReadiness + AiTarget 物理删除 (PR 8, 12 AI module 全删)
 import { translate, type AppLocale } from '../lib/i18n'
+import { formatLastDreamRelative } from '../lib/dreamCliStatus'
 import { RUNTIME_STYLE_NONCE } from '../lib/runtimeStyleNonce'
 import type { VaultEntry, GitCommit, NoteWidthMode, NoteStatus, WorkspaceIdentity } from '../types'
 import type { NoteListItem } from '../utils/ai-context'
@@ -95,6 +96,11 @@ interface EditorProps {
   recentEntries?: VaultEntry[]
   /** PR 47: open an entry from the empty-state Recent quick-pick. */
   onOpenEntry?: (entry: VaultEntry) => void
+  /** PR 48: ISO-8601 UTC timestamp of the last successful Dream run,
+   *  parsed from `dream status` stdout. Null = never run (line is
+   *  hidden, not "Last dream: never", per the no-landing-page
+   *  invariant locked in PR 42/47). */
+  lastDreamAt?: string | null
   noteList?: NoteListItem[]
   noteListFilter?: { type: string | null; query: string }
   onToggleFavorite?: (path: string) => void
@@ -185,6 +191,7 @@ function EditorEmptyState({
   workspaceCounts,
   recentEntries,
   onOpenEntry,
+  lastDreamAt,
   onCreateNote,
   onOpenMemory,
   onRunDream,
@@ -194,6 +201,7 @@ function EditorEmptyState({
   workspaceCounts?: { notes: number; wiki: number; memory: number; raw: number }
   recentEntries?: VaultEntry[]
   onOpenEntry?: (entry: VaultEntry) => void
+  lastDreamAt?: string | null
   onCreateNote?: () => void
   onOpenMemory?: () => void
   onRunDream?: () => void
@@ -243,6 +251,22 @@ function EditorEmptyState({
                 wiki: workspaceCounts.wiki,
                 memory: workspaceCounts.memory,
                 raw: workspaceCounts.raw,
+              })}
+            </p>
+          ) : null}
+          {/* PR 48: "Last dream: X ago" line. Hidden when lastDreamAt
+              is null/undefined (fresh install, never run) so we never
+              display a "Last dream: never" placeholder that would
+              violate the no-landing-page invariant locked in PR 42/47.
+              The relative time is computed by the parent (App.tsx
+              status poll) so the editor stays a pure renderer. */}
+          {lastDreamAt ? (
+            <p
+              className="m-0 text-xs text-muted-foreground"
+              data-testid="editor-empty-state-last-dream"
+            >
+              {translate(locale, 'editor.workspace.lastDream', {
+                time: formatLastDreamRelative(lastDreamAt, undefined, locale),
               })}
             </p>
           ) : null}
@@ -477,6 +501,7 @@ function EditorLayout({
   onRunDream,
   recentEntries,
   onOpenEntry,
+  lastDreamAt,
   onSave,
   activeStatus,
   showDiffToggle,
@@ -583,6 +608,8 @@ function EditorLayout({
   // PR 47: Recent quick-pick entries + click handler
   recentEntries?: VaultEntry[]
   onOpenEntry?: (entry: VaultEntry) => void
+  // PR 48: ISO timestamp of last successful Dream run (or null)
+  lastDreamAt?: string | null
   rawLatestContentRef: React.MutableRefObject<string | null>
   onRenameFilename?: (path: string, newFilenameStem: string) => void
   noteWidth?: NoteWidthMode
@@ -627,6 +654,7 @@ function EditorLayout({
               workspaceCounts={workspaceCounts}
               recentEntries={recentEntries}
               onOpenEntry={onOpenEntry}
+              lastDreamAt={lastDreamAt}
               onCreateNote={onCreateNote}
               onOpenMemory={onOpenMemory}
               onRunDream={onRunDream}

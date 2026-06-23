@@ -557,6 +557,7 @@
   "editor.workspace.counts": "{notes} ghi chú · {wiki} trang Wiki · {memory} bộ nhớ · {raw} ứng viên",
   "editor.workspace.hint": "Chọn một ghi chú từ thanh bên, hoặc:",
   "editor.workspace.recent": "Gần đây",
+  "editor.workspace.lastDream": "Dream gần nhất: {time}",
   "editor.workspace.action.newNote": "Ghi chú mới",
   "editor.workspace.action.openMemory": "Mở MEMORY.md",
   "editor.workspace.action.runDream": "Chạy Dream",

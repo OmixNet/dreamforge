@@ -557,6 +557,7 @@
   "editor.workspace.counts": "{notes} note · {wiki} pagine Wiki · {memory} memoria · {raw} candidati",
   "editor.workspace.hint": "Scegli una nota dalla barra laterale, oppure:",
   "editor.workspace.recent": "Recenti",
+  "editor.workspace.lastDream": "Ultimo Dream: {time}",
   "editor.workspace.action.newNote": "Nuova nota",
   "editor.workspace.action.openMemory": "Apri MEMORY.md",
   "editor.workspace.action.runDream": "Esegui Dream",

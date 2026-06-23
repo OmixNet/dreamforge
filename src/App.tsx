@@ -97,6 +97,7 @@ import { useAppCommandAiActions } from './hooks/useAppCommandAiActions'
 import {
   translate,
 } from './lib/i18n'
+import { parseDreamStatus } from './lib/dreamCliStatus'
 import { normalizeReleaseChannel } from './lib/releaseChannel'
 import {
   buildVaultAiGuidanceRefreshKey,
@@ -762,6 +763,40 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
     if (memoryEntry) result.push(memoryEntry)
     return result.slice(0, 3)
   }, [vault.entries, resolvedPath])
+
+  // PR 48: poll dream CLI `status` and parse the "Last dream: <ISO>"
+  // line so the empty editor can show "Last dream: 2h ago". The
+  // status call is cheap (no LLM, no key) so we run it on mount and
+  // whenever the vault path changes. We don't poll periodically —
+  // the user runs Dream from the DreamPanel, which already calls
+  // status; a fresh lastDreamAt flows back through the next mount
+  // or vault switch. Adding a periodic poll would be a v0.7+ change
+  // to avoid surprising the user with auto-refreshing content.
+  const [lastDreamAt, setLastDreamAt] = useState<string | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const invoke = (await import('@tauri-apps/api/core')).invoke
+        const output = await invoke<{ stdout: string; stderr: string; success: boolean }>(
+          'dreamvault_status',
+          { vaultPath: resolvedPath },
+        )
+        if (cancelled) return
+        const parsed = parseDreamStatus(output.stdout)
+        setLastDreamAt(parsed.lastDreamAt)
+      } catch {
+        // Status call can fail if the dream CLI binary is missing
+        // (no Settings path set, or no PATH). Treat as "never run"
+        // — the empty-state line just doesn't render, no error UI.
+        if (!cancelled) setLastDreamAt(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [resolvedPath])
+
   const handleAiWorkspaceWindowOpenNote = notes.handleNavigateWikilink
   const {
     handleAgentFileCreated: handleAiWorkspaceWindowFileCreated,
@@ -1760,6 +1795,10 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
               // picking it from the sidebar (no new code path).
               recentEntries={recentEntries}
               onOpenEntry={notes.handleSelectNote}
+              // PR 48: "Last dream: X ago" line in the empty state.
+              // Polled by App.tsx on mount + vault path change so the
+              // timestamp refreshes when the user switches vaults.
+              lastDreamAt={lastDreamAt}
               noteList={aiNoteList}
               noteListFilter={aiNoteListFilter}
               onToggleFavorite={activeDeletedFile ? undefined : entryActions.handleToggleFavorite}

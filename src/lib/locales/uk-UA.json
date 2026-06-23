@@ -557,6 +557,7 @@
   "editor.workspace.counts": "{notes} нотаток · {wiki} Wiki сторінок · {memory} пам'ять · {raw} кандидати",
   "editor.workspace.hint": "Виберіть нотатку на бічній панелі, або:",
   "editor.workspace.recent": "Останні",
+  "editor.workspace.lastDream": "Останній Dream: {time}",
   "editor.workspace.action.newNote": "Нова нотатка",
   "editor.workspace.action.openMemory": "Відкрити MEMORY.md",
   "editor.workspace.action.runDream": "Запустити Dream",

@@ -463,6 +463,50 @@ describe('Editor', () => {
     expect(onOpenEntry).toHaveBeenCalledWith(recentEntries[0])
   })
 
+  // -- PR 48: empty editor shows "Last dream: X ago" line from dream CLI status --
+
+  it('PR 48: empty state shows "Last dream: <relative>" when lastDreamAt is provided', () => {
+    // 2 hours before the test's "now" — the formatter resolves to
+    // "2 hours ago" for any sane system clock.
+    const twoHoursAgoIso = new Date(Date.now() - 2 * 60 * 60_000).toISOString()
+    renderEditor({
+      lastDreamAt: twoHoursAgoIso,
+      vaultPath: '/tmp/vault',
+    })
+
+    // The line is rendered as a single "Last dream: X" string with
+    // the relative time appended. We assert the i18n key is rendered
+    // AND the relative time string is present (so a future i18n
+    // refactor doesn't accidentally drop the time portion).
+    const lastDream = screen.getByTestId('editor-empty-state-last-dream')
+    expect(lastDream.textContent).toMatch(/Last dream/i)
+    expect(lastDream.textContent).toMatch(/hour|just now|min/i)
+  })
+
+  it('PR 48: empty state hides the "Last dream" line when lastDreamAt is null', () => {
+    renderEditor({
+      lastDreamAt: null,
+      vaultPath: '/tmp/vault',
+    })
+
+    // The line is rendered conditionally — null/undefined means
+    // "never run", and we hide the line entirely (no "Last dream: never"
+    // placeholder, per the no-landing-page invariant locked in PR 42/47).
+    expect(screen.queryByTestId('editor-empty-state-last-dream')).not.toBeInTheDocument()
+  })
+
+  it('PR 48: i18n key "editor.workspace.lastDream" exists in en.json with the {time} placeholder', async () => {
+    // Parity test for the new key. The wider i18n parity test in
+    // src/lib/i18n.test.ts enforces this for all 20 locales, but a
+    // dedicated test gives clearer failure when PR 48 ships without
+    // adding the key to all locales.
+    const en = (await import('../lib/locales/en.json')).default as Record<string, string>
+    expect(en['editor.workspace.lastDream']).toBeTypeOf('string')
+    // Must reference the {time} placeholder so a future translator
+    // doesn't drop it.
+    expect(en['editor.workspace.lastDream']).toContain('{time}')
+  })
+
   it('renders an invisible drag region in the empty state', () => {
     const { container } = renderEditor()
     const dragRegion = container.querySelector('[data-testid="editor-empty-state-drag-region"]')

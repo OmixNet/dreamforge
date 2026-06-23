@@ -557,6 +557,7 @@
   "editor.workspace.counts": "{notes} catatan · {wiki} halaman Wiki · {memory} memori · {raw} kandidat",
   "editor.workspace.hint": "Pilih catatan dari bilah sisi, atau:",
   "editor.workspace.recent": "Terbaru",
+  "editor.workspace.lastDream": "Dream terakhir: {time}",
   "editor.workspace.action.newNote": "Catatan baru",
   "editor.workspace.action.openMemory": "Buka MEMORY.md",
   "editor.workspace.action.runDream": "Jalankan Dream",
