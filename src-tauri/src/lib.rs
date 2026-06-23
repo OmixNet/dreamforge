@@ -397,6 +397,10 @@ macro_rules! app_invoke_handler {
             vault_watcher::start_vault_watcher,
             vault_watcher::stop_vault_watcher,
             commands::dreamvault_status,
+            // v0.6.x PR 50b: structured JSON variant of dreamvault_status.
+            // Frontend catches the typed Err and falls back to text parse
+            // (PR 48 parseDreamStatus) on schemaVersion mismatch.
+            commands::dreamvault_status_json,
             commands::dreamvault_run,
             commands::dreamvault_report,
             // v0.5 PR 25 P2b: macOS Keychain for LLM provider API keys.
