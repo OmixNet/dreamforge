@@ -76,6 +76,18 @@ entry point that already runs without LLM).
 1. **schemaVersion: 1 is locked.** New fields can be added (non-breaking).
    Removing a field, renaming, or changing a field's type is breaking
    and requires schemaVersion bump.
+
+   **Strict acceptance rule (locked, added 2026-06-23 per user
+   sign-off)**: The Rust `dreamvault_status_json` command accepts
+   **schemaVersion === 1 ONLY**. Any other version (0, 2, "1.0",
+   missing, or null) MUST return a typed error (`Err("...")`) — the
+   Rust side does NOT guess, default, or fall back. The frontend
+   catches that typed error and falls back to the existing text parse
+   (PR 48 `parseDreamStatus`). This is the inverse of "tolerant
+   reader" — we want loud failure on contract drift so the consumer
+   knows the Swift CLI is from a different version family, not
+   silently parse the wrong shape. Tests pin this behavior.
+
 2. **All counts are non-negative u32** (Rust `u32`, Swift `UInt32`,
    TS `number`). Negative is not a valid signal — corrupt ledger
    surfaces as an error from Swift CLI (non-zero exit), not as -1.
@@ -83,7 +95,10 @@ entry point that already runs without LLM).
    prefix; not absolute). Forward-slash separators on all platforms.
 4. **Missing fields = null** (Swift `nil` → JSON `null` → Rust
    `Option<T>` → TS `T | null`). Frontend checks each field before
-   display, never assumes presence.
+   display, never assumes presence. **Exception**: `schemaVersion`,
+   `vaultPath`, `rawCandidatesCount`, `processedCount`, `archivedCount`
+   are REQUIRED and must be present (per §1.2). `lastReportPath`
+   is the only optional field (null when no reports exist).
 5. **Errors surface as Swift CLI non-zero exit + stderr text.** Rust
    surfaces stderr to the frontend via the existing error channel.
    We do NOT use JSON error envelopes — the existing text-error path
@@ -148,18 +163,25 @@ backwards compat.
    - Returns `Result<DreamVaultStatusReport, String>`
 3. New helper `run_dreamvault_status_json(...)` — separate from `run_dreamvault_action` because the action type changes from `DreamVaultAction::Status` (text) to a new `DreamVaultAction::StatusJson`
 4. Wire into `commands/mod.rs` invoke handler (1 line addition)
+5. **Strict schemaVersion gate** (locked §1.4 rule 1): after parsing
+   JSON, check `schema_version == 1`. If not, return
+   `Err(format!("DreamVault stats report has schemaVersion={parsed.schema_version}, expected 1. Update both repos to compatible versions."))`. **Do NOT parse, default, or fall back** — the frontend will catch the typed error and switch to the existing text parse (PR 48). This makes contract drift loud instead of silent.
 
 **Backwards compat in Rust**: if the dream binary doesn't support
 `--json` yet (older build), `dream status --json` exits non-zero with
 "unknown option" stderr. Rust surfaces the error to the frontend. The
 existing `dreamvault_status` text command stays as the fallback for
 users with older dream binaries — frontend can call EITHER depending
-on schemaVersion support detection.
+on schemaVersion support detection. The schemaVersion mismatch
+error is structurally identical to the "no --json flag" error from
+the frontend's perspective: both surface as Rust `Err`, both trigger
+the same fallback to text parsing.
 
 **Tests** (Rust):
 - `dreamvault_status_json::tests::parses_valid_json_into_typed_struct` — round-trip test
 - `dreamvault_status_json::tests::errors_on_missing_json_flag` — non-JSON binary returns clean error
 - `dreamvault_status_json::tests::path_resolution_uses_existing_4_tier_fallback` — Settings arg → env → hard-coded path → PATH
+- `dreamvault_status_json::tests::errors_on_schema_version_mismatch` — schemaVersion=0 / 2 / missing / null → typed `Err` with diagnostic message; **no fall-through to default values** (locked §1.4 rule 1)
 
 ## 4. Frontend change
 
