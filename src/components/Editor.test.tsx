@@ -549,6 +549,7 @@ describe('Editor', () => {
   it('PR 50c: empty state shows processed + archived counts when typed stats are provided', () => {
     renderEditor({
       workspaceCounts: { notes: 5, wiki: 2, memory: 1, raw: 3 },
+      rawCandidatesCount: 3,
       processedCount: 23,
       archivedCount: 2,
       vaultPath: '/tmp/vault',
@@ -558,6 +559,21 @@ describe('Editor', () => {
     expect(screen.getByText(/3 candidates/)).toBeInTheDocument()
     expect(screen.getByText(/23 processed/)).toBeInTheDocument()
     expect(screen.getByText(/2 archived/)).toBeInTheDocument()
+  })
+
+  it('PR 50c.2: detailed stats use typed rawCandidatesCount instead of folder raw count', () => {
+    renderEditor({
+      workspaceCounts: { notes: 5, wiki: 2, memory: 1, raw: 6 },
+      rawCandidatesCount: 5,
+      processedCount: 7,
+      archivedCount: 1,
+      vaultPath: '/tmp/vault',
+    })
+
+    expect(screen.getByText(/5 candidates/)).toBeInTheDocument()
+    expect(screen.queryByText(/6 candidates/)).not.toBeInTheDocument()
+    expect(screen.getByText(/7 processed/)).toBeInTheDocument()
+    expect(screen.getByText(/1 archived/)).toBeInTheDocument()
   })
 
   it('PR 50c: empty state shows the basic counts when typed stats are not available (fallback)', () => {

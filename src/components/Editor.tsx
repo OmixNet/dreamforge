@@ -106,10 +106,11 @@ interface EditorProps {
    *  'unknown' = no data → badge hides entirely. */
   vaultHealth?: 'healthy' | 'stale' | 'critical' | 'unknown'
   /** PR 50c: typed stats from the new dreamvault_status_json
-   *  Tauri command. When both are present, the counts line shows
+   *  Tauri command. When all three are present, the counts line shows
    *  the detailed format (X candidates · Y processed · Z archived).
-   *  Absent either, falls back to the simple PR 47 format
+   *  Absent any, falls back to the simple PR 47 format
    *  (X candidates only). */
+  rawCandidatesCount?: number
   processedCount?: number
   archivedCount?: number
   noteList?: NoteListItem[]
@@ -204,6 +205,7 @@ function EditorEmptyState({
   onOpenEntry,
   lastDreamAt,
   vaultHealth,
+  rawCandidatesCount,
   processedCount,
   archivedCount,
   onCreateNote,
@@ -218,6 +220,7 @@ function EditorEmptyState({
   lastDreamAt?: string | null
   vaultHealth?: 'healthy' | 'stale' | 'critical' | 'unknown'
   // PR 50c: typed stats from dreamvault_status_json
+  rawCandidatesCount?: number
   processedCount?: number
   archivedCount?: number
   onCreateNote?: () => void
@@ -272,9 +275,9 @@ function EditorEmptyState({
                     mismatch, etc.) fall back to the simple PR 47
                     "notes · wiki · memory · candidates" format. The
                     fallback is silent — no error UI, no banner. */}
-                {typeof processedCount === 'number' && typeof archivedCount === 'number'
+                {typeof rawCandidatesCount === 'number' && typeof processedCount === 'number' && typeof archivedCount === 'number'
                   ? translate(locale, 'editor.workspace.countsDetailed', {
-                      candidates: workspaceCounts.raw,
+                      candidates: rawCandidatesCount,
                       processed: processedCount,
                       archived: archivedCount,
                     })
@@ -572,6 +575,7 @@ function EditorLayout({
   onOpenEntry,
   lastDreamAt,
   vaultHealth,
+  rawCandidatesCount,
   processedCount,
   archivedCount,
   onSave,
@@ -684,7 +688,8 @@ function EditorLayout({
   lastDreamAt?: string | null
   // PR 49: vault health (color-coded badge next to counts)
   vaultHealth?: 'healthy' | 'stale' | 'critical' | 'unknown'
-  // PR 50c: typed stats (processed + archived counts)
+  // PR 50c: typed stats (raw candidates + processed + archived counts)
+  rawCandidatesCount?: number
   processedCount?: number
   archivedCount?: number
   rawLatestContentRef: React.MutableRefObject<string | null>
@@ -733,6 +738,7 @@ function EditorLayout({
               onOpenEntry={onOpenEntry}
               lastDreamAt={lastDreamAt}
               vaultHealth={vaultHealth}
+              rawCandidatesCount={rawCandidatesCount}
               processedCount={processedCount}
               archivedCount={archivedCount}
               onCreateNote={onCreateNote}

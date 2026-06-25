@@ -1856,6 +1856,7 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
               // when the typed path isn't available (old binary /
               // schemaVersion mismatch) → Editor falls back to the
               // simple "X candidates" format.
+              rawCandidatesCount={vaultStatsJson?.rawCandidatesCount}
               processedCount={vaultStatsJson?.processedCount}
               archivedCount={vaultStatsJson?.archivedCount}
               noteList={aiNoteList}
