@@ -35,6 +35,16 @@ interface DreamPanelProps {
   onOpenMemory?: () => void
   onOpenWiki?: () => void
   /**
+   * PR 53: open a dream-report by its vault-relative path. The
+   * App-level callback first tries `vaultBridge.openNoteByPath`,
+   * which works if the report is indexed as a note. If the
+   * .dream/reports entry is not indexed as a note, the existing
+   * local-file helper falls back. When undefined, the Open button
+   * is hidden (silent — the run-state card still shows the path
+   * inline so the user can copy/paste manually).
+   */
+  onOpenReport?: (relativePath: string) => void
+  /**
    * v0.6 PR 34: open the Settings panel, optionally scrolled to the
    * AI section. Wired by App.tsx via `dialogs.openSettings()`. When
    * undefined, fix-action buttons that need it (missing key / auth
@@ -113,7 +123,14 @@ function formatDreamPanelLastDreamTime(iso: string, locale: AppLocale): string {
   return locale === 'en' ? `${years} y ago` : `${years} y`
 }
 
-export function DreamPanel({ vaultPath, locale = 'en', onOpenMemory, onOpenWiki, onOpenSettingsAi }: DreamPanelProps) {
+export function DreamPanel({
+  vaultPath,
+  locale = 'en',
+  onOpenMemory,
+  onOpenWiki,
+  onOpenReport,
+  onOpenSettingsAi,
+}: DreamPanelProps) {
   const [output, setOutput] = useState('No Dream run yet.')
   const [error, setError] = useState<string | null>(null)
   const [runningCommand, setRunningCommand] = useState<DreamCommand | null>(null)
@@ -357,6 +374,26 @@ export function DreamPanel({ vaultPath, locale = 'en', onOpenMemory, onOpenWiki,
                   <span>
                     {runSummary.rawCollected ?? 0} raw · {runSummary.integrated ?? 0} integrated
                   </span>
+                ) : null}
+                {/* PR 53: Open latest report. Renders ONLY when
+                    the run produced a `dream-report:` line in the
+                    output AND the parent wired `onOpenReport`.
+                    Silent fallback: if onOpenReport is undefined,
+                    the button is hidden (the run-state card still
+                    shows the path inline so the user can copy it).
+                    Task 4 will swap the hardcoded label to
+                    `dreamPanel.run.openLatestReport` i18n key. */}
+                {runSummary.reportPath && onOpenReport ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onOpenReport(runSummary.reportPath!)}
+                    data-testid="dream-panel-open-report"
+                    className="mt-2"
+                  >
+                    Open latest report
+                  </Button>
                 ) : null}
               </div>
             ) : null}

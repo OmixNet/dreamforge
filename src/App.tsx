@@ -681,6 +681,34 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
     handleSlimFolderSelect('wiki')
   }, [handleSlimFolderSelect])
 
+  // PR 53: open a dream-report by its vault-relative path. The
+  // dream CLI emits paths like `.dream/reports/dream-report-...md`
+  // (PR 50a design note §1.4 rule 3 — paths are always vault-relative
+  // and internal file layout is owned by DreamVault). We try the
+  // note bridge first (works if the report is already indexed) and
+  // fall back to opening it as a local file via `open_path` (PR 7+
+  // Tauri command — opens the file in the system editor). If both
+  // fail we silently do nothing; the run-state card still shows
+  // the path inline so the user can copy/paste it.
+  const handleOpenDreamReport = useCallback(
+    (relativePath: string) => {
+      const absolutePath = `${resolvedPath}/${relativePath}`
+      const existing = visibleEntries.find(
+        (entry) => entry.path === absolutePath,
+      )
+      if (existing) {
+        void handleReplaceActiveTab(existing)
+        return
+      }
+      // Fallback: open the report as a local file. This is the
+      // path DreamPanel takes when `.dream/reports/<file>` is not
+      // indexed as a note (which is the common case — reports are
+      // engine-internal, not in the sidebar).
+      void invoke('open_path', { path: absolutePath })
+    },
+    [resolvedPath, visibleEntries, handleReplaceActiveTab],
+  )
+
   const vaultBridge = useVaultBridge({
     entriesByPath,
     resolvedPath,
@@ -1905,6 +1933,7 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
             locale={appLocale}
             onOpenMemory={handleOpenMemory}
             onOpenWiki={handleOpenWiki}
+            onOpenReport={handleOpenDreamReport}
             onOpenSettingsAi={() => {
               // v0.6 PR 34: open Settings scrolled to the AI section
               // so the user lands on the provider config when a missing

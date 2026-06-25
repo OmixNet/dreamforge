@@ -848,5 +848,53 @@ describe('DreamPanel', () => {
       expect(await screen.findByText(/API key missing or not saved/i)).toBeInTheDocument()
       expect(screen.queryByTestId('dream-panel-run-state')).toBeNull()
     })
+
+    it('renders Open latest report when Run Dream output includes a report path', async () => {
+      const onOpenReport = vi.fn()
+      vi.mocked(mockInvoke)
+        .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+        .mockResolvedValueOnce({
+          stdout: [
+            'dream completed:',
+            '  - collected raw: 1',
+            '  - integrated: 1',
+            '  - dream-report: .dream/reports/dream-report-2026-06-25-090000.md',
+          ].join('\n'),
+          stderr: '',
+          success: true,
+        })
+
+      render(<DreamPanel vaultPath="/tmp/vault" onOpenReport={onOpenReport} />)
+      await screen.findByText(/status ok/)
+      fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+      const openBtn = await screen.findByRole('button', { name: 'Open latest report' })
+      fireEvent.click(openBtn)
+      expect(onOpenReport).toHaveBeenCalledWith('.dream/reports/dream-report-2026-06-25-090000.md')
+    })
+
+    it('hides the Open latest report button when onOpenReport prop is missing', async () => {
+      vi.mocked(mockInvoke)
+        .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+        .mockResolvedValueOnce({
+          stdout: [
+            'dream completed:',
+            '  - collected raw: 1',
+            '  - integrated: 1',
+            '  - dream-report: .dream/reports/dream-report-2026-06-25-090000.md',
+          ].join('\n'),
+          stderr: '',
+          success: true,
+        })
+
+      render(<DreamPanel vaultPath="/tmp/vault" />)
+      await screen.findByText(/status ok/)
+      fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+      await screen.findByTestId('dream-panel-run-state')
+      // No onOpenReport prop → no Open button (silent, not a warning)
+      expect(
+        screen.queryByRole('button', { name: 'Open latest report' }),
+      ).toBeNull()
+    })
   })
 })
