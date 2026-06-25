@@ -310,6 +310,8 @@
   "settings.aiProviders.currentConfig": "目前使用：{provider} · {model}",
   "settings.aiProviders.activeBanner": "使用中",
   "settings.aiProviders.activeBannerClear": "清除",
+  "settings.aiProviders.baseUrlHint": "DreamX 會為 OpenAI 相容介面自動加 /v1。直接用裸網域（例如 https://api.openai.com）。",
+  "settings.aiProviders.baseUrlV1Warning": "不要寫 /v1 — DreamX 會自動加。用裸網域即可。",
   "settings.workflow.title": "工作流",
   "settings.workflow.description": "選擇 DreamX 是否顯示收件箱工作流，以及整理時如何移動到下一項。",
   "settings.workflow.explicit": "顯式整理筆記",

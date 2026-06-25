@@ -310,6 +310,8 @@
   "settings.aiProviders.currentConfig": "Выкарыстоўваецца: {provider} · {model}",
   "settings.aiProviders.activeBanner": "Актыўны",
   "settings.aiProviders.activeBannerClear": "Ачысціць",
+  "settings.aiProviders.baseUrlHint": "DreamX дадае /v1 для OpenAI-сумяшчальных правайдэраў. Выкарыстоўвайце голы дамен (напрыклад, https://api.openai.com).",
+  "settings.aiProviders.baseUrlV1Warning": "Не дадавайце /v1 — DreamX зробіць гэта аўтаматычна. Выкарыстоўвайце голы дамен.",
   "settings.workflow.title": "Працоўны працэс (Workflow)",
   "settings.workflow.description": "Наладка функцыянавання Уваходных (Inbox).",
   "settings.workflow.explicit": "Размяркоўваць нататкі ўручную",

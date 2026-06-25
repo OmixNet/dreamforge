@@ -310,6 +310,8 @@
   "settings.aiProviders.currentConfig": "Används: {provider} · {model}",
   "settings.aiProviders.activeBanner": "Aktiv",
   "settings.aiProviders.activeBannerClear": "Rensa",
+  "settings.aiProviders.baseUrlHint": "DreamX lägger till /v1 för OpenAI-kompatibla leverantörer. Använd bara grunddomänen (t.ex. https://api.openai.com).",
+  "settings.aiProviders.baseUrlV1Warning": "Inkludera inte /v1 — DreamX lägger till det automatiskt. Använd grunddomänen istället.",
   "settings.workflow.title": "Arbetsflöde",
   "settings.workflow.description": "Välj om DreamX ska visa Inkorgsarbetsflödet, samt hur det förflyttar sig mellan objekt medan du sorterar dem.",
   "settings.workflow.explicit": "Organisera anteckningar explicit",

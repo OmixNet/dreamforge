@@ -311,6 +311,46 @@ function ApiKeyStorageFields({
   )
 }
 
+function BaseUrlV1Hint({
+  t,
+  kind,
+  baseUrl,
+}: {
+  t: Translate
+  kind: AiModelProviderKind
+  baseUrl: string
+}) {
+  // PR 54.2: the /v1 rule applies to providers whose URL goes
+  // through /v1/chat/completions. That's open_ai, open_router, and
+  // open_ai_compatible (the dream CLI's OpenAICompatibleProvider
+  // appends /v1/chat/completions to whatever base URL you give it).
+  // Anthropic (/v1/messages) and Gemini (/v1beta/models/...:gener-
+  // ateContent) use different URL paths, so we stay quiet for those
+  // kinds to avoid showing a wrong hint.
+  const V1_AWARE_KINDS = new Set<AiModelProviderKind>(['open_ai', 'open_router', 'open_ai_compatible'])
+  if (!V1_AWARE_KINDS.has(kind)) return null
+  if (!baseUrl) return null
+  const endsWithV1 = /\/v1\/?$/.test(baseUrl)
+  if (endsWithV1) {
+    return (
+      <p
+        data-testid="ai-providers-baseurl-v1-warning"
+        className="-mt-1 pl-1 text-xs leading-5 text-amber-700 dark:text-amber-300"
+      >
+        {t('settings.aiProviders.baseUrlV1Warning')}
+      </p>
+    )
+  }
+  return (
+    <p
+      data-testid="ai-providers-baseurl-hint"
+      className="-mt-1 pl-1 text-xs leading-5 text-muted-foreground"
+    >
+      {t('settings.aiProviders.baseUrlHint')}
+    </p>
+  )
+}
+
 function ActiveProviderBanner({
   t,
   providerName,
@@ -663,6 +703,16 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
       <div className="space-y-3">
         <ProviderKindSelect mode={mode} t={t} value={draft.kind} onChange={updateKind} />
         <LabeledInput label={t('settings.aiProviders.baseUrl')} value={draft.baseUrl} onChange={(baseUrl) => updateForm({ baseUrl })} />
+        {/* PR 54.2: Base URL /v1 hint. OpenAI-compatible providers go
+            through the dream CLI's /v1/chat/completions path; if the
+            user pastes a URL that already ends with /v1, dreamforge
+            would double-append /v1 and hit /v1/v1/chat/completions
+            (404). The hint is inline (right under the input) so the
+            user sees it at the moment of typing. Anthropic + Gemini
+            don't go through this path, so the hint is hidden for
+            those kinds. The warning is destructive-amber; the
+            helper is muted text. */}
+        <BaseUrlV1Hint t={t} kind={draft.kind} baseUrl={draft.baseUrl} />
         <LabeledInput label={t('settings.aiProviders.model')} value={draft.modelId} onChange={(modelId) => updateForm({ modelId })} placeholder={aiModelProviderCatalogEntry(draft.kind).default_model_id} />
         {mode === 'api' ? (
           <>

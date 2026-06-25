@@ -310,6 +310,8 @@
   "settings.aiProviders.currentConfig": "使用中: {provider} · {model}",
   "settings.aiProviders.activeBanner": "アクティブ",
   "settings.aiProviders.activeBannerClear": "解除",
+  "settings.aiProviders.baseUrlHint": "DreamX は OpenAI 互換プロバイダーに対して /v1 を自動的に付加します。素のドメインを使用してください（例: https://api.openai.com）。",
+  "settings.aiProviders.baseUrlV1Warning": "/v1 を含めないでください — DreamX が自動的に付加します。代わりに素のドメインを使用してください。",
   "settings.workflow.title": "ワークフロー",
   "settings.workflow.description": "DreamXが受信トレイのワークフローを表示するかどうか、およびあなたがアイテムをトリアージする際にDreamXがアイテム間を移動する方法を選択します。",
   "settings.workflow.explicit": "ノートを明示的に整理する",

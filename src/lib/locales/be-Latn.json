@@ -310,6 +310,8 @@
   "settings.aiProviders.currentConfig": "Vykarystoŭvajecca: {provider} · {model}",
   "settings.aiProviders.activeBanner": "Aktyŭny",
   "settings.aiProviders.activeBannerClear": "Ačyscіcь",
+  "settings.aiProviders.baseUrlHint": "DreamX dadaje /v1 dlja OpenAI-sumjaščal'naha prajdэraŭ. Vykarystoŭvajcе haly damen (napryklad, https://api.openai.com).",
+  "settings.aiProviders.baseUrlV1Warning": "Ne dadajcе /v1 — DreamX zrobіc heta aŭtamatyčna. Vykarystoŭvajcе haly damen.",
   "settings.workflow.title": "Pracoŭny praces (Workflow)",
   "settings.workflow.description": "Naladka funkcyjanavannia Uvachodnych (Inbox).",
   "settings.workflow.explicit": "Razmiarkoŭvać natatki ŭručnuju",

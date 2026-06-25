@@ -310,6 +310,8 @@
   "settings.aiProviders.currentConfig": "W użyciu: {provider} · {model}",
   "settings.aiProviders.activeBanner": "Aktywny",
   "settings.aiProviders.activeBannerClear": "Wyczyść",
+  "settings.aiProviders.baseUrlHint": "DreamX dodaje /v1 dla dostawców kompatybilnych z OpenAI. Używaj samej domeny (np. https://api.openai.com).",
+  "settings.aiProviders.baseUrlV1Warning": "Nie dołączaj /v1 — DreamX doda to automatycznie. Użyj zamiast tego samej domeny.",
   "settings.workflow.title": "Przepływ pracy",
   "settings.workflow.description": "Wybierz, czy DreamX pokazuje przepływ pracy Skrzynki odbiorczej i jak przechodzi między elementami podczas segregacji.",
   "settings.workflow.explicit": "Porządkuj notatki jawnie",

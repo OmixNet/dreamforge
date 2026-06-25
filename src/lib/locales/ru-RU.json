@@ -310,6 +310,8 @@
   "settings.aiProviders.currentConfig": "Используется: {provider} · {model}",
   "settings.aiProviders.activeBanner": "Активен",
   "settings.aiProviders.activeBannerClear": "Сбросить",
+  "settings.aiProviders.baseUrlHint": "DreamX добавляет /v1 для провайдеров, совместимых с OpenAI. Используйте только домен (например, https://api.openai.com).",
+  "settings.aiProviders.baseUrlV1Warning": "Не добавляйте /v1 — DreamX добавит его автоматически. Используйте только домен.",
   "settings.workflow.title": "Рабочий процесс",
   "settings.workflow.description": "Выберите, будет ли DreamX отображать рабочий процесс в папке «Входящие», а также порядок перемещения по элементам во время их сортировки.",
   "settings.workflow.explicit": "Явно упорядочивать заметки",

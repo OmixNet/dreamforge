@@ -310,6 +310,8 @@
   "settings.aiProviders.currentConfig": "Đang sử dụng: {provider} · {model}",
   "settings.aiProviders.activeBanner": "Đang hoạt động",
   "settings.aiProviders.activeBannerClear": "Xóa",
+  "settings.aiProviders.baseUrlHint": "DreamX tự thêm /v1 cho nhà cung cấp tương thích OpenAI. Chỉ dùng tên miền gốc (ví dụ: https://api.openai.com).",
+  "settings.aiProviders.baseUrlV1Warning": "Đừng bao gồm /v1 — DreamX sẽ tự thêm. Hãy dùng tên miền gốc thay thế.",
   "settings.workflow.title": "Quy trình",
   "settings.workflow.description": "Chọn xem DreamX có hiển thị quy trình Hộp thư đến hay không, và cách nó chuyển qua các mục khi bạn phân loại chúng.",
   "settings.workflow.explicit": "Sắp xếp ghi chú rõ ràng",

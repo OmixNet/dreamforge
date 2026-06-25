@@ -310,6 +310,8 @@
   "settings.aiProviders.currentConfig": "Sedang digunakan: {provider} · {model}",
   "settings.aiProviders.activeBanner": "Aktif",
   "settings.aiProviders.activeBannerClear": "Hapus",
+  "settings.aiProviders.baseUrlHint": "DreamX menambahkan /v1 untuk provider yang kompatibel dengan OpenAI. Gunakan domain kosong saja (mis. https://api.openai.com).",
+  "settings.aiProviders.baseUrlV1Warning": "Jangan sertakan /v1 — DreamX akan menambahkannya otomatis. Gunakan domain kosong sebagai gantinya.",
   "settings.workflow.title": "Alur Kerja",
   "settings.workflow.description": "Pilih apakah DreamX menampilkan alur kerja Kotak Masuk, serta bagaimana ia berpindah melalui item saat Anda menyortirnya.",
   "settings.workflow.explicit": "Atur catatan secara eksplisit",

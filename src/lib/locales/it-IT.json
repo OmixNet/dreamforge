@@ -310,6 +310,8 @@
   "settings.aiProviders.currentConfig": "In uso: {provider} · {model}",
   "settings.aiProviders.activeBanner": "Attivo",
   "settings.aiProviders.activeBannerClear": "Rimuovi",
+  "settings.aiProviders.baseUrlHint": "DreamX aggiunge /v1 per i provider compatibili con OpenAI. Usa solo il dominio base (es. https://api.openai.com).",
+  "settings.aiProviders.baseUrlV1Warning": "Non includere /v1 — DreamX lo aggiunge automaticamente. Usa invece il dominio base.",
   "settings.workflow.title": "Flusso di lavoro",
   "settings.workflow.description": "Scegli se DreamX deve mostrare il flusso di lavoro dell'Inbox e come si sposta tra gli elementi mentre li smisti.",
   "settings.workflow.explicit": "Organizza le note in modo esplicito",

@@ -310,6 +310,8 @@
   "settings.aiProviders.currentConfig": "En uso: {provider} · {model}",
   "settings.aiProviders.activeBanner": "Activo",
   "settings.aiProviders.activeBannerClear": "Quitar",
+  "settings.aiProviders.baseUrlHint": "DreamX agrega /v1 para proveedores compatibles con OpenAI. Usa solo el dominio base (p. ej. https://api.openai.com).",
+  "settings.aiProviders.baseUrlV1Warning": "No incluyas /v1 — DreamX lo agrega automáticamente. Usa el dominio base en su lugar.",
   "settings.workflow.title": "Flujo de trabajo",
   "settings.workflow.description": "Elija si desea que DreamX muestre el flujo de trabajo de la bandeja de entrada y cómo avanza por los elementos mientras usted los clasifica.",
   "settings.workflow.explicit": "Organizar las notas de forma explícita",
