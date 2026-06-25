@@ -304,7 +304,12 @@ describe('AiProviderSettings', () => {
       />,
     )
 
+    // PR 54.4: Remove opens a confirm dialog. The delete_ai call
+    // only fires after the user clicks Delete in the dialog.
     fireEvent.click(screen.getByRole('button', { name: /common\.remove/ }))
+    fireEvent.click(
+      await screen.findByRole('button', { name: /settings\.aiProviders\.deleteConfirm\.confirm/ }),
+    )
 
     await waitFor(() => {
       expect(invoke).toHaveBeenCalledWith(
@@ -344,6 +349,14 @@ describe('AiProviderSettings', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: /common\.remove/ }))
+
+    // PR 54.4: Remove opens a confirm dialog now. localStorage
+    // pointers are only cleared after the user clicks Delete in the
+    // dialog. (Cancel would leave them intact — see PR 54: delete
+    // confirm dialog tests below.)
+    fireEvent.click(
+      await screen.findByRole('button', { name: /settings\.aiProviders\.deleteConfirm\.confirm/ }),
+    )
 
     await waitFor(() => {
       expect(window.localStorage.getItem('dreamforge.llmApiKeyEnv')).toBeNull()
@@ -1090,6 +1103,171 @@ describe('AiProviderSettings', () => {
       // describe block verify the positive paths.
       // If we ever export shouldShowV1Hint as a helper, add a pure
       // helper test in src/lib/baseUrlHints.test.ts.
+    })
+
+    // PR 54.4: provider delete now goes through a confirm dialog
+    // (shadcn Dialog) instead of a single click. Per user backlog
+    // 'provider 删除后状态清理' — the existing single-click delete
+    // was too easy to misfire. The dialog adds a single intentional
+    // confirmation step without making the flow annoying.
+    describe('PR 54: delete confirm dialog', () => {
+      it('opens a confirm dialog when Remove is clicked', async () => {
+        vi.mocked(invoke).mockResolvedValue(null)
+        const providers: AiModelProvider[] = [
+          {
+            id: 'openrouter-abc',
+            kind: 'open_router',
+            name: 'OpenRouter',
+            base_url: 'https://openrouter.ai/api/v1',
+            api_key_storage: 'env',
+            api_key_env_var: 'OPENROUTER_API_KEY',
+            headers: null,
+            models: [{ id: 'gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+          },
+        ]
+        render(
+          <AiProviderSettings
+            t={(k: string, params?: Record<string, string | number>) => {
+              // For the title key with {name} placeholder, render
+              // the substituted string so the test can assert on
+              // it. Other keys pass through unchanged.
+              if (k === 'settings.aiProviders.deleteConfirm.title' && params) {
+                return `Delete ${params.name}?`
+              }
+              return k
+            }}
+            mode="api"
+            providers={providers}
+            onChange={() => {}}
+          />,
+        )
+
+        fireEvent.click(screen.getByRole('button', { name: /common\.remove/ }))
+
+        // Dialog appears with title containing the provider name +
+        // Cancel + Delete buttons.
+        expect(await screen.findByText(/Delete OpenRouter\?/)).toBeInTheDocument()
+        expect(
+          screen.getByRole('button', { name: /settings\.aiProviders\.deleteConfirm\.cancel/ }),
+        ).toBeInTheDocument()
+        expect(
+          screen.getByRole('button', { name: /settings\.aiProviders\.deleteConfirm\.confirm/ }),
+        ).toBeInTheDocument()
+      })
+
+      it('does NOT delete when Cancel is clicked', async () => {
+        vi.mocked(invoke).mockResolvedValue(null)
+        const onChange = vi.fn()
+        const providers: AiModelProvider[] = [
+          {
+            id: 'openrouter-abc',
+            kind: 'open_router',
+            name: 'OpenRouter',
+            base_url: 'https://openrouter.ai/api/v1',
+            api_key_storage: 'env',
+            api_key_env_var: 'OPENROUTER_API_KEY',
+            headers: null,
+            models: [{ id: 'gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+          },
+        ]
+        render(
+          <AiProviderSettings
+            t={(k: string) => k}
+            mode="api"
+            providers={providers}
+            onChange={onChange}
+          />,
+        )
+
+        fireEvent.click(screen.getByRole('button', { name: /common\.remove/ }))
+        fireEvent.click(
+          await screen.findByRole('button', { name: /settings\.aiProviders\.deleteConfirm\.cancel/ }),
+        )
+
+        // Wait a tick to give the delete IPC time to fire (it shouldn't)
+        await new Promise((r) => setTimeout(r, 10))
+        expect(invoke).not.toHaveBeenCalledWith('delete_ai_model_provider_api_key', expect.anything())
+        expect(onChange).not.toHaveBeenCalled()
+      })
+
+      it('deletes when Delete is clicked in the dialog', async () => {
+        vi.mocked(invoke).mockResolvedValue(null)
+        const onChange = vi.fn()
+        const providers: AiModelProvider[] = [
+          {
+            id: 'openrouter-abc',
+            kind: 'open_router',
+            name: 'OpenRouter',
+            base_url: 'https://openrouter.ai/api/v1',
+            api_key_storage: 'env',
+            api_key_env_var: 'OPENROUTER_API_KEY',
+            headers: null,
+            models: [{ id: 'gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+          },
+        ]
+        render(
+          <AiProviderSettings
+            t={(k: string) => k}
+            mode="api"
+            providers={providers}
+            onChange={onChange}
+          />,
+        )
+
+        fireEvent.click(screen.getByRole('button', { name: /common\.remove/ }))
+        fireEvent.click(
+          await screen.findByRole('button', { name: /settings\.aiProviders\.deleteConfirm\.confirm/ }),
+        )
+
+        await waitFor(() => {
+          expect(onChange).toHaveBeenCalledWith([])
+        })
+      })
+
+      it('clears active pointer + banner when deleting the active provider', async () => {
+        vi.mocked(invoke).mockResolvedValue(null)
+        window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter-active')
+        window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'OPENROUTER_API_KEY')
+
+        const providers: AiModelProvider[] = [
+          {
+            id: 'openrouter-active',
+            kind: 'open_router',
+            name: 'OpenRouter',
+            base_url: 'https://openrouter.ai/api/v1',
+            api_key_storage: 'env',
+            api_key_env_var: 'OPENROUTER_API_KEY',
+            headers: null,
+            models: [{ id: 'gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+          },
+        ]
+        render(
+          <AiProviderSettings
+            t={(k: string) => k}
+            mode="api"
+            providers={providers}
+            onChange={() => {}}
+          />,
+        )
+
+        // Sanity: banner is visible before delete.
+        expect(await screen.findByTestId('ai-providers-active-banner')).toBeInTheDocument()
+
+        fireEvent.click(screen.getByRole('button', { name: /common\.remove/ }))
+        fireEvent.click(
+          await screen.findByRole('button', { name: /settings\.aiProviders\.deleteConfirm\.confirm/ }),
+        )
+
+        // PR 43 + 54.4: the active pointer is cleared + the banner
+        // disappears. This was the state-cleanup invariant the user
+        // wanted re-verified.
+        await waitFor(() => {
+          expect(screen.queryByTestId('ai-providers-active-banner')).toBeNull()
+        })
+        // localStorage should also be cleared so DreamPanel doesn't
+        // pass a dangling provider id to dreamvault_run.
+        expect(window.localStorage.getItem('dreamforge.llmApiKeyProviderId')).toBeNull()
+      })
     })
   })
 

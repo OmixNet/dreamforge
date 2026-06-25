@@ -25,6 +25,14 @@ import {
   writeLlmProviderKind,
 } from '../lib/dreamCliPath'
 import { Button } from './ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
 import { Input } from './ui/input'
 import {
   Select,
@@ -183,6 +191,63 @@ function providerModeTitle(mode: ProviderMode, t: Translate): string {
 
 function providerModeDescription(mode: ProviderMode, t: Translate): string {
   return mode === 'local' ? t('settings.aiProviders.localDescription') : t('settings.aiProviders.apiDescription')
+}
+
+function DeleteProviderDialog({
+  t,
+  provider,
+  onConfirm,
+  onCancel,
+}: {
+  t: Translate
+  provider: AiModelProvider | null
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  // PR 54.4: confirm dialog before destructive delete. Replaces
+  // the previous single-click Remove → delete flow, which was too
+  // easy to misfire on touchpad / small hit areas. Title includes
+  // the provider name so the user sees exactly what they're about
+  // to delete. Body explains the side effects (Keychain removal,
+  // no file deletion) — important since some users might think
+  // "delete" removes vault files.
+  //
+  // Returns null when no provider is pending so the dialog doesn't
+  // render an empty shell. The parent's `pendingDelete` state is
+  // the single source of truth for open/close.
+  if (!provider) return null
+  return (
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent data-testid="ai-providers-delete-dialog">
+        <DialogHeader>
+          <DialogTitle>
+            {t('settings.aiProviders.deleteConfirm.title', { name: provider.name })}
+          </DialogTitle>
+          <DialogDescription>
+            {t('settings.aiProviders.deleteConfirm.message')}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            data-testid="ai-providers-delete-cancel"
+          >
+            {t('settings.aiProviders.deleteConfirm.cancel')}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={onConfirm}
+            data-testid="ai-providers-delete-confirm"
+          >
+            {t('settings.aiProviders.deleteConfirm.confirm')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 function KeychainStatusDot({
@@ -449,7 +514,7 @@ function ProviderList({
   keyConfiguredByProviderId,
   activeProviderId,
   onUseThis,
-  onRemove,
+  onRequestDelete,
 }: {
   t: Translate
   mode: ProviderMode
@@ -457,7 +522,11 @@ function ProviderList({
   keyConfiguredByProviderId: ReadonlyMap<string, boolean>
   activeProviderId: string | null
   onUseThis: (providerId: string) => void
-  onRemove: (providerId: string) => void
+  // PR 54.4: changed from onRemove(providerId) → onRequestDelete(provider).
+  // We now pass the whole provider object so the dialog can show the
+  // provider name in the title without a follow-up lookup. The actual
+  // delete happens after the user confirms in the dialog.
+  onRequestDelete: (provider: AiModelProvider) => void
 }) {
   const visible = visibleProviders(providers, mode)
   if (visible.length === 0) {
@@ -540,7 +609,7 @@ function ProviderList({
                   {t('settings.aiProviders.useThis')}
                 </Button>
               ) : null}
-              <Button type="button" variant="ghost" size="sm" onClick={() => onRemove(target.provider.id)}>
+              <Button type="button" variant="ghost" size="sm" onClick={() => onRequestDelete(target.provider)}>
                 {t('common.remove')}
               </Button>
             </div>
@@ -554,6 +623,12 @@ function ProviderList({
 export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderSettingsProps) {
   const [draft, setDraft] = useState<ProviderDraft>(() => initialDraft(mode))
   const [error, setError] = useState<string | null>(null)
+  // PR 54.4: pendingDelete holds the provider awaiting confirmation.
+  // null = no dialog open. The provider object (not just the id) is
+  // stored so the dialog can show the provider name in the title
+  // without a follow-up lookup. The dialog renders above everything
+  // else; Escape / overlay click close it (onCancel fires).
+  const [pendingDelete, setPendingDelete] = useState<AiModelProvider | null>(null)
   // PR 43: track which provider is "active" — i.e. the one
   // DreamPanel currently reads from localStorage (paired with
   // dreamforge.llmApiKeyEnv at dream CLI invocation time). Init
@@ -740,7 +815,7 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
         keyConfiguredByProviderId={keyConfiguredByProviderId}
         activeProviderId={activeProviderId}
         onUseThis={useThisProvider}
-        onRemove={removeProvider}
+        onRequestDelete={setPendingDelete}
       />
       {/* v0.6 PR 35: simplified 4-step main flow. The 4 fields most
           users need (provider / base URL / model / API key) are
@@ -804,6 +879,24 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
             button removed — no way to call the (non-existent)
             test_ai_model_provider tauri command from v0.5. */}
       </div>
+      {/* PR 54.4: confirm dialog for provider delete. Rendered at the
+          end of the component so it floats above everything (shadcn
+          Dialog uses a portal). The dialog's open prop is derived from
+          pendingDelete !== null — set by onRequestDelete, cleared by
+          onCancel / onConfirm. The actual removeProvider call only
+          fires after the user clicks Delete in the dialog, so an
+          accidental Remove click is recoverable (form draft survives). */}
+      <DeleteProviderDialog
+        t={t}
+        provider={pendingDelete}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete) {
+            void removeProvider(pendingDelete.id)
+          }
+          setPendingDelete(null)
+        }}
+      />
     </div>
   )
 }
