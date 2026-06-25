@@ -556,6 +556,8 @@
   "editor.workspace.vaultPath": "Kho: {path}",
   "editor.workspace.counts": "{notes} ghi chú · {wiki} trang Wiki · {memory} bộ nhớ · {raw} ứng viên",
   "editor.workspace.countsDetailed": "{candidates} ứng viên · {processed} đã xử lý · {archived} đã lưu trữ",
+  "dreamPanel.stats.lastDream": "Dream gần nhất: {time} trước",
+  "dreamPanel.stats.lastReport": "Báo cáo gần nhất: {path}",
   "editor.workspace.hint": "Chọn một ghi chú từ thanh bên, hoặc:",
   "editor.workspace.recent": "Gần đây",
   "editor.workspace.lastDream": "Dream gần nhất: {time}",

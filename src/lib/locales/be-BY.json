@@ -556,6 +556,8 @@
   "editor.workspace.vaultPath": "Сховішча: {path}",
   "editor.workspace.counts": "{notes} нататак · {wiki} Wiki старонак · {memory} памяць · {raw} кандыдаты",
   "editor.workspace.countsDetailed": "{candidates} кандыдатаў · {processed} апрацавана · {archived} у архіве",
+  "dreamPanel.stats.lastDream": "Апошні Dream: {time} таму",
+  "dreamPanel.stats.lastReport": "Апошні справаздача: {path}",
   "editor.workspace.hint": "Абярыце нататку на бакавой панэлі, або:",
   "editor.workspace.recent": "Нядаўна",
   "editor.workspace.lastDream": "Апошні Dream: {time}",

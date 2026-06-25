@@ -556,6 +556,8 @@
   "editor.workspace.vaultPath": "Сховище: {path}",
   "editor.workspace.counts": "{notes} нотаток · {wiki} Wiki сторінок · {memory} пам'ять · {raw} кандидати",
   "editor.workspace.countsDetailed": "{candidates} кандидатів · {processed} оброблено · {archived} в архіві",
+  "dreamPanel.stats.lastDream": "Останній Dream: {time} тому",
+  "dreamPanel.stats.lastReport": "Останній звіт: {path}",
   "editor.workspace.hint": "Виберіть нотатку на бічній панелі, або:",
   "editor.workspace.recent": "Останні",
   "editor.workspace.lastDream": "Останній Dream: {time}",

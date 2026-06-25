@@ -556,6 +556,8 @@
   "editor.workspace.vaultPath": "Bóveda: {path}",
   "editor.workspace.counts": "{notes} notas · {wiki} páginas Wiki · {memory} memoria · {raw} candidatos",
   "editor.workspace.countsDetailed": "{candidates} candidatos · {processed} procesados · {archived} archivados",
+  "dreamPanel.stats.lastDream": "Último Dream: hace {time}",
+  "dreamPanel.stats.lastReport": "Último informe: {path}",
   "editor.workspace.hint": "Elige una nota de la barra lateral, o:",
   "editor.workspace.recent": "Recientes",
   "editor.workspace.lastDream": "Último Dream: {time}",

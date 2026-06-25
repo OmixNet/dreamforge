@@ -556,6 +556,8 @@
   "editor.workspace.vaultPath": "Brankas: {path}",
   "editor.workspace.counts": "{notes} catatan · {wiki} halaman Wiki · {memory} memori · {raw} kandidat",
   "editor.workspace.countsDetailed": "{candidates} kandidat · {processed} diproses · {archived} diarsipkan",
+  "dreamPanel.stats.lastDream": "Dream terakhir: {time} lalu",
+  "dreamPanel.stats.lastReport": "Laporan terakhir: {path}",
   "editor.workspace.hint": "Pilih catatan dari bilah sisi, atau:",
   "editor.workspace.recent": "Terbaru",
   "editor.workspace.lastDream": "Dream terakhir: {time}",

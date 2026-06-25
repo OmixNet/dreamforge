@@ -556,6 +556,8 @@
   "editor.workspace.vaultPath": "Vault: {path}",
   "editor.workspace.counts": "{notes} note · {wiki} pagine Wiki · {memory} memoria · {raw} candidati",
   "editor.workspace.countsDetailed": "{candidates} candidati · {processed} elaborati · {archived} archiviati",
+  "dreamPanel.stats.lastDream": "Ultimo Dream: {time} fa",
+  "dreamPanel.stats.lastReport": "Ultimo report: {path}",
   "editor.workspace.hint": "Scegli una nota dalla barra laterale, oppure:",
   "editor.workspace.recent": "Recenti",
   "editor.workspace.lastDream": "Ultimo Dream: {time}",

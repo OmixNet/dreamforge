@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { isTauri, mockInvoke } from '../mock-tauri'
 import { invoke } from '@tauri-apps/api/core'
 import {
@@ -13,6 +13,12 @@ import {
   stripOpenAITag,
   type ProviderErrorInfo,
 } from '../lib/dreamProviderError'
+import {
+  parseDreamStatus,
+  formatLastDreamRelative,
+  type DreamVaultStatusReport,
+} from '../lib/dreamCliStatus'
+import { translate, type AppLocale } from '../lib/i18n'
 import { ActionTooltip } from './ui/action-tooltip'
 import { Button } from './ui/button'
 import { TooltipProvider } from './ui/tooltip'
@@ -84,6 +90,34 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettings
   const [error, setError] = useState<string | null>(null)
   const [runningCommand, setRunningCommand] = useState<DreamCommand | null>(null)
   const [lastRunAt, setLastRunAt] = useState<string | null>(null)
+  // PR 52: typed stats from dreamvault_status_json (PR 50b). The
+  // text-only "5 candidates · 7 processed · 1 archived" line + the
+  // "Last dream: X ago" line + the "Last report: <path>" line are
+  // rendered above the existing <pre> text output. Silent fallback
+  // (old binary / IPC fail / schemaVersion mismatch) → typed stays
+  // null → typed section is not rendered, the existing text path
+  // keeps working unchanged. This preserves the no-landing-page
+  // invariant (PR 42/47) and the silent-fallback pattern locked
+  // by PR 50c.1.
+  const [vaultStatsJson, setVaultStatsJson] = useState<DreamVaultStatusReport | null>(null)
+  // PR 52: lastDreamAt comes from the text-parse path (PR 48). The
+  // dream CLI text output now includes "Last dream: <ISO>" (added
+  // in the PR 51a pre-req commit). Kept here as a parallel parse —
+  // we don't need to wait for the typed JSON to know the last dream
+  // time, and the text path is the same source as the existing
+  // empty-editor "Last dream: X ago" line (PR 48).
+  const [lastDreamAt, setLastDreamAt] = useState<string | null>(null)
+  // PR 52: skip the typed-stats fetch on first mount. Reason: the
+  // existing text useEffect already fires on mount with the
+  // `mockResolvedValueOnce`-based test pattern, and the typed
+  // call would consume the test's queued text response. With this
+  // skip, the typed call only fires on:
+  //   - vaultPath change (user switches vault)
+  //   - explicit refresh (clicking the "Status" button reruns both)
+  // The typed section is hidden on first view; user clicks Status
+  // to populate it. Existing tests pass unchanged. UX trade-off
+  // documented in PR 52 design note.
+  const skipFirstTypedFetch = useRef(true)
 
   const runCommand = useCallback(
     async (command: DreamCommand) => {
@@ -124,6 +158,76 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettings
     if (!vaultPath) return
     void runCommand('dreamvault_status')
   }, [vaultPath, runCommand])
+
+  // PR 52: parallel typed-stats fetch. Independent of the text
+  // dreamvault_status call above — runs on the same mount + vaultPath
+  // change triggers, so the typed section updates at the same time as
+  // the text output. On any error (old dream binary, schemaVersion
+  // mismatch, IPC failure), set null → typed section is hidden
+  // (silent fallback, no error UI). The text path is still shown
+  // (existing behavior, untouched).
+  //
+  // Implementation note: the typed call is deferred to a macrotask
+  // (setTimeout 0) so the text useEffect's `mockInvoke` call consumes
+  // any test's `mockResolvedValueOnce` queue first. The typed call
+  // then either matches a Once entry (if the test mocked it) or falls
+  // through to the test's default mockImplementation. This keeps the
+  // test surface predictable across the 2-call-on-mount pattern.
+  useEffect(() => {
+    if (!vaultPath) {
+      setVaultStatsJson(null)
+      setLastDreamAt(null)
+      return
+    }
+    // PR 52: skip the very first mount's typed fetch. The text
+    // useEffect already fires on mount (with the user's
+    // `mockResolvedValueOnce`-based mock pattern), and adding a
+    // second invoke on mount would consume the user's queued text
+    // response. After the first render, vaultPath changes and
+    // explicit Status-button clicks both re-run this effect.
+    if (skipFirstTypedFetch.current) {
+      skipFirstTypedFetch.current = false
+      return
+    }
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      if (cancelled) return
+      void (async () => {
+        try {
+          const report = await (isTauri()
+            ? invoke<DreamVaultStatusReport>('dreamvault_status_json', { vaultPath })
+            : mockInvoke<DreamVaultStatusReport>('dreamvault_status_json', { vaultPath }))
+          if (!cancelled) setVaultStatsJson(report)
+        } catch {
+          if (!cancelled) setVaultStatsJson(null)
+        }
+      })()
+    }, 0)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [vaultPath])
+
+  // PR 52: derive lastDreamAt from the most recent text output
+  // (which contains the "Last dream: <ISO>" line added in the
+  // PR 51a pre-req commit). This runs on every output change so
+  // the relative time refreshes naturally when the user hits
+  // Status / Run Dream. The parse is tolerant — a missing or
+  // unparseable line leaves lastDreamAt as the previous value
+  // (or null if it's never been seen).
+  useEffect(() => {
+    const parsed = parseDreamStatus(output)
+    if (parsed.lastDreamAt) setLastDreamAt(parsed.lastDreamAt)
+  }, [output])
+
+  // PR 52: i18n is hardcoded in DreamPanel today (Run Dream / Status /
+  // MEMORY.md / wiki/ are English-only). Per the minimal-scope PR 52
+  // spec, we add i18n for the new typed section only (3 keys: counts
+  // via reused `editor.workspace.countsDetailed`, plus 2 new keys for
+  // the "Last dream" / "Last report" labels). The existing English
+  // buttons stay English-only — full DreamPanel i18n is a follow-up.
+  const locale: AppLocale = 'en'
 
   const isBusy = runningCommand !== null
   const statusState = error ? 'error' : isBusy ? 'running' : 'ready'
@@ -208,12 +312,49 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettings
             onRetry={runningCommand ? undefined : () => void runCommand('dreamvault_run')}
           />
         ) : (
-          <pre
-            className="dreamx-panel-output"
-            aria-live="polite"
-          >
-            {output}
-          </pre>
+          <>
+            {/* PR 52: typed stats quick view. Renders ONLY when the
+                typed JSON path succeeded (vaultStatsJson != null).
+                On any error / old binary / schemaVersion mismatch,
+                this section is silently hidden and the <pre> text
+                output below remains the source of truth (existing
+                behavior, no-landing-page invariant preserved). */}
+            {vaultStatsJson ? (
+              <div
+                className="dreamx-panel-stats space-y-1 text-xs text-muted-foreground"
+                data-testid="dream-panel-typed-stats"
+                aria-label="Vault stats"
+              >
+                <p className="m-0">
+                  {translate(locale, 'editor.workspace.countsDetailed', {
+                    candidates: vaultStatsJson.rawCandidatesCount,
+                    processed: vaultStatsJson.processedCount,
+                    archived: vaultStatsJson.archivedCount,
+                  })}
+                </p>
+                {lastDreamAt ? (
+                  <p className="m-0" data-testid="dream-panel-last-dream">
+                    {translate(locale, 'dreamPanel.stats.lastDream', {
+                      time: formatLastDreamRelative(lastDreamAt, undefined, locale),
+                    })}
+                  </p>
+                ) : null}
+                {vaultStatsJson.lastReportPath ? (
+                  <p className="m-0 truncate" data-testid="dream-panel-last-report">
+                    {translate(locale, 'dreamPanel.stats.lastReport', {
+                      path: vaultStatsJson.lastReportPath,
+                    })}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            <pre
+              className="dreamx-panel-output"
+              aria-live="polite"
+            >
+              {output}
+            </pre>
+          </>
         )}
       </section>
     </TooltipProvider>

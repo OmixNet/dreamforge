@@ -18,6 +18,27 @@ describe('DreamPanel', () => {
   beforeEach(() => {
     vi.mocked(mockInvoke).mockReset()
     vi.mocked(invoke).mockReset()
+    // PR 52: DreamPanel now also fetches typed stats via
+    // dreamvault_status_json on vault change. Tests that don't
+    // mock the typed call explicitly rely on this default
+    // implementation: typed path returns a v1 all-zero report,
+    // other commands return an empty text-output shape. This
+    // keeps the existing `mockResolvedValueOnce` pattern working
+    // for the text path (the typed call falls through to the
+    // default when no Once is queued).
+    vi.mocked(mockInvoke).mockImplementation(async (cmd: string) => {
+      if (cmd === 'dreamvault_status_json') {
+        return {
+          schemaVersion: 1,
+          vaultPath: '/tmp/vault',
+          rawCandidatesCount: 0,
+          processedCount: 0,
+          archivedCount: 0,
+          lastReportPath: null,
+        }
+      }
+      return { stdout: '', stderr: '', success: true }
+    })
   })
 
   afterEach(() => {
@@ -552,5 +573,109 @@ describe('DreamPanel', () => {
       }
       unmount()
     }
+  })
+
+  // PR 52: typed stats section. The typed useEffect has a
+  // skip-first-mount guard (see DreamPanel.tsx) so the typed
+  // section only renders after the user has triggered a fetch
+  // (vaultPath change, click Status). To test the typed section
+  // in isolation, we use rerender with a new vaultPath — that
+  // counts as a vault change, which the useEffect's [vaultPath]
+  // dep picks up.
+  describe('typed stats section (PR 52)', () => {
+    it('hides the typed section on initial mount (silent default state)', () => {
+      render(<DreamPanel vaultPath="/tmp/vault" />)
+      // The skip-first-mount guard means the typed fetch hasn't
+      // run yet, so vaultStatsJson is null and the section is
+      // not rendered. The pre-existing <pre> text path is
+      // unaffected.
+      expect(screen.queryByTestId('dream-panel-typed-stats')).toBeNull()
+    })
+
+    it('renders the typed counts line when the typed path returns a v1 report', async () => {
+      const { rerender } = render(<DreamPanel vaultPath="/tmp/vault-a" />)
+      // Switch vault — the [vaultPath] dep fires the typed useEffect
+      // (skipFirstTypedFetch is now false). Override the per-command
+      // dispatch so the typed call returns our v1 report instead of
+      // the default all-zero shape. The text call uses the default
+      // (empty stdout) — fine for this test.
+      const originalImpl = vi.mocked(mockInvoke).getMockImplementation()
+      vi.mocked(mockInvoke).mockImplementation(async (cmd: string) => {
+        if (cmd === 'dreamvault_status_json') {
+          return {
+            schemaVersion: 1,
+            vaultPath: '/tmp/vault-b',
+            rawCandidatesCount: 5,
+            processedCount: 7,
+            archivedCount: 1,
+            lastReportPath: '.dream/reports/dream-report-2026-06-25-090000.md',
+          }
+        }
+        return { stdout: '', stderr: '', success: true }
+      })
+      rerender(<DreamPanel vaultPath="/tmp/vault-b" />)
+      // Reuses editor.workspace.countsDetailed i18n key — same as
+      // the empty editor. Verify the section appears with the
+      // typed numbers.
+      const section = await screen.findByTestId('dream-panel-typed-stats')
+      expect(section.textContent).toMatch(/5 candidates/)
+      expect(section.textContent).toMatch(/7 processed/)
+      expect(section.textContent).toMatch(/1 archived/)
+      // Restore the original implementation for subsequent tests
+      // (not strictly needed — beforeEach resets — but explicit
+      // is safer when the test order changes).
+      if (originalImpl) vi.mocked(mockInvoke).mockImplementation(originalImpl)
+    })
+
+    it('renders lastReportPath when present (typed JSON path)', async () => {
+      const { rerender } = render(<DreamPanel vaultPath="/tmp/vault-a" />)
+      const originalImpl = vi.mocked(mockInvoke).getMockImplementation()
+      vi.mocked(mockInvoke).mockImplementation(async (cmd: string) => {
+        if (cmd === 'dreamvault_status_json') {
+          return {
+            schemaVersion: 1,
+            vaultPath: '/tmp/vault-b',
+            rawCandidatesCount: 5,
+            processedCount: 7,
+            archivedCount: 1,
+            lastReportPath: '.dream/reports/dream-report-2026-06-25-090000.md',
+          }
+        }
+        return { stdout: '', stderr: '', success: true }
+      })
+      rerender(<DreamPanel vaultPath="/tmp/vault-b" />)
+      const reportLine = await screen.findByTestId('dream-panel-last-report')
+      expect(reportLine.textContent).toContain('.dream/reports/dream-report-2026-06-25-090000.md')
+      if (originalImpl) vi.mocked(mockInvoke).mockImplementation(originalImpl)
+    })
+
+    it('hides lastReportPath when null (no reports in vault)', async () => {
+      const { rerender } = render(<DreamPanel vaultPath="/tmp/vault-a" />)
+      vi.mocked(mockInvoke).mockResolvedValueOnce({
+        schemaVersion: 1,
+        vaultPath: '/tmp/vault-b',
+        rawCandidatesCount: 0,
+        processedCount: 0,
+        archivedCount: 0,
+        lastReportPath: null,
+      })
+      rerender(<DreamPanel vaultPath="/tmp/vault-b" />)
+      // The section appears (counts are 0 but present), but
+      // lastReportPath is null → no last-report line.
+      await screen.findByTestId('dream-panel-typed-stats')
+      expect(screen.queryByTestId('dream-panel-last-report')).toBeNull()
+    })
+
+    it('falls back silently when typed path rejects (old binary / IPC fail)', async () => {
+      const { rerender } = render(<DreamPanel vaultPath="/tmp/vault-a" />)
+      vi.mocked(mockInvoke).mockRejectedValueOnce(
+        new Error('old dream binary — no --json flag'),
+      )
+      rerender(<DreamPanel vaultPath="/tmp/vault-b" />)
+      // No error UI, no typed section. The pre-existing text path
+      // is unaffected. Wait a tick to let the catch block run.
+      await new Promise((r) => setTimeout(r, 10))
+      expect(screen.queryByTestId('dream-panel-typed-stats')).toBeNull()
+    })
   })
 })

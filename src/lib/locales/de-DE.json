@@ -556,6 +556,8 @@
   "editor.workspace.vaultPath": "Tresor: {path}",
   "editor.workspace.counts": "{notes} Notizen · {wiki} Wiki-Seiten · {memory} Erinnerung · {raw} Kandidaten",
   "editor.workspace.countsDetailed": "{candidates} Kandidaten · {processed} verarbeitet · {archived} archiviert",
+  "dreamPanel.stats.lastDream": "Letzter Dream: vor {time}",
+  "dreamPanel.stats.lastReport": "Letzter Bericht: {path}",
   "editor.workspace.hint": "Wähle eine Notiz aus der Seitenleiste, oder:",
   "editor.workspace.recent": "Zuletzt",
   "editor.workspace.lastDream": "Letzter Dream: {time}",

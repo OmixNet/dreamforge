@@ -557,6 +557,8 @@
   "editor.workspace.vaultPath": "保管庫: {path}",
   "editor.workspace.counts": "{notes} 筆記 · {wiki} Wiki 頁 · {memory} 記憶 · {raw} 候選",
   "editor.workspace.countsDetailed": "{candidates} 候選 · {processed} 已處理 · {archived} 已封存",
+  "dreamPanel.stats.lastDream": "上次 Dream: {time} 前",
+  "dreamPanel.stats.lastReport": "最近報告: {path}",
   "editor.workspace.hint": "從側欄選一條筆記, 或直接:",
   "editor.workspace.recent": "最近",
   "editor.workspace.lastDream": "上次執行：{time}",

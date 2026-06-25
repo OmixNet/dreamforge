@@ -556,6 +556,8 @@
   "editor.workspace.vaultPath": "Хранилище: {path}",
   "editor.workspace.counts": "{notes} заметок · {wiki} Wiki страниц · {memory} память · {raw} кандидаты",
   "editor.workspace.countsDetailed": "{candidates} кандидатов · {processed} обработано · {archived} в архиве",
+  "dreamPanel.stats.lastDream": "Последний Dream: {time} назад",
+  "dreamPanel.stats.lastReport": "Последний отчёт: {path}",
   "editor.workspace.hint": "Выберите заметку на боковой панели, или:",
   "editor.workspace.recent": "Недавние",
   "editor.workspace.lastDream": "Последний Dream: {time}",
