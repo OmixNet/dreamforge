@@ -984,3 +984,66 @@ PR 47 加 "Recent" quick-pick section (latest note + latest raw + MEMORY.md), co
 - re-verify 优先 catalog 默认 model (Qwen2.5-7B-Instruct), 不用特定 model ID (server-side 可能改名/下架)
 - HTTP 404 + "Not Found" from server + dream CLI `[OPENAI_MODEL_NOT_FOUND]` tag 是 model 不存在信号, 不是 URL shape 信号; 先 curl 直打确认才能判断是哪一类. PR 36 6-category error contract 锁死这种区分.
 - **GUI path 不受以上 3 个 lesson 影响**: dreamforge Rust `strip_v1_suffix()` (PR 10) 自动剥 `/v1` suffix, 用户的 `https://api.siliconflow.cn/v1` 跟 `https://api.siliconflow.cn` 都 work. 这 3 个 lesson 只在 **direct dream CLI invocation** 适用 (例如 SiliconFlow re-verify 流程).
+
+
+### §45 PR 50 series close-out + PR 51 release GUI verify (2026-06-25) — typed vault stats contract + fixture
+
+PR 50 series (4 commits, 3 code PRs across Swift/Rust/TS + 1 self-fix + 1 fixture) 把 "release 装版显示 vault 健康" 这条链路从 "dev mock 通过" 推到 "release 真实 .app 跑通". 跨 3 仓库 (DreamVault Swift engine + dreamforge frontend/Rust + 1 design note), 4 类别 (Swift CLI flag / Rust Tauri command / TS 消费 / fixture), 单一 contract (dream status --json v1).
+
+**PR 50a (DreamVault `8fe4a4c`)** — Swift `dream status --json` 结构化输出
+- 新增 `--json` flag on `dream status` subcommand. Swift `JSONEncoder.outputFormatting = [.sortedKeys]` 保证 deterministic (snapshot-testable).
+- 新 `StatusReport` Codable struct: `schemaVersion: 1, vaultPath, rawCandidatesCount, processedCount, archivedCount, lastReportPath (String?)`. 自定义 `encode(to:)` 强制 emit `lastReportPath` key (string OR JSON null) — Swift `JSONEncoder` 默认 skip nil Optional, 不 override 的话 typed consumer 会把 `null` 跟 `missing` 混淆.
+- `lastReportPath` vault-relative via `pathComponents` stripping (不是 string prefix match, 避开 macOS `/var` ↔ `/private/var` symlink resolution).
+- 10 new `StatusReportJSONTests` 锁 schemaVersion=1, 4 wire-format field names, 5 edge cases (fresh vault / corrupt ledger / no reports dir / null lastReportPath / JSON round-trip). 743 → 753.
+
+**PR 50b (dreamforge Rust `8865673`)** — `dreamvault_status_json` Tauri command + typed struct
+- 新 `DreamVaultAction::StatusJson` 走现有 4-tier fallback 调 dream CLI 加 `--json` flag.
+- 新 `DreamVaultStatusReport` struct (serde camelCase) 跟 Swift 字段完全 mirror.
+- **Strict `schemaVersion === 1` acceptance rule** (locked by design note §1.4 rule 1): `report.schema_version != 1` 直接返 `Err`, 不 defaulting, 不 guessing. 7 new test 锁死 accepts 1, rejects 0/2/missing. 758 → 765.
+
+**PR 50c (dreamforge TS `30348ce`)** — 前端 typed 消费
+- 新 TS interface `DreamVaultStatusReport` mirror Rust struct. 20 locales 加 `editor.workspace.countsDetailed` (3 placeholder: `{candidates}` / `{processed}` / `{archived}`).
+- Editor.tsx 加 `processedCount` + `archivedCount` props, counts line 在 3 个数都有时显示 detailed format "X candidates · Y processed · Z archived", 否则 fallback 到 PR 47 simple format. Silent fallback, no error UI (no-landing-page invariant).
+- 3 new Editor tests 锁 detailed format / fallback path / i18n key 存在.
+- 3941 → 3944 (+3).
+
+**PR 50c.2 (dreamforge TS `52fb752`, user self-fix)** — `rawCandidatesCount` 走 typed JSON, 不再 fallback
+- Symptom: detailed format 的 "X candidates" 数字当时用 `workspaceCounts.raw` (PR 47 fallback path), 跟 typed `rawCandidatesCount` 数字可能不一致 (workspaceCounts 是 filesystem scan, typed 是 dream CLI report).
+- Fix: 加 `rawCandidatesCount?: number` prop, conditional check 改 "all three required", candidates 数字改 typed source. App.tsx 传 `vaultStatsJson?.rawCandidatesCount`. 1 Editor test 锁 invariant.
+- Lesson: **typed 主路径启用后, 数字 source of truth 必须统一走 typed**, 不能保留 legacy fallback 数字, 不然 main path 跟 fallback path 数字不一致会让 user 困惑.
+
+**PR 50c.1 (dreamforge TS `d5170a4`)** — `dreamvault_status_json` 走 mock-tauri 标准派发
+- Symptom (user GUI verify 2026-06-23, Chrome/Vite): detailed format 永远不显示. App.tsx 当时 `await import("@tauri-apps/api/core").invoke` 绕过 mock-tauri 派发.
+- Fix: 改用项目标准 `isTauri() ? invoke : mockInvoke` 派发 (useSettings.ts:23-34 + useVaultSwitcher.ts:146 pattern). mock default 5/7/1 跟 user 验收口径对齐.
+- AGENTS.md §9 早就 explicit 警告 "mock-tauri.ts silently swallows Tauri calls — 不是 native testing 替身". PR 50c 第一次 commit 我没遵守, user GUI verify 抓到.
+- Locked pattern: 任何 `invoke` 调用必须走 `isTauri() ? invoke : mockInvoke`. memory file 锁定 2026-06-23.
+
+**PR 51a (dreamforge `11f48f1` + DreamVault `75c8fcf`)** — deterministic GUI verify fixture + 文本路径补全
+- `scripts/gui-verify-fixture.sh` (新, ~140 lines, bash): 创 `~/Desktop/APP/dreamforge-gui-verify-vault/`, 5 raw candidates + 7 durable + 1 archived + 1 report (creation time = now - 30 min). Deterministic, idempotent, self-validating (跑 `dream status --json` + `dream status` 两条路径都 assert, exit non-zero on drift).
+- DreamVault Swift 5-line diff: `cmdStatus` 文本输出加 `Last dream: <ISO-8601-UTC>` line. 关闭 PR 48 `parseDreamStatus` 设计的 contract gap (PR 48 comment 说 "the dream CLI already prints Last dream" 但实际没写). `ISO8601DateFormatter(.withInternetDateTime)` → `2026-06-25T02:32:31Z` 格式, 匹配 frontend regex.
+- 为什么需要: 不加 `Last dream:` line, `lastDreamAt` 永远 null → `computeVaultHealth` 默认 3d ago → badge 永远 amber. 加了之后, fixture report creation time (now - 30m) → green.
+- SourceRef schema 修正: 我 PR 51a 第一次写错 (`path` / 无 `line`), dream CLI decode throws → ledger 0 memories. 改成 `file: String` + `line: Int` (Models.swift:1xx) 后 7+1 通过.
+
+**GUI verify 跨 3 语言 (user self-tested 2026-06-25 release .app)**:
+- en:    "5 candidates · 7 processed · 1 archived" + green health badge
+- zh-CN: "5 候选 · 7 已处理 · 1 已归档" + green
+- ja-JP: "候補 5 · 処理済み 7 · アーカイブ 1" + green
+
+**§45 closed-loop 验收 (PR 50 series 全链路 + 跨语言 contract 一致)**:
+- Swift `--json` output → Rust strict === 1 accept → TS interface mirror → mock 跨 dev/prod 行为对齐 → fixture 跨 3 语言显示
+- fallback 路径 (old binary / IPC fail / schemaVersion mismatch): 静默, 无 error UI, no-landing-page invariant 保留 (PR 42/47 锁)
+- typed main path 启用后, 数字 source of truth 走 typed (PR 50c.2 lesson)
+- mock-tauri 派发 standard 锁定 (PR 50c.1 lesson, AGENTS.md §9 + memory file)
+
+**scope discipline 总结 (PR 50 series 跨 3 仓库 + 5 sub-PR, 全部独立 verify)**:
+- 安全边界 (Keychain) + 网络噪音 (HTTP smoke) + 协议差异 (multi-provider adapter) **不能塞进同一个 PR** (PR 50 series 完全 split, 每个 sub-PR 单 surface)
+- 跨语言 contract (Swift JSON / Rust struct / TS interface) **必须先 design note 锁**, 再 3 个 sub-PR implement (PR 50 design note 2026-06-23 锁死)
+- 跨 PR 数据流要在 next-PR review 阶段 trace 一次端到端 (PR 50c.2 self-fix 是 closed-loop trace 抓到 typed/fallback 数字不一致)
+- 第一 PR commit message 必须 explicit 写 "next PR 必须 trace 到 X" (PR 50a commit message 写 "next PR (50b) must wire Rust Tauri command"; 50b 写 "next PR (50c) must consume typed struct"; 50c 写 "next PR (50c.1) must fix mock-tauri dispatch" — 链式显式)
+
+**what PR 50 series 留待后续 PR**:
+- PR 52: DreamPanel 状态区也消费 typed stats (现在 detailed counts 只在 empty editor, DreamPanel 还看不到)
+- PR 53: Run Dream 状态可视化 (Running / Completed / No-op / Failed + "Open latest report")
+- PR 54: Settings AI 小收口 (active provider 强化 / base URL /v1 规则提示 / Keychain 状态 / provider delete 清理 GUI verify)
+- PR 37 / PR 38: 真实 Anthropic / Gemini E2E (需 user 提供 key, 不挡 PR 51 ship)
+- **v0.6.0 状态 unchanged**: API-complete and test-verified, real Anthropic/Gemini E2E 仍 deferred. v0.6.1 / v0.6.2 tag 仍 reserved 给 PR 37 / PR 38 pass.
