@@ -1902,6 +1902,7 @@ function MainApp({ noteWindowParams }: { noteWindowParams: NoteWindowParams | nu
           </div>
           <DreamPanel
             vaultPath={resolvedPath}
+            locale={appLocale}
             onOpenMemory={handleOpenMemory}
             onOpenWiki={handleOpenWiki}
             onOpenSettingsAi={() => {

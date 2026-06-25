@@ -575,31 +575,18 @@ describe('DreamPanel', () => {
     }
   })
 
-  // PR 52: typed stats section. The typed useEffect has a
-  // skip-first-mount guard (see DreamPanel.tsx) so the typed
-  // section only renders after the user has triggered a fetch
-  // (vaultPath change, click Status). To test the typed section
-  // in isolation, we use rerender with a new vaultPath — that
-  // counts as a vault change, which the useEffect's [vaultPath]
-  // dep picks up.
+  // PR 52: typed stats section. The typed section is intentionally
+  // click-to-show in the DreamPanel: initial mount and vault switches
+  // keep the existing text output as the only visible status; clicking
+  // Status fetches the typed JSON report and renders it above <pre>.
   describe('typed stats section (PR 52)', () => {
     it('hides the typed section on initial mount (silent default state)', () => {
       render(<DreamPanel vaultPath="/tmp/vault" />)
-      // The skip-first-mount guard means the typed fetch hasn't
-      // run yet, so vaultStatsJson is null and the section is
-      // not rendered. The pre-existing <pre> text path is
-      // unaffected.
       expect(screen.queryByTestId('dream-panel-typed-stats')).toBeNull()
     })
 
-    it('renders the typed counts line when the typed path returns a v1 report', async () => {
+    it('keeps typed stats hidden after a vault switch until the user clicks Status', async () => {
       const { rerender } = render(<DreamPanel vaultPath="/tmp/vault-a" />)
-      // Switch vault — the [vaultPath] dep fires the typed useEffect
-      // (skipFirstTypedFetch is now false). Override the per-command
-      // dispatch so the typed call returns our v1 report instead of
-      // the default all-zero shape. The text call uses the default
-      // (empty stdout) — fine for this test.
-      const originalImpl = vi.mocked(mockInvoke).getMockImplementation()
       vi.mocked(mockInvoke).mockImplementation(async (cmd: string) => {
         if (cmd === 'dreamvault_status_json') {
           return {
@@ -614,21 +601,78 @@ describe('DreamPanel', () => {
         return { stdout: '', stderr: '', success: true }
       })
       rerender(<DreamPanel vaultPath="/tmp/vault-b" />)
-      // Reuses editor.workspace.countsDetailed i18n key — same as
-      // the empty editor. Verify the section appears with the
-      // typed numbers.
+      await waitFor(() => {
+        expect(mockInvoke).toHaveBeenCalledWith('dreamvault_status', { vaultPath: '/tmp/vault-b' })
+      })
+      expect(screen.queryByTestId('dream-panel-typed-stats')).toBeNull()
+    })
+
+    it('fetches and renders typed stats when the user clicks Status', async () => {
+      vi.mocked(mockInvoke).mockImplementation(async (cmd: string) => {
+        if (cmd === 'dreamvault_status_json') {
+          return {
+            schemaVersion: 1,
+            vaultPath: '/tmp/vault',
+            rawCandidatesCount: 5,
+            processedCount: 7,
+            archivedCount: 1,
+            lastReportPath: '.dream/reports/dream-report-2026-06-25-090000.md',
+          }
+        }
+        return {
+          stdout: 'vault: /tmp/vault\nLast dream: 2026-06-25T10:22:32Z',
+          stderr: '',
+          success: true,
+        }
+      })
+
+      render(<DreamPanel vaultPath="/tmp/vault" />)
+      await screen.findByText(/vault: \/tmp\/vault/)
+      expect(screen.queryByTestId('dream-panel-typed-stats')).toBeNull()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Status' }))
+
       const section = await screen.findByTestId('dream-panel-typed-stats')
-      expect(section.textContent).toMatch(/5 candidates/)
-      expect(section.textContent).toMatch(/7 processed/)
-      expect(section.textContent).toMatch(/1 archived/)
-      // Restore the original implementation for subsequent tests
-      // (not strictly needed — beforeEach resets — but explicit
-      // is safer when the test order changes).
-      if (originalImpl) vi.mocked(mockInvoke).mockImplementation(originalImpl)
+      expect(section.textContent).toContain('5 candidates · 7 processed · 1 archived')
+      expect(section.textContent).toContain('Last dream:')
+      expect(section.textContent).toContain('Last report: .dream/reports/dream-report-2026-06-25-090000.md')
+    })
+
+    it('uses the provided locale for the typed stats section', async () => {
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60_000).toISOString()
+      const props = {
+        vaultPath: '/tmp/vault',
+        locale: 'zh-CN',
+      } satisfies Parameters<typeof DreamPanel>[0] & { locale: 'zh-CN' }
+      vi.mocked(mockInvoke).mockImplementation(async (cmd: string) => {
+        if (cmd === 'dreamvault_status_json') {
+          return {
+            schemaVersion: 1,
+            vaultPath: '/tmp/vault',
+            rawCandidatesCount: 5,
+            processedCount: 7,
+            archivedCount: 1,
+            lastReportPath: '.dream/reports/dream-report-2026-06-25-090000.md',
+          }
+        }
+        return {
+          stdout: `vault: /tmp/vault\nLast dream: ${thirtyMinutesAgo}`,
+          stderr: '',
+          success: true,
+        }
+      })
+
+      render(<DreamPanel {...props} />)
+      await screen.findByText(/vault: \/tmp\/vault/)
+      fireEvent.click(screen.getByRole('button', { name: 'Status' }))
+
+      const section = await screen.findByTestId('dream-panel-typed-stats')
+      expect(section.textContent).toContain('5 候选 · 7 已处理 · 1 已归档')
+      expect(section.textContent).toContain('上次 Dream: 30 min 前')
+      expect(section.textContent).toContain('最近报告: .dream/reports/dream-report-2026-06-25-090000.md')
     })
 
     it('renders lastReportPath when present (typed JSON path)', async () => {
-      const { rerender } = render(<DreamPanel vaultPath="/tmp/vault-a" />)
       const originalImpl = vi.mocked(mockInvoke).getMockImplementation()
       vi.mocked(mockInvoke).mockImplementation(async (cmd: string) => {
         if (cmd === 'dreamvault_status_json') {
@@ -643,23 +687,31 @@ describe('DreamPanel', () => {
         }
         return { stdout: '', stderr: '', success: true }
       })
-      rerender(<DreamPanel vaultPath="/tmp/vault-b" />)
+      render(<DreamPanel vaultPath="/tmp/vault-b" />)
+      await screen.findByText('Command completed.')
+      fireEvent.click(screen.getByRole('button', { name: 'Status' }))
       const reportLine = await screen.findByTestId('dream-panel-last-report')
       expect(reportLine.textContent).toContain('.dream/reports/dream-report-2026-06-25-090000.md')
       if (originalImpl) vi.mocked(mockInvoke).mockImplementation(originalImpl)
     })
 
     it('hides lastReportPath when null (no reports in vault)', async () => {
-      const { rerender } = render(<DreamPanel vaultPath="/tmp/vault-a" />)
-      vi.mocked(mockInvoke).mockResolvedValueOnce({
-        schemaVersion: 1,
-        vaultPath: '/tmp/vault-b',
-        rawCandidatesCount: 0,
-        processedCount: 0,
-        archivedCount: 0,
-        lastReportPath: null,
+      vi.mocked(mockInvoke).mockImplementation(async (cmd: string) => {
+        if (cmd === 'dreamvault_status_json') {
+          return {
+            schemaVersion: 1,
+            vaultPath: '/tmp/vault-b',
+            rawCandidatesCount: 0,
+            processedCount: 0,
+            archivedCount: 0,
+            lastReportPath: null,
+          }
+        }
+        return { stdout: '', stderr: '', success: true }
       })
-      rerender(<DreamPanel vaultPath="/tmp/vault-b" />)
+      render(<DreamPanel vaultPath="/tmp/vault-b" />)
+      await screen.findByText('Command completed.')
+      fireEvent.click(screen.getByRole('button', { name: 'Status' }))
       // The section appears (counts are 0 but present), but
       // lastReportPath is null → no last-report line.
       await screen.findByTestId('dream-panel-typed-stats')
@@ -667,11 +719,12 @@ describe('DreamPanel', () => {
     })
 
     it('falls back silently when typed path rejects (old binary / IPC fail)', async () => {
-      const { rerender } = render(<DreamPanel vaultPath="/tmp/vault-a" />)
-      vi.mocked(mockInvoke).mockRejectedValueOnce(
-        new Error('old dream binary — no --json flag'),
-      )
-      rerender(<DreamPanel vaultPath="/tmp/vault-b" />)
+      vi.mocked(mockInvoke).mockImplementation(async (cmd: string) => {
+        if (cmd === 'dreamvault_status_json') throw new Error('old dream binary — no --json flag')
+        return { stdout: '', stderr: '', success: true }
+      })
+      render(<DreamPanel vaultPath="/tmp/vault-b" />)
+      fireEvent.click(screen.getByRole('button', { name: 'Status' }))
       // No error UI, no typed section. The pre-existing text path
       // is unaffected. Wait a tick to let the catch block run.
       await new Promise((r) => setTimeout(r, 10))

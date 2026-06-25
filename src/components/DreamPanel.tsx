@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { isTauri, mockInvoke } from '../mock-tauri'
 import { invoke } from '@tauri-apps/api/core'
 import {
@@ -15,7 +15,6 @@ import {
 } from '../lib/dreamProviderError'
 import {
   parseDreamStatus,
-  formatLastDreamRelative,
   type DreamVaultStatusReport,
 } from '../lib/dreamCliStatus'
 import { translate, type AppLocale } from '../lib/i18n'
@@ -31,6 +30,7 @@ interface DreamVaultCommandOutput {
 
 interface DreamPanelProps {
   vaultPath: string
+  locale?: AppLocale
   onOpenMemory?: () => void
   onOpenWiki?: () => void
   /**
@@ -85,7 +85,34 @@ async function runDreamCommand(
     : mockInvoke<DreamVaultCommandOutput>(command, args)
 }
 
-export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettingsAi }: DreamPanelProps) {
+function formatDreamPanelLastDreamTime(iso: string, locale: AppLocale): string {
+  const ms = Date.parse(iso)
+  if (!Number.isFinite(ms)) return ''
+  const diffMs = Date.now() - ms
+  if (diffMs < 0 || diffMs < 60_000) return locale === 'en' ? 'just now' : '0 min'
+
+  const abs = Math.abs(diffMs)
+  if (abs < 60 * 60_000) {
+    const minutes = Math.round(abs / 60_000)
+    return locale === 'en' ? `${minutes} min ago` : `${minutes} min`
+  }
+  if (abs < 24 * 60 * 60_000) {
+    const hours = Math.round(abs / (60 * 60_000))
+    return locale === 'en' ? `${hours} h ago` : `${hours} h`
+  }
+  if (abs < 30 * 24 * 60 * 60_000) {
+    const days = Math.round(abs / (24 * 60 * 60_000))
+    return locale === 'en' ? `${days} days ago` : `${days} d`
+  }
+  if (abs < 365 * 24 * 60 * 60_000) {
+    const months = Math.round(abs / (30 * 24 * 60 * 60_000))
+    return locale === 'en' ? `${months} mo ago` : `${months} mo`
+  }
+  const years = Math.round(abs / (365 * 24 * 60 * 60_000))
+  return locale === 'en' ? `${years} y ago` : `${years} y`
+}
+
+export function DreamPanel({ vaultPath, locale = 'en', onOpenMemory, onOpenWiki, onOpenSettingsAi }: DreamPanelProps) {
   const [output, setOutput] = useState('No Dream run yet.')
   const [error, setError] = useState<string | null>(null)
   const [runningCommand, setRunningCommand] = useState<DreamCommand | null>(null)
@@ -107,20 +134,19 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettings
   // time, and the text path is the same source as the existing
   // empty-editor "Last dream: X ago" line (PR 48).
   const [lastDreamAt, setLastDreamAt] = useState<string | null>(null)
-  // PR 52: skip the typed-stats fetch on first mount. Reason: the
-  // existing text useEffect already fires on mount with the
-  // `mockResolvedValueOnce`-based test pattern, and the typed
-  // call would consume the test's queued text response. With this
-  // skip, the typed call only fires on:
-  //   - vaultPath change (user switches vault)
-  //   - explicit refresh (clicking the "Status" button reruns both)
-  // The typed section is hidden on first view; user clicks Status
-  // to populate it. Existing tests pass unchanged. UX trade-off
-  // documented in PR 52 design note.
-  const skipFirstTypedFetch = useRef(true)
+  const fetchVaultStatsJson = useCallback(async () => {
+    try {
+      const report = await (isTauri()
+        ? invoke<DreamVaultStatusReport>('dreamvault_status_json', { vaultPath })
+        : mockInvoke<DreamVaultStatusReport>('dreamvault_status_json', { vaultPath }))
+      setVaultStatsJson(report)
+    } catch {
+      setVaultStatsJson(null)
+    }
+  }, [vaultPath])
 
   const runCommand = useCallback(
-    async (command: DreamCommand) => {
+    async (command: DreamCommand, options: { refreshTypedStats?: boolean } = {}) => {
       setRunningCommand(command)
       setError(null)
       try {
@@ -149,8 +175,11 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettings
       } finally {
         setRunningCommand(null)
       }
+      if (options.refreshTypedStats) {
+        await fetchVaultStatsJson()
+      }
     },
-    [vaultPath],
+    [fetchVaultStatsJson, vaultPath],
   )
 
   // Auto-fetch status on mount and whenever the active vault changes.
@@ -159,54 +188,13 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettings
     void runCommand('dreamvault_status')
   }, [vaultPath, runCommand])
 
-  // PR 52: parallel typed-stats fetch. Independent of the text
-  // dreamvault_status call above — runs on the same mount + vaultPath
-  // change triggers, so the typed section updates at the same time as
-  // the text output. On any error (old dream binary, schemaVersion
-  // mismatch, IPC failure), set null → typed section is hidden
-  // (silent fallback, no error UI). The text path is still shown
-  // (existing behavior, untouched).
-  //
-  // Implementation note: the typed call is deferred to a macrotask
-  // (setTimeout 0) so the text useEffect's `mockInvoke` call consumes
-  // any test's `mockResolvedValueOnce` queue first. The typed call
-  // then either matches a Once entry (if the test mocked it) or falls
-  // through to the test's default mockImplementation. This keeps the
-  // test surface predictable across the 2-call-on-mount pattern.
   useEffect(() => {
-    if (!vaultPath) {
-      setVaultStatsJson(null)
-      setLastDreamAt(null)
-      return
-    }
-    // PR 52: skip the very first mount's typed fetch. The text
-    // useEffect already fires on mount (with the user's
-    // `mockResolvedValueOnce`-based mock pattern), and adding a
-    // second invoke on mount would consume the user's queued text
-    // response. After the first render, vaultPath changes and
-    // explicit Status-button clicks both re-run this effect.
-    if (skipFirstTypedFetch.current) {
-      skipFirstTypedFetch.current = false
-      return
-    }
-    let cancelled = false
-    const timer = window.setTimeout(() => {
-      if (cancelled) return
-      void (async () => {
-        try {
-          const report = await (isTauri()
-            ? invoke<DreamVaultStatusReport>('dreamvault_status_json', { vaultPath })
-            : mockInvoke<DreamVaultStatusReport>('dreamvault_status_json', { vaultPath }))
-          if (!cancelled) setVaultStatsJson(report)
-        } catch {
-          if (!cancelled) setVaultStatsJson(null)
-        }
-      })()
-    }, 0)
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
+    // PR 52: DreamPanel typed stats are deliberately click-to-show.
+    // Empty editor gets typed stats on mount from App.tsx (PR 50c),
+    // but this side panel keeps the pre-existing text output until
+    // the user explicitly clicks Status. Clear stale typed stats when
+    // the active vault changes.
+    setVaultStatsJson(null)
   }, [vaultPath])
 
   // PR 52: derive lastDreamAt from the most recent text output
@@ -221,14 +209,12 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettings
     if (parsed.lastDreamAt) setLastDreamAt(parsed.lastDreamAt)
   }, [output])
 
-  // PR 52: i18n is hardcoded in DreamPanel today (Run Dream / Status /
-  // MEMORY.md / wiki/ are English-only). Per the minimal-scope PR 52
+  // PR 52: i18n is still partial in DreamPanel today (Run Dream / Status /
+  // MEMORY.md / wiki/ remain English-only). Per the minimal-scope PR 52
   // spec, we add i18n for the new typed section only (3 keys: counts
   // via reused `editor.workspace.countsDetailed`, plus 2 new keys for
   // the "Last dream" / "Last report" labels). The existing English
   // buttons stay English-only — full DreamPanel i18n is a follow-up.
-  const locale: AppLocale = 'en'
-
   const isBusy = runningCommand !== null
   const statusState = error ? 'error' : isBusy ? 'running' : 'ready'
   const statusLabel = error ? 'Issue' : isBusy ? 'Running' : 'Ready'
@@ -271,7 +257,7 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettings
                 type="button"
                 size="sm"
                 variant="outline"
-                onClick={() => runCommand('dreamvault_status')}
+                onClick={() => runCommand('dreamvault_status', { refreshTypedStats: true })}
                 disabled={isBusy}
                 className="flex-1"
               >
@@ -335,7 +321,7 @@ export function DreamPanel({ vaultPath, onOpenMemory, onOpenWiki, onOpenSettings
                 {lastDreamAt ? (
                   <p className="m-0" data-testid="dream-panel-last-dream">
                     {translate(locale, 'dreamPanel.stats.lastDream', {
-                      time: formatLastDreamRelative(lastDreamAt, undefined, locale),
+                      time: formatDreamPanelLastDreamTime(lastDreamAt, locale),
                     })}
                   </p>
                 ) : null}
