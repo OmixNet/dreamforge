@@ -351,17 +351,16 @@ export function DreamPanel({
                   - 'No new work' kind='noop' (zero-work, not a failure)
                 Hidden before the first run + after a failed run
                 (ProviderErrorView takes over in the error path).
-                Task 4 will convert the hardcoded English copy to
-                locale-aware i18n keys; the test ids + state values
-                are stable so the i18n swap is mechanical. */}
+                All copy goes through the `dreamPanel.run.*` i18n
+                keys (Task 4); the locale prop defaults to 'en'. */}
             {runningCommand === 'dreamvault_run' ? (
               <div
                 className="dreamx-panel-run-state"
                 data-testid="dream-panel-run-state"
                 data-state="running"
               >
-                <strong>Running</strong>
-                <span>Dream is organizing this vault.</span>
+                <strong>{translate(locale, 'dreamPanel.run.running')}</strong>
+                <span>{translate(locale, 'dreamPanel.run.runningBody')}</span>
               </div>
             ) : runSummary ? (
               <div
@@ -369,10 +368,20 @@ export function DreamPanel({
                 data-testid="dream-panel-run-state"
                 data-state={runSummary.kind}
               >
-                <strong>{runSummary.kind === 'noop' ? 'No new work' : 'Completed'}</strong>
+                <strong>
+                  {translate(
+                    locale,
+                    runSummary.kind === 'noop'
+                      ? 'dreamPanel.run.noop'
+                      : 'dreamPanel.run.completed',
+                  )}
+                </strong>
                 {runSummary.rawCollected !== null || runSummary.integrated !== null ? (
                   <span>
-                    {runSummary.rawCollected ?? 0} raw · {runSummary.integrated ?? 0} integrated
+                    {translate(locale, 'dreamPanel.run.counts', {
+                      raw: runSummary.rawCollected ?? 0,
+                      integrated: runSummary.integrated ?? 0,
+                    })}
                   </span>
                 ) : null}
                 {/* PR 53: Open latest report. Renders ONLY when
@@ -380,9 +389,7 @@ export function DreamPanel({
                     output AND the parent wired `onOpenReport`.
                     Silent fallback: if onOpenReport is undefined,
                     the button is hidden (the run-state card still
-                    shows the path inline so the user can copy it).
-                    Task 4 will swap the hardcoded label to
-                    `dreamPanel.run.openLatestReport` i18n key. */}
+                    shows the path inline so the user can copy it). */}
                 {runSummary.reportPath && onOpenReport ? (
                   <Button
                     type="button"
@@ -392,7 +399,7 @@ export function DreamPanel({
                     data-testid="dream-panel-open-report"
                     className="mt-2"
                   >
-                    Open latest report
+                    {translate(locale, 'dreamPanel.run.openLatestReport')}
                   </Button>
                 ) : null}
               </div>

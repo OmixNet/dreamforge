@@ -896,5 +896,25 @@ describe('DreamPanel', () => {
         screen.queryByRole('button', { name: 'Open latest report' }),
       ).toBeNull()
     })
+
+    // PR 53.4: i18n. The run-state copy goes through the locale
+    // helper, not hardcoded strings. The existing en assertions
+    // (above) already lock the English copy; this test pins the
+    // zh-CN noop variant to catch accidental hardcode regressions.
+    it('localizes the no-op run-state copy to zh-CN', async () => {
+      vi.mocked(mockInvoke)
+        .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+        .mockResolvedValueOnce({
+          stdout: 'dream completed:\n  - collected raw: 0\n  - integrated: 0',
+          stderr: '',
+          success: true,
+        })
+
+      render(<DreamPanel vaultPath="/tmp/vault" locale="zh-CN" />)
+      await screen.findByText(/status ok/)
+      fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+      expect(await screen.findByTestId('dream-panel-run-state')).toHaveTextContent('没有新内容')
+    })
   })
 })
