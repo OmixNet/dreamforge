@@ -308,6 +308,8 @@
   "settings.aiProviders.useThis": "Ustaw jako aktywne",
   "settings.aiProviders.addKeyFirst": "Najpierw dodaj klucz API",
   "settings.aiProviders.currentConfig": "W użyciu: {provider} · {model}",
+  "settings.aiProviders.activeBanner": "Aktywny",
+  "settings.aiProviders.activeBannerClear": "Wyczyść",
   "settings.workflow.title": "Przepływ pracy",
   "settings.workflow.description": "Wybierz, czy DreamX pokazuje przepływ pracy Skrzynki odbiorczej i jak przechodzi między elementami podczas segregacji.",
   "settings.workflow.explicit": "Porządkuj notatki jawnie",

@@ -308,6 +308,8 @@
   "settings.aiProviders.useThis": "Als aktiv festlegen",
   "settings.aiProviders.addKeyFirst": "Zuerst API-Schlüssel hinzufügen",
   "settings.aiProviders.currentConfig": "In Verwendung: {provider} · {model}",
+  "settings.aiProviders.activeBanner": "Aktiv",
+  "settings.aiProviders.activeBannerClear": "Aufheben",
   "settings.workflow.title": "Workflow",
   "settings.workflow.description": "Legen Sie fest, ob DreamX den Inbox-Workflow anzeigt und wie DreamX bei der Triage durch die Elemente navigiert.",
   "settings.workflow.explicit": "Notizen explizit organisieren",

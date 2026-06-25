@@ -308,6 +308,8 @@
   "settings.aiProviders.useThis": "Зрабіць актыўным",
   "settings.aiProviders.addKeyFirst": "Спачатку дадайце API-ключ",
   "settings.aiProviders.currentConfig": "Выкарыстоўваецца: {provider} · {model}",
+  "settings.aiProviders.activeBanner": "Актыўны",
+  "settings.aiProviders.activeBannerClear": "Ачысціць",
   "settings.workflow.title": "Працоўны працэс (Workflow)",
   "settings.workflow.description": "Наладка функцыянавання Уваходных (Inbox).",
   "settings.workflow.explicit": "Размяркоўваць нататкі ўручную",

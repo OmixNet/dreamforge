@@ -308,6 +308,8 @@
   "settings.aiProviders.useThis": "활성으로 설정",
   "settings.aiProviders.addKeyFirst": "먼저 API 키를 추가하세요",
   "settings.aiProviders.currentConfig": "사용 중: {provider} · {model}",
+  "settings.aiProviders.activeBanner": "활성",
+  "settings.aiProviders.activeBannerClear": "해제",
   "settings.workflow.title": "워크플로",
   "settings.workflow.description": "DreamX에서 Inbox 워크플로를 표시할지 여부와, 사용자가 항목을 분류하는 동안 DreamX가 항목을 이동하는 방식을 선택하세요.",
   "settings.workflow.explicit": "노트를 명확하게 정리",

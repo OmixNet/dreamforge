@@ -308,6 +308,8 @@
   "settings.aiProviders.useThis": "Ange som aktiv",
   "settings.aiProviders.addKeyFirst": "Lägg till API-nyckel först",
   "settings.aiProviders.currentConfig": "Används: {provider} · {model}",
+  "settings.aiProviders.activeBanner": "Aktiv",
+  "settings.aiProviders.activeBannerClear": "Rensa",
   "settings.workflow.title": "Arbetsflöde",
   "settings.workflow.description": "Välj om DreamX ska visa Inkorgsarbetsflödet, samt hur det förflyttar sig mellan objekt medan du sorterar dem.",
   "settings.workflow.explicit": "Organisera anteckningar explicit",

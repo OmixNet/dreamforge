@@ -308,6 +308,8 @@
   "settings.aiProviders.useThis": "Establecer como activo",
   "settings.aiProviders.addKeyFirst": "Agrega primero la clave de API",
   "settings.aiProviders.currentConfig": "En uso: {provider} · {model}",
+  "settings.aiProviders.activeBanner": "Activo",
+  "settings.aiProviders.activeBannerClear": "Quitar",
   "settings.workflow.title": "Flujo de trabajo",
   "settings.workflow.description": "Elija si desea que DreamX muestre el flujo de trabajo de la bandeja de entrada y cómo avanza por los elementos mientras usted los clasifica.",
   "settings.workflow.explicit": "Organizar las notas de forma explícita",

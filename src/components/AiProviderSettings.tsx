@@ -311,6 +311,54 @@ function ApiKeyStorageFields({
   )
 }
 
+function ActiveProviderBanner({
+  t,
+  providerName,
+  modelId,
+  onClear,
+}: {
+  t: Translate
+  providerName: string
+  modelId: string
+  onClear: () => void
+}) {
+  // PR 54: prominent "Active" indicator. Uses primary border + bg so
+  // the user can't miss which provider DreamPanel reads from. The
+  // Clear button unsets the active pointer in localStorage without
+  // deleting the provider from settings.json — useful when the user
+  // wants to temporarily fall back to Ollama or no-provider state.
+  // role="status" + aria-label="settings.aiProviders.activeBanner"
+  // keeps the banner findable by assistive tech without depending on
+  // the visual treatment.
+  return (
+    <div
+      role="status"
+      aria-label={t('settings.aiProviders.activeBanner')}
+      data-testid="ai-providers-active-banner"
+      data-state="active"
+      className="flex items-center justify-between gap-3 rounded-md border border-primary/50 bg-primary/10 px-3 py-2"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-primary">
+          <span aria-hidden="true">✓</span>
+          <span>{t('settings.aiProviders.activeBanner')}</span>
+        </div>
+        {/* Provider name + model id are runtime data, not localized
+            copy, so render them directly (not through t()). The i18n
+            key `activeBannerBody` exists for users who want a
+            fully-translated wrapper but isn't used here — the data
+            itself is the source of truth. */}
+        <div className="mt-1 truncate text-sm font-medium text-foreground">
+          {providerName} · {modelId}
+        </div>
+      </div>
+      <Button type="button" variant="outline" size="sm" onClick={onClear}>
+        {t('settings.aiProviders.activeBannerClear')}
+      </Button>
+    </div>
+  )
+}
+
 function ProviderList({
   t,
   mode,
@@ -577,22 +625,26 @@ export function AiProviderSettings({ t, mode, providers, onChange }: AiProviderS
         <div className="text-sm font-medium text-foreground">{providerModeTitle(mode, t)}</div>
         <div className="mt-1 text-xs leading-5 text-muted-foreground">{providerModeDescription(mode, t)}</div>
       </div>
-      {/* PR 45: top "In use" summary — the one-line current runtime
-          config snapshot (provider name · model id). Hides itself
-          when nothing is active (fresh install or just deleted the
-          active one) so we never show a stale name. Sits above the
-          ProviderList so the user sees the live config at a glance
-          without scanning for the Active badge in the row list. */}
+      {/* PR 54: prominent Active banner. Replaces the small 10px
+          "Active" badge + muted "In use" summary with a card that
+          uses primary border + bg, so the active provider is
+          unmissable at a glance (per user backlog: "current active
+          provider 更明显"). The Clear button lets the user unset
+          the active pointer without deleting the provider — useful
+          when switching to "no provider" state for testing or
+          temporarily reverting to Ollama. Hides when nothing is
+          active so fresh install / post-delete state doesn't show
+          a stale name. */}
       {activeProviderConfig ? (
-        <div
-          className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs font-medium text-foreground"
-          data-testid="ai-providers-in-use-summary"
-        >
-          {t('settings.aiProviders.currentConfig', {
-            provider: activeProviderConfig.provider.name,
-            model: activeProviderConfig.model.id,
-          })}
-        </div>
+        <ActiveProviderBanner
+          t={t}
+          providerName={activeProviderConfig.provider.name}
+          modelId={activeProviderConfig.model.id}
+          onClear={() => {
+            clearActiveLlmApiKey()
+            setActiveProviderId(null)
+          }}
+        />
       ) : null}
       <ProviderList
         t={t}

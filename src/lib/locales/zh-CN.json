@@ -308,6 +308,8 @@
   "settings.aiProviders.useThis": "设为当前",
   "settings.aiProviders.addKeyFirst": "请先添加 API 密钥",
   "settings.aiProviders.currentConfig": "当前使用：{provider} · {model}",
+  "settings.aiProviders.activeBanner": "使用中",
+  "settings.aiProviders.activeBannerClear": "清除",
   "settings.workflow.title": "工作流",
   "settings.workflow.description": "选择 DreamX 是否显示收件箱工作流，以及整理时如何移动到下一项。",
   "settings.workflow.explicit": "显式整理笔记",

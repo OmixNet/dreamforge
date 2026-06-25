@@ -308,6 +308,8 @@
   "settings.aiProviders.useThis": "Zrabić aktyŭnym",
   "settings.aiProviders.addKeyFirst": "Spačatku dadajcie API-kluč",
   "settings.aiProviders.currentConfig": "Vykarystoŭvajecca: {provider} · {model}",
+  "settings.aiProviders.activeBanner": "Aktyŭny",
+  "settings.aiProviders.activeBannerClear": "Ačyscіcь",
   "settings.workflow.title": "Pracoŭny praces (Workflow)",
   "settings.workflow.description": "Naladka funkcyjanavannia Uvachodnych (Inbox).",
   "settings.workflow.explicit": "Razmiarkoŭvać natatki ŭručnuju",

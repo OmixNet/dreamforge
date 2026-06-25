@@ -308,6 +308,8 @@
   "settings.aiProviders.useThis": "Đặt làm đang hoạt động",
   "settings.aiProviders.addKeyFirst": "Thêm khóa API trước",
   "settings.aiProviders.currentConfig": "Đang sử dụng: {provider} · {model}",
+  "settings.aiProviders.activeBanner": "Đang hoạt động",
+  "settings.aiProviders.activeBannerClear": "Xóa",
   "settings.workflow.title": "Quy trình",
   "settings.workflow.description": "Chọn xem DreamX có hiển thị quy trình Hộp thư đến hay không, và cách nó chuyển qua các mục khi bạn phân loại chúng.",
   "settings.workflow.explicit": "Sắp xếp ghi chú rõ ràng",

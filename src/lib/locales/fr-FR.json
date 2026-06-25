@@ -308,6 +308,8 @@
   "settings.aiProviders.useThis": "Définir comme actif",
   "settings.aiProviders.addKeyFirst": "Ajoutez d'abord la clé API",
   "settings.aiProviders.currentConfig": "En cours d'utilisation : {provider} · {model}",
+  "settings.aiProviders.activeBanner": "Actif",
+  "settings.aiProviders.activeBannerClear": "Effacer",
   "settings.workflow.title": "Flux de travail",
   "settings.workflow.description": "Choisissez si DreamX affiche le flux de travail de la boîte de réception, ainsi que la manière dont il parcourt les éléments pendant que vous les triez.",
   "settings.workflow.explicit": "Organiser les notes de manière explicite",

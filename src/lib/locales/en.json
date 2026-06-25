@@ -310,6 +310,8 @@
   "settings.aiProviders.useThis": "Set as active",
   "settings.aiProviders.addKeyFirst": "Add API key first",
   "settings.aiProviders.currentConfig": "In use: {provider} · {model}",
+  "settings.aiProviders.activeBanner": "Active",
+  "settings.aiProviders.activeBannerClear": "Clear",
   "settings.workflow.title": "Workflow",
   "settings.workflow.description": "Choose whether DreamX shows the Inbox workflow, plus how it moves through items while you triage them.",
   "settings.workflow.explicit": "Organize notes explicitly",

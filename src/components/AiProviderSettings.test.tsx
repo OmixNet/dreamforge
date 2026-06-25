@@ -633,14 +633,17 @@ describe('AiProviderSettings', () => {
       />,
     )
 
-    // Both providers render. The list label is `${provider.name} · ${model.id}`
-    // (configuredModelTargets in aiTargets.ts) so use a flexible matcher.
-    expect(screen.getByText(/Claude Work/)).toBeInTheDocument()
+    // Both providers render. PR 54 also renders the Active banner at
+    // the top which contains the active provider's name, so use
+    // getAllByText and assert both elements show "Claude Work".
+    expect(screen.getAllByText(/Claude Work/).length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText(/My Work OpenAI/)).toBeInTheDocument()
     // Exactly one provider carries the Active badge. role="status" with
     // aria-label=i18n key makes the badge findable without depending on
-    // position/layout.
-    const activeBadges = screen.getAllByRole('status', { name: /settings\.aiProviders\.active/ })
+    // position/layout. The exact-match regex excludes the PR 54 banner
+    // (aria-label=settings.aiProviders.activeBanner) which is a
+    // different visual treatment at the top of the panel.
+    const activeBadges = screen.getAllByRole('status', { name: /^settings\.aiProviders\.active$/ })
     expect(activeBadges).toHaveLength(1)
   })
 
@@ -908,52 +911,10 @@ describe('AiProviderSettings', () => {
 
   // -- PR 45: Settings AI product closure — in-use summary + clearer copy --
 
-  it('PR 45: top "In use" summary renders with provider name + model id when an active provider is set', () => {
+  it('PR 54: Active banner renders with provider name + model id when an active provider is set', () => {
     window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter-1')
     window.localStorage.setItem('dreamforge.llmApiKeyEnv', 'OPENROUTER_API_KEY')
 
-    const providers: AiModelProvider[] = [
-      {
-        id: 'openrouter-1',
-        kind: 'open_router',
-        name: 'OpenRouter',
-        base_url: 'https://openrouter.ai/api/v1',
-        api_key_storage: 'env',
-        api_key_env_var: 'OPENROUTER_API_KEY',
-        headers: null,
-        models: [{ id: 'openai/gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
-      },
-    ]
-    render(
-      <AiProviderSettings
-        t={(k: string, params?: Record<string, string | number>) => {
-          // Mock the formatWith pattern the real translator uses:
-          // "{provider} · {model}" placeholders get substituted.
-          if (k === 'settings.aiProviders.currentConfig' && params) {
-            return `${k}|${params.provider}|${params.model}`
-          }
-          return k
-        }}
-        mode="api"
-        providers={providers}
-        onChange={() => {}}
-      />,
-    )
-
-    // The summary line shows up at the top of the form, above the
-    // ProviderList, in a font-medium line that names the live
-    // provider + model. The exact i18n string carries the
-    // {provider} and {model} placeholders — we just assert the
-    // summary key was invoked with the right params, not the
-    // localized format, so the test stays locale-agnostic.
-    expect(
-      screen.getByText(/settings\.aiProviders\.currentConfig\|OpenRouter\|openai\/gpt-4\.1-mini/),
-    ).toBeInTheDocument()
-  })
-
-  it('PR 45: top "In use" summary is hidden when no provider is active', () => {
-    // No active pre-seed. activeProviderId state defaults to null
-    // and the summary should not render.
     const providers: AiModelProvider[] = [
       {
         id: 'openrouter-1',
@@ -975,17 +936,110 @@ describe('AiProviderSettings', () => {
       />,
     )
 
-    // The currentConfig key is NOT in the rendered DOM because the
-    // activeProviderId is null.
-    expect(screen.queryByText(/settings\.aiProviders\.currentConfig/)).not.toBeInTheDocument()
+    // PR 54: the prominent Active banner replaces the muted "In use"
+    // summary. Provider name + model id are runtime data, rendered
+    // directly (not via t() with {provider}/{model} placeholders).
+    const banner = screen.getByTestId('ai-providers-active-banner')
+    expect(banner).toHaveTextContent(/OpenRouter/)
+    expect(banner).toHaveTextContent(/openai\/gpt-4\.1-mini/)
   })
 
-  it('PR 45: i18n key "currentConfig" exists in en.json', async () => {
+  it('PR 54: Active banner is hidden when no provider is active', () => {
+    // No active pre-seed. activeProviderId state defaults to null
+    // and the banner should not render.
+    const providers: AiModelProvider[] = [
+      {
+        id: 'openrouter-1',
+        kind: 'open_router',
+        name: 'OpenRouter',
+        base_url: 'https://openrouter.ai/api/v1',
+        api_key_storage: 'env',
+        api_key_env_var: 'OPENROUTER_API_KEY',
+        headers: null,
+        models: [{ id: 'openai/gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+      },
+    ]
+    render(
+      <AiProviderSettings
+        t={(k: string) => k}
+        mode="api"
+        providers={providers}
+        onChange={() => {}}
+      />,
+    )
+
+    // No active pointer → no banner.
+    expect(screen.queryByTestId('ai-providers-active-banner')).toBeNull()
+  })
+
+  it('PR 54: i18n key "activeBanner" exists in en.json', async () => {
     const en = (await import('../lib/locales/en.json')).default as Record<string, string>
-    expect(en['settings.aiProviders.currentConfig']).toBeTypeOf('string')
-    // Must reference both placeholders so a future translator
-    // doesn't drop one.
-    expect(en['settings.aiProviders.currentConfig']).toContain('{provider}')
-    expect(en['settings.aiProviders.currentConfig']).toContain('{model}')
+    expect(en['settings.aiProviders.activeBanner']).toBeTypeOf('string')
+    // Should be a short single-word label (e.g. "Active") — the body
+    // text is data (provider name + model id), not localized copy.
+    expect(en['settings.aiProviders.activeBanner'].length).toBeLessThan(30)
+  })
+
+  // PR 54: Active Provider Banner — replaces the small "Active"
+  // badge + muted "In use" summary with a prominent banner that's
+  // findable at a glance. Per the user's PR 54 backlog
+  // ("current active provider 更明显"), the existing 10px badge +
+  // grey summary was easy to miss; the new banner uses primary
+  // border + bg so the active state is unmissable.
+  describe('PR 54: Active banner', () => {
+    it('renders a prominent Active banner when a provider is active', async () => {
+      window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter')
+      vi.mocked(invoke).mockResolvedValue(true)
+      const providers: AiModelProvider[] = [
+        {
+          id: 'openrouter',
+          kind: 'open_ai_compatible',
+          name: 'OpenRouter',
+          base_url: 'https://openrouter.ai/api/v1',
+          api_key_storage: 'local_file',
+          api_key_env_var: 'OPENROUTER_API_KEY',
+          headers: null,
+          models: [{ id: 'openai/gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+        },
+      ]
+      render(
+        <AiProviderSettings
+          t={(k: string) => k}
+          mode="api"
+          providers={providers}
+          onChange={() => {}}
+        />,
+      )
+
+      const banner = await screen.findByTestId('ai-providers-active-banner')
+      expect(banner).toHaveTextContent(/OpenRouter/)
+      expect(banner).toHaveTextContent(/openai\/gpt-4\.1-mini/)
+      expect(banner).toHaveAttribute('role', 'status')
+    })
+
+    it('hides the Active banner when nothing is active (fresh install)', () => {
+      // No dreamforge.llmApiKeyProviderId in localStorage
+      const providers: AiModelProvider[] = [
+        {
+          id: 'openrouter',
+          kind: 'open_ai_compatible',
+          name: 'OpenRouter',
+          base_url: 'https://openrouter.ai/api/v1',
+          api_key_storage: 'local_file',
+          api_key_env_var: 'OPENROUTER_API_KEY',
+          headers: null,
+          models: [{ id: 'openai/gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+        },
+      ]
+      render(
+        <AiProviderSettings
+          t={(k: string) => k}
+          mode="api"
+          providers={providers}
+          onChange={() => {}}
+        />,
+      )
+      expect(screen.queryByTestId('ai-providers-active-banner')).toBeNull()
+    })
   })
 })

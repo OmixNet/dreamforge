@@ -308,6 +308,8 @@
   "settings.aiProviders.useThis": "Зробити активним",
   "settings.aiProviders.addKeyFirst": "Спочатку додайте API-ключ",
   "settings.aiProviders.currentConfig": "Використовується: {provider} · {model}",
+  "settings.aiProviders.activeBanner": "Активний",
+  "settings.aiProviders.activeBannerClear": "Скинути",
   "settings.workflow.title": "Робочий процес",
   "settings.workflow.description": "Виберіть, чи показує DreamX робочий процес «Вхідні», а також як він рухається елементами під час їх сортування.",
   "settings.workflow.explicit": "Впорядковувати нотатки явно",

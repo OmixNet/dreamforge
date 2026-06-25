@@ -308,6 +308,8 @@
   "settings.aiProviders.useThis": "Сделать активным",
   "settings.aiProviders.addKeyFirst": "Сначала добавьте API-ключ",
   "settings.aiProviders.currentConfig": "Используется: {provider} · {model}",
+  "settings.aiProviders.activeBanner": "Активен",
+  "settings.aiProviders.activeBannerClear": "Сбросить",
   "settings.workflow.title": "Рабочий процесс",
   "settings.workflow.description": "Выберите, будет ли DreamX отображать рабочий процесс в папке «Входящие», а также порядок перемещения по элементам во время их сортировки.",
   "settings.workflow.explicit": "Явно упорядочивать заметки",
