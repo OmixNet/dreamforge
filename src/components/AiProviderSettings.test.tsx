@@ -1092,4 +1092,110 @@ describe('AiProviderSettings', () => {
       // helper test in src/lib/baseUrlHints.test.ts.
     })
   })
+
+  // PR 54.3: Keychain status dot. Per user backlog 'Keychain 状态
+  // 更直接' — the existing inline text label is OK but a colored
+  // dot makes the state recognizable at-a-glance without reading
+  // the text. The dot color maps to the same 4 storage states the
+  // existing text label covers, so this is a strict visual upgrade
+  // (no behavior change).
+  describe('PR 54: Keychain status dot', () => {
+    it('renders a green dot for local_file providers with a saved Keychain key', async () => {
+      window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter')
+      // has_ai_model_provider_api_key returns { provider_id, configured }.
+      // mocked with the right shape so hasAiModelProviderApiKey reads
+      // `result.configured` and returns true.
+      vi.mocked(invoke).mockResolvedValue({ provider_id: 'openrouter', configured: true })
+      const providers: AiModelProvider[] = [
+        {
+          id: 'openrouter',
+          kind: 'open_ai_compatible',
+          name: 'OpenRouter',
+          base_url: 'https://openrouter.ai/api/v1',
+          api_key_storage: 'local_file',
+          api_key_env_var: 'OPENROUTER_API_KEY',
+          headers: null,
+          models: [{ id: 'openai/gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+        },
+      ]
+      render(
+        <AiProviderSettings
+          t={(k: string) => k}
+          mode="api"
+          providers={providers}
+          onChange={() => {}}
+        />,
+      )
+
+      // Green dot + "Saved in macOS Keychain" text. The dot starts as
+      // 'missing' (initial render before the Keychain poll resolves)
+      // and transitions to 'configured' once invoke({configured:true}) returns.
+      // waitFor handles the transition without flake.
+      const dot = await screen.findByTestId('ai-providers-keychain-dot-openrouter')
+      await waitFor(() => expect(dot).toHaveAttribute('data-state', 'configured'))
+      expect(dot).toHaveTextContent(/settings\.aiProviders\.keyLocalSaved/)
+    })
+
+    it('renders a red dot for local_file providers without a saved Keychain key', async () => {
+      window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter')
+      vi.mocked(invoke).mockResolvedValue({ provider_id: 'openrouter', configured: false })
+      const providers: AiModelProvider[] = [
+        {
+          id: 'openrouter',
+          kind: 'open_ai_compatible',
+          name: 'OpenRouter',
+          base_url: 'https://openrouter.ai/api/v1',
+          api_key_storage: 'local_file',
+          api_key_env_var: 'OPENROUTER_API_KEY',
+          headers: null,
+          models: [{ id: 'openai/gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+        },
+      ]
+      render(
+        <AiProviderSettings
+          t={(k: string) => k}
+          mode="api"
+          providers={providers}
+          onChange={() => {}}
+        />,
+      )
+
+      const dot = await screen.findByTestId('ai-providers-keychain-dot-openrouter')
+      expect(dot).toHaveAttribute('data-state', 'missing')
+      expect(dot).toHaveTextContent(/settings\.aiProviders\.keyLocalNotConfigured/)
+    })
+
+    it('renders a yellow dot for env-mode providers with an env var name', async () => {
+      window.localStorage.setItem('dreamforge.llmApiKeyProviderId', 'openrouter')
+      // env-mode providers skip the Keychain poll entirely — no invoke
+      // call needed. The dot renders immediately with state="env".
+      const providers: AiModelProvider[] = [
+        {
+          id: 'openrouter',
+          kind: 'open_router',
+          name: 'OpenRouter',
+          base_url: 'https://openrouter.ai/api/v1',
+          api_key_storage: 'env',
+          api_key_env_var: 'OPENROUTER_API_KEY',
+          headers: null,
+          models: [{ id: 'openai/gpt-4.1-mini', display_name: null, context_window: null, max_output_tokens: null, capabilities: ['chat'] }],
+        },
+      ]
+      render(
+        <AiProviderSettings
+          t={(k: string, params?: Record<string, string | number>) => {
+            if (k === 'settings.aiProviders.keyEnvSaved' && params) return `${k}|${params.env}`
+            return k
+          }}
+          mode="api"
+          providers={providers}
+          onChange={() => {}}
+        />,
+      )
+
+      const dot = await screen.findByTestId('ai-providers-keychain-dot-openrouter')
+      expect(dot).toHaveAttribute('data-state', 'env')
+      expect(dot).toHaveTextContent(/settings\.aiProviders\.keyEnvSaved\|OPENROUTER_API_KEY/)
+    })
+  })
 })

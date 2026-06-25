@@ -185,16 +185,59 @@ function providerModeDescription(mode: ProviderMode, t: Translate): string {
   return mode === 'local' ? t('settings.aiProviders.localDescription') : t('settings.aiProviders.apiDescription')
 }
 
-function providerStorageLabel(provider: AiModelProvider, keyConfigured: boolean, t: Translate): string {
+function KeychainStatusDot({
+  provider,
+  keyConfigured,
+  t,
+}: {
+  provider: AiModelProvider
+  keyConfigured: boolean
+  t: Translate
+}) {
+  // PR 54.3: at-a-glance status indicator for the Keychain /
+  // env-var storage state. The dot color maps to the existing
+  // storage label so this is a strict visual upgrade (no
+  // behavior change, same text content).
+  //
+  //   - green dot + "Saved in macOS Keychain"  (local_file + configured)
+  //   - red   dot + "Not in macOS Keychain"    (local_file + !configured)
+  //   - amber dot + "key from {env}"            (env + env_var set)
+  //   - red   dot + "No key"                    (env without var, or none)
+  //
+  // data-testid="ai-providers-keychain-dot-{id}" lets tests target
+  // a specific provider's status without scanning the whole list.
+  // data-state is the discrete machine-readable value
+  // (configured / missing / env / none) for future assertions.
+  let state: 'configured' | 'missing' | 'env' | 'none'
+  let label: string
   if (provider.api_key_storage === 'local_file') {
-    return keyConfigured
+    state = keyConfigured ? 'configured' : 'missing'
+    label = keyConfigured
       ? t('settings.aiProviders.keyLocalSaved')
       : t('settings.aiProviders.keyLocalNotConfigured')
+  } else if (provider.api_key_storage === 'env' && provider.api_key_env_var) {
+    state = 'env'
+    label = t('settings.aiProviders.keyEnvSaved', { env: provider.api_key_env_var })
+  } else {
+    state = 'none'
+    label = t('settings.aiProviders.noKey')
   }
-  if (provider.api_key_storage === 'env' && provider.api_key_env_var) {
-    return t('settings.aiProviders.keyEnvSaved', { env: provider.api_key_env_var })
-  }
-  return t('settings.aiProviders.noKey')
+  const dotClass =
+    state === 'configured'
+      ? 'bg-emerald-500'
+      : state === 'env'
+      ? 'bg-amber-500'
+      : 'bg-red-500'
+  return (
+    <span
+      data-testid={`ai-providers-keychain-dot-${provider.id}`}
+      data-state={state}
+      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+    >
+      <span aria-hidden="true" className={`inline-block h-2 w-2 rounded-full ${dotClass}`} />
+      <span>{label}</span>
+    </span>
+  )
 }
 
 function visibleProviders(providers: AiModelProvider[], mode: ProviderMode): AiModelProvider[] {
@@ -465,8 +508,12 @@ function ProviderList({
                   </span>
                 ) : null}
               </div>
-              <div className="mt-1 truncate text-xs text-muted-foreground">
-                {target.provider.base_url || t('settings.aiProviders.defaultEndpoint')} · {providerStorageLabel(target.provider, configured, t)}
+              <div className="mt-1 flex items-center gap-2 truncate text-xs text-muted-foreground">
+                <span className="truncate">
+                  {target.provider.base_url || t('settings.aiProviders.defaultEndpoint')}
+                </span>
+                <span aria-hidden="true" className="text-muted-foreground/50">·</span>
+                <KeychainStatusDot provider={target.provider} keyConfigured={configured} t={t} />
               </div>
               {/* PR 43: "Add API key first" hint under the row when
                   the Use this button is disabled. Sits next to the
