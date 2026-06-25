@@ -17,6 +17,7 @@ import {
   parseDreamStatus,
   type DreamVaultStatusReport,
 } from '../lib/dreamCliStatus'
+import { parseDreamRunSummary, type DreamRunSummary } from '../lib/dreamRunSummary'
 import { translate, type AppLocale } from '../lib/i18n'
 import { ActionTooltip } from './ui/action-tooltip'
 import { Button } from './ui/button'
@@ -134,6 +135,13 @@ export function DreamPanel({ vaultPath, locale = 'en', onOpenMemory, onOpenWiki,
   // time, and the text path is the same source as the existing
   // empty-editor "Last dream: X ago" line (PR 48).
   const [lastDreamAt, setLastDreamAt] = useState<string | null>(null)
+  // PR 53: run-state card. Drives the "Running / Completed / No new
+  // work" badge above the typed stats section. The parser
+  // (parseDreamRunSummary) classifies the dream CLI stdout into
+  // one of three kinds; failed runs don't update this state at
+  // all (ProviderErrorView takes over the error path). Set on
+  // dreamvault_run success, cleared on next run start + on error.
+  const [runSummary, setRunSummary] = useState<DreamRunSummary | null>(null)
   const fetchVaultStatsJson = useCallback(async () => {
     try {
       const report = await (isTauri()
@@ -149,6 +157,12 @@ export function DreamPanel({ vaultPath, locale = 'en', onOpenMemory, onOpenWiki,
     async (command: DreamCommand, options: { refreshTypedStats?: boolean } = {}) => {
       setRunningCommand(command)
       setError(null)
+      // PR 53: clear stale run summary when starting a new run so
+      // the UI doesn't briefly show "Completed" from the previous
+      // cycle while the new one is in flight.
+      if (command === 'dreamvault_run') {
+        setRunSummary(null)
+      }
       try {
         const dreamCliPath = resolveDreamCliPathForInvoke()
         const { llmBaseUrl, llmModel } = resolveLlmConfigForInvoke()
@@ -168,10 +182,24 @@ export function DreamPanel({ vaultPath, locale = 'en', onOpenMemory, onOpenWiki,
         const next = [result.stdout, result.stderr].filter(Boolean).join('\n\n') || 'Command completed.'
         setOutput(next)
         setLastRunAt(new Date().toISOString())
+        // PR 53: parse the run output into a structured summary
+        // for the run-state card. Pure parser; falls back to
+        // kind='unknown' when the CLI's text output doesn't match
+        // any of the locked patterns.
+        if (command === 'dreamvault_run') {
+          setRunSummary(parseDreamRunSummary(next))
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         setError(message)
         setOutput(message)
+        // PR 53: failed runs don't get a run-state card —
+        // ProviderErrorView renders the actionable error UX
+        // instead. Clearing prevents the stale "Completed" badge
+        // from showing after a transient error.
+        if (command === 'dreamvault_run') {
+          setRunSummary(null)
+        }
       } finally {
         setRunningCommand(null)
       }
@@ -241,7 +269,7 @@ export function DreamPanel({ vaultPath, locale = 'en', onOpenMemory, onOpenWiki,
           <Button
             type="button"
             size="sm"
-            onClick={() => runCommand('dreamvault_run')}
+            onClick={() => runCommand('dreamvault_run', { refreshTypedStats: true })}
             disabled={isBusy}
             // PR 42: empty workspace's "Run Dream" action button focuses
             // this button via the testid. Do not rename without updating
@@ -299,6 +327,39 @@ export function DreamPanel({ vaultPath, locale = 'en', onOpenMemory, onOpenWiki,
           />
         ) : (
           <>
+            {/* PR 53: run-state card. Renders above the typed stats
+                block. Three states:
+                  - 'Running'    while dreamvault_run is in flight
+                  - 'Completed'  parseDreamRunSummary returns kind='completed'
+                  - 'No new work' kind='noop' (zero-work, not a failure)
+                Hidden before the first run + after a failed run
+                (ProviderErrorView takes over in the error path).
+                Task 4 will convert the hardcoded English copy to
+                locale-aware i18n keys; the test ids + state values
+                are stable so the i18n swap is mechanical. */}
+            {runningCommand === 'dreamvault_run' ? (
+              <div
+                className="dreamx-panel-run-state"
+                data-testid="dream-panel-run-state"
+                data-state="running"
+              >
+                <strong>Running</strong>
+                <span>Dream is organizing this vault.</span>
+              </div>
+            ) : runSummary ? (
+              <div
+                className="dreamx-panel-run-state"
+                data-testid="dream-panel-run-state"
+                data-state={runSummary.kind}
+              >
+                <strong>{runSummary.kind === 'noop' ? 'No new work' : 'Completed'}</strong>
+                {runSummary.rawCollected !== null || runSummary.integrated !== null ? (
+                  <span>
+                    {runSummary.rawCollected ?? 0} raw · {runSummary.integrated ?? 0} integrated
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
             {/* PR 52: typed stats quick view. Renders ONLY when the
                 typed JSON path succeeded (vaultStatsJson != null).
                 On any error / old binary / schemaVersion mismatch,

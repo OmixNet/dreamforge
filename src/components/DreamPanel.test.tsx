@@ -731,4 +731,122 @@ describe('DreamPanel', () => {
       expect(screen.queryByTestId('dream-panel-typed-stats')).toBeNull()
     })
   })
+
+  // PR 53: run-state UI. The run-state card appears above the
+  // typed stats section and reflects the latest dream cycle:
+  //   - 'Running'        while dreamvault_run is in flight
+  //   - 'Completed'      parseDreamRunSummary returns kind='completed'
+  //   - 'No new work'    parseDreamRunSummary returns kind='noop'
+  //                     (zero-work, not a failure)
+  //   - (no card)        before any run, or after a failed run
+  //                     (failed runs use the existing ProviderErrorView)
+  //
+  // The run-state card is a frontend-only addition; it parses
+  // the dream CLI text output (the same source as the typed
+  // fallback path). The typed JSON contract (PR 50) doesn't
+  // expose per-run stats — only cumulative vault stats.
+  describe('run-state (PR 53)', () => {
+    it('shows a running state while Run Dream is in flight', async () => {
+      let resolveRun!: (value: { stdout: string; stderr: string; success: boolean }) => void
+      vi.mocked(mockInvoke)
+        .mockResolvedValueOnce({ stdout: 'status ok', stderr: '', success: true })
+        .mockImplementationOnce(
+          () =>
+            new Promise<{ stdout: string; stderr: string; success: boolean }>((resolve) => {
+              resolveRun = resolve
+            }),
+        )
+
+      render(<DreamPanel vaultPath="/tmp/vault" />)
+      await screen.findByText(/status ok/)
+      fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+      expect(await screen.findByTestId('dream-panel-run-state')).toHaveTextContent('Running')
+      resolveRun({
+        stdout: 'dream completed:\n  - collected raw: 1\n  - integrated: 1',
+        stderr: '',
+        success: true,
+      })
+    })
+
+    it('shows completed summary after Run Dream succeeds and refreshes typed stats', async () => {
+      vi.mocked(mockInvoke).mockImplementation(async (cmd: string) => {
+        if (cmd === 'dreamvault_run') {
+          return {
+            stdout: [
+              'dream completed:',
+              '  - collected raw: 2',
+              '  - integrated: 1',
+              '  - dream-report: .dream/reports/dream-report-2026-06-25-090000.md',
+            ].join('\n'),
+            stderr: '',
+            success: true,
+          }
+        }
+        if (cmd === 'dreamvault_status_json') {
+          return {
+            schemaVersion: 1,
+            vaultPath: '/tmp/vault',
+            rawCandidatesCount: 5,
+            processedCount: 7,
+            archivedCount: 1,
+            lastReportPath: '.dream/reports/dream-report-2026-06-25-090000.md',
+          }
+        }
+        return { stdout: 'status ok', stderr: '', success: true }
+      })
+
+      render(<DreamPanel vaultPath="/tmp/vault" />)
+      await screen.findByText(/status ok/)
+      fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+      const state = await screen.findByTestId('dream-panel-run-state')
+      expect(state).toHaveTextContent('Completed')
+      expect(state).toHaveTextContent('2 raw')
+      expect(state).toHaveTextContent('1 integrated')
+      // PR 53 also refreshes typed stats after Run Dream completes
+      // (so the user doesn't need to click Status again).
+      expect(await screen.findByTestId('dream-panel-typed-stats')).toHaveTextContent(
+        '5 candidates · 7 processed · 1 archived',
+      )
+    })
+
+    it('shows no-op summary after Run Dream has no raw work', async () => {
+      vi.mocked(mockInvoke).mockImplementation(async (cmd: string) => {
+        if (cmd === 'dreamvault_run') {
+          return {
+            stdout: 'dream completed:\n  - collected raw: 0\n  - integrated: 0',
+            stderr: '',
+            success: true,
+          }
+        }
+        return { stdout: 'status ok', stderr: '', success: true }
+      })
+
+      render(<DreamPanel vaultPath="/tmp/vault" />)
+      await screen.findByText(/status ok/)
+      fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+      expect(await screen.findByTestId('dream-panel-run-state')).toHaveTextContent('No new work')
+    })
+
+    it('clears the run-state card when Run Dream fails (ProviderErrorView takes over)', async () => {
+      vi.mocked(mockInvoke).mockImplementation(async (cmd: string) => {
+        if (cmd === 'dreamvault_run') {
+          throw new Error(
+            '[OPENAI_MISSING_KEY] OpenAI-compatible missing API key: set DREAMFORGE_LLM_API_KEY',
+          )
+        }
+        return { stdout: 'status ok', stderr: '', success: true }
+      })
+
+      render(<DreamPanel vaultPath="/tmp/vault" />)
+      await screen.findByText(/status ok/)
+      fireEvent.click(screen.getByRole('button', { name: 'Run Dream' }))
+
+      // ProviderErrorView surfaces the failure; run-state card is gone.
+      expect(await screen.findByText(/API key missing or not saved/i)).toBeInTheDocument()
+      expect(screen.queryByTestId('dream-panel-run-state')).toBeNull()
+    })
+  })
 })
