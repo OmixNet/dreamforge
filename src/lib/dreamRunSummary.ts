@@ -81,6 +81,10 @@ function parseReportPath(output: string): string | null {
   return path ? path : null
 }
 
+function isExplicitNoWorkOutput(output: string): boolean {
+  return /无需事项|无新\s*raw|no\s+new\s+raw|nothing\s+to\s+do/i.test(output)
+}
+
 /**
  * Parse the stdout of `dreamvault_run` and return a structured
  * summary. The function is pure: no IO, no exceptions thrown on
@@ -107,7 +111,13 @@ export function parseDreamRunSummary(output: string): DreamRunSummary {
   const reportPath = parseReportPath(output)
 
   let kind: DreamRunSummaryKind = 'unknown'
-  if (rawCollected !== null || integrated !== null) {
+  let normalizedRawCollected = rawCollected
+  let normalizedIntegrated = integrated
+  if (rawCollected === null && integrated === null && isExplicitNoWorkOutput(output)) {
+    normalizedRawCollected = 0
+    normalizedIntegrated = 0
+    kind = 'noop'
+  } else if (rawCollected !== null || integrated !== null) {
     // Both counts are 0 → "no new work" (success, but nothing to show).
     // Either count > 0 → completed (something was processed).
     kind = (rawCollected ?? 0) === 0 && (integrated ?? 0) === 0 ? 'noop' : 'completed'
@@ -115,8 +125,8 @@ export function parseDreamRunSummary(output: string): DreamRunSummary {
 
   return {
     kind,
-    rawCollected,
-    integrated,
+    rawCollected: normalizedRawCollected,
+    integrated: normalizedIntegrated,
     reportPath,
   }
 }

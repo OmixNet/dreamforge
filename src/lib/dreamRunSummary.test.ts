@@ -37,6 +37,20 @@ describe('parseDreamRunSummary', () => {
     })
   })
 
+  it('classifies the real Chinese no-work line as no-op', () => {
+    const output = [
+      'dream: 无需事项（无新 raw, 无矛盾需解决）',
+      'budget: today 0 call(s), $0.0000 used',
+    ].join('\n')
+
+    expect(parseDreamRunSummary(output)).toEqual({
+      kind: 'noop',
+      rawCollected: 0,
+      integrated: 0,
+      reportPath: null,
+    })
+  })
+
   it('parses English-style output when the CLI emits English labels', () => {
     const output = [
       'dream completed:',
