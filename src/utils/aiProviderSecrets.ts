@@ -17,17 +17,15 @@ import type { AiModelProvider } from '../lib/aiTargets'
  */
 
 export async function saveAiModelProviderApiKey(providerId: string, apiKey: string): Promise<void> {
-  if (!isTauri()) return
-  await invoke('save_ai_model_provider_api_key', { providerId, apiKey })
+  await keychainInvokeIfAvailable('save_ai_model_provider_api_key', { providerId, apiKey })
 }
 
 export async function deleteAiModelProviderApiKey(providerId: string): Promise<void> {
-  if (!isTauri()) return
-  await invoke('delete_ai_model_provider_api_key', { providerId })
+  await keychainInvokeIfAvailable('delete_ai_model_provider_api_key', { providerId })
 }
 
 export interface ProviderKeyStatus {
-  providerId: string
+  provider_id: string
   configured: boolean
 }
 
@@ -37,15 +35,27 @@ export interface ProviderKeyStatus {
  * fn only receives `{ provider_id, configured: bool }`.
  */
 export async function hasAiModelProviderApiKey(providerId: string): Promise<boolean> {
-  if (!isTauri()) {
+  const result = await keychainInvokeIfAvailable<ProviderKeyStatus>('has_ai_model_provider_api_key', { providerId })
+  if (result === undefined) {
     // In mock / browser mode, surface a sensible default so the UI
     // renders without errors. Test suites should override via
     // `mockInvoke.mockResolvedValueOnce({ provider_id, configured: true })`.
-    const result = await mockInvoke<ProviderKeyStatus>('has_ai_model_provider_api_key', { providerId })
-    return result?.configured ?? false
+    const mockResult = await mockInvoke<ProviderKeyStatus>('has_ai_model_provider_api_key', { providerId })
+    return mockResult?.configured ?? false
   }
-  const result = await invoke<ProviderKeyStatus>('has_ai_model_provider_api_key', { providerId })
   return result?.configured ?? false
+}
+
+async function keychainInvokeIfAvailable<T>(
+  command: string,
+  args: Record<string, unknown>,
+): Promise<T | undefined> {
+  try {
+    return await invoke<T>(command, args)
+  } catch (error) {
+    if (isTauri()) throw error
+    return undefined
+  }
 }
 
 /**
