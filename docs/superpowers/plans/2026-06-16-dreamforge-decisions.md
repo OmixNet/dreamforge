@@ -1047,3 +1047,64 @@ PR 50 series (4 commits, 3 code PRs across Swift/Rust/TS + 1 self-fix + 1 fixtur
 - PR 54: Settings AI 小收口 (active provider 强化 / base URL /v1 规则提示 / Keychain 状态 / provider delete 清理 GUI verify)
 - PR 37 / PR 38: 真实 Anthropic / Gemini E2E (需 user 提供 key, 不挡 PR 51 ship)
 - **v0.6.0 状态 unchanged**: API-complete and test-verified, real Anthropic/Gemini E2E 仍 deferred. v0.6.1 / v0.6.2 tag 仍 reserved 给 PR 37 / PR 38 pass.
+
+
+## §46 PR 52-54 series close-out + follow-ups (PR 54.6 LaunchServices + PR 54.7 Keychain IPC) (2026-06-26)
+
+PR 52-54 series 是 v0.6.0 ship 之后落的 polish arc, 16 commits 跨 13 sub-PR, 把 "API-complete and test-verified" 推到 "fully usable in production". 详细 ship doc 在 `docs/reports/v0.6.x-pr54-ship-2026-06-26.md` (2026-06-26). 本节只记 3 个 locked lesson + 2 个 follow-up 的 root cause.
+
+**PR 52-54 series 范围 (10 commits + 3 follow-up = 13 PR 跨 16 commits)**:
+- PR 52 (`8d18c44` + `4a55eb6`): DreamPanel 消费 typed stats + click-to-show UX trade-off
+- PR 53 series (`bcda17e` / `2ef25a8` / `e5ce610` / `d04886e` / `ce5a2d5` self-fix / `e069b64` plan): Run Dream 状态可视化 (4 state) + 文本 parser + "Open latest report"
+- PR 54 series (`6bc6d69` / `113603f` / `3116cf6` / `552a979` / `c3469aa` plan): Settings AI 4-task closure (active banner / /v1 hint / Keychain dot / delete confirm dialog)
+- PR 54.6 (`6e1cea5`): LaunchServices stale-registration cleanup (env-state, docs-only)
+- PR 54.7 (`46f8e21`, user self-fix): Keychain IPC native fallback (TS `keychainInvokeIfAvailable` helper)
+
+**§46 lesson #1: real-data parser 永远比 synthetic-data 暴露更多 patterns** (locked by PR 53 user self-fix `ce5a2d5`):
+- PR 53.1 parser `parseDreamRunSummary` 写时只 match 旧 1 套 Chinese label (`无需事项`)
+- 真跑 dream CLI (PR 51a fixture) 才发现输出是 `一无无事（无新 raw，无矛盾需要裁决）` — 跟 parser regex 不匹配 → classify 成 `unknown` (错)
+- User 跑 native .app + 看到 `unknown` 状态 → self-fix PR 加 `isExplicitNoWorkOutput()` helper + 新 regex `/无需事项|一无无事|无新\s*raw|no\s+new\s+raw|nothing\s+to\s+do/i`
+- 教训: parser 写完必跑真 data, 不能只 match 设计文档里的 sample. fixture (PR 51a) 是 pre-req, fixture + parser 应该同时落, 不能 parser 先落 fixture 后落.
+- 跨项目适用: 所有 parser / formatter / validator code 都在 real-data 上 暴露 design-doc 没写的 corner case. 必跑真 input 后再 close PR.
+
+**§46 lesson #2: "isTauri() ? invoke : mockInvoke" 是 necessary 但 not sufficient** (locked by PR 54.7 user self-fix):
+- PR 50c.1 (`d5170a4`) 锁的模式: `await import("@tauri-apps/api/core").invoke(...)` 直接 import → silently bypasses mock-tauri 派发. 改用 `isTauri() ? invoke : mockInvoke` 修.
+- PR 54.7 (`46f8e21`) 暴露 PR 50c.1 模式 仍不充分: `aiProviderSecrets.ts` 旧 code 是 `if (!isTauri()) return; await invoke(...)` — early return 让 `isTauri()` 报 false 的 path 完全 skip IPC. User 跑 native .app 时某些 path 出现 "Save API key 失败" 但 test 都过 (test 默认 `isTauri()` mock 返 true).
+- 修: 新 `keychainInvokeIfAvailable<T>(command, args)` helper — `try invoke first; if it throws AND !isTauri(), fall back to mockInvoke`. **"try then fall back on error"** 才是 correct pattern, 单纯 trust detection 是 fragile.
+- 跨项目适用: 任何 front-end ↔ Tauri / Electron / Web Extension / extension host 边界都有 "detect environment" 陷阱. detection 不总是 reliable, runtime probe 才是 source of truth.
+
+**§46 lesson #3: LaunchServices stale registration 是 macOS app 通用 trap** (locked by PR 54.6 `6e1cea5` + memory `macos-toolchain-gotchas.md` §5):
+- `open MyApp.app` 报 `kLSNoExecutableErr: The executable is missing` 但 binary 完好 → 99% 是 LaunchServices stale registration. macOS LaunchServices 用 bundle ID 当 lookup key, 改名 / rebuild 都不 invalidate 旧 entry. 每个 `pnpm tauri build` 加 1 个 entry, 旧 .app 移到 Trash 不清, stale entry 一直留.
+- 修: `lsregister -u <stale.app>` 每个 stale path, 然后 `mavis-trash` 文件. 核弹选项 `lsregister -kill -r -domain user -domain local` (清整张表, 慎用).
+- 防: trashing .app 前必 `lsregister -u <path>`. Pattern: `git rm` before `rm` 一样, 留 registry 干净.
+- 跨项目适用: 任何 macOS .app 都有这 trap (Tauri / Electron / Xcode / Swift CLI / native bundle). 不止 dreamforge.
+
+**scope discipline 总结 (PR 52-54 series 13 sub-PR)**:
+- 4-task (PR 54) split: active banner / /v1 hint / Keychain dot / delete dialog 各自独立 commit, 各自 verify. 互不阻塞, 任一 task 出问题可以单独回滚, 不影响其他 3 个.
+- follow-up PR 单独走 (PR 54.6 LaunchServices 是 env-state doc, PR 54.7 Keychain IPC 是 code fix). 不塞回 PR 54.4 / 54.5.
+- i18n 跟测试跟 code 同步走 (PR 53.4 + PR 54.4: 4 new keys × 20 locales = 80 entries 每个 PR). `pnpm exec vitest run src/lib/i18n.test.ts` 15/15 持续绿.
+- i18n parity test 锁住, English placeholder 模式 (non-en locale 用 en string). 真翻译推后续 locale-specific PR.
+- user self-fix 受鼓励 (PR 53 `ce5a2d5` + PR 54.7 `46f8e21` 都是 user 自修, 我 verify + commit message 走). 不 push back, 不甩锅.
+
+**test discipline 总结 (PR 52-54 series)**:
+- 13/13 PR 都有 vitest RED→GREEN: 54.1 (+2) / 54.2 (+2 / 1 skip) / 54.3 (+3) / 54.4 (+4) / 53.1 (+5) / 53.2 (+4) / 53.3 (+0) / 53.4 (parity test 仍 15/15) / 52 (+4 + 1 fix) / 54.7 (+4) = +28 dreamforge test. -3 旧 PR 43 single-click delete test (改用 dialog flow) = +25 net.
+- 5 个安全 boundary test 都用 mock wrapper / pure helper, 不打真 Keychain / 真 network. 真 Keychain 在 `#[ignore]` Rust test + manual verify.
+- 1 个 Radix Select `fireEvent.change` skip (shadcn Select 用 portal, 不接受 native select event). 改用 Radix SelectItem click 或 logic review + 2 positive-path test.
+
+**closed-loop data flow (PR 52-54 series 维持 v0.5.0 验证的 invariant)**:
+- PR 52/53/54 series **不动** 关键路径 (Settings → Keychain → Rust → dream CLI → Swift provider → cloud API). 只加 read-time UX (typed stats in DreamPanel, "Open latest report" 按钮), 加 state visibility (Run Dream 4-state card), 加 settings ergonomics (4 active/UX task), 加 IPC robustness (54.7 native fallback).
+- v0.5.0 PR 32 SiliconFlow E2E 验证的 closed-loop invariant 保持: provider call count > 0 (v0.5.0 是 5 calls, v0.6.0 addendum 7 calls, PR 53 fixture 期间 1 call — 都没 regress).
+- **"security boundary test ≠ end-to-end test"** 跟 **"data flow contract > test passes"** 持续 hold (PR 26/50c.1/50c.2 锁的).
+
+**v0.6.0 ship 状态 unchanged (post-§46 close)**:
+- API-complete and test-verified, real Anthropic / Gemini E2E 仍 deferred to PR 56 / PR 57
+- v0.6.0 tag (`4989fb3`, 2026-06-21) 仍是 current ship
+- v0.6.1 / v0.6.2 / v0.6.3 tag reserved 给 PR 55 (SiliconFlow re-verify) / PR 56 (Anthropic real E2E) / PR 57 (Gemini real E2E) pass with user-provided keys
+- PR 52-54 series 不打新 tag. Polish arc, 不是 release.
+
+**post-§46 backlog (user flag 2026-06-26)**:
+- **PR 55 (post-v0.6)**: SiliconFlow re-verify with current DeepSeek catalog (DeepSeek-V4-Flash 404, server-side 改/删). 用新 model ID 确认 OpenAI-compat path 仍 healthy. tag v0.6.1.
+- **PR 56 (post-v0.6)**: Anthropic real E2E with user-provided key. PR 36 + PR 37b wiring 都在 main, 只差真 key. tag v0.6.2.
+- **PR 57 (post-v0.6)**: Gemini real E2E with user-provided key. tag v0.6.3.
+- **PR 58 (post-v0.6)**: 10 new i18n keys (activeBanner / baseUrlHint / deleteConfirm.* / dreamPanel.run.* / dreamPanel.stats.*) 用 en placeholder 在 non-en locale. 真翻译推后续 locale-specific PR.
+- **PR 59 (post-v0.6)**: StatusBar 进一步 slim (user 第一轮 v0.1 GUI verify 提的 PR 6 follow-up). 4-item → 2-item (vault + commit).
